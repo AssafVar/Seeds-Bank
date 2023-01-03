@@ -1,0 +1,16 @@
+.home-main{
+    display: flex;
+    flex-direction: column;
+}
+.home-main >div{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    border:rgb(31, 133, 167) 1px solid;
+}
+.home-main >div >div{
+    border:lightblue 1px solid;
+    flex-grow: 1;
+    margin:1%;
+    text-align: center;
+}

@@ -1,0 +1,27 @@
+.home-page{
+    display:flex;
+    flex-direction: column;
+    margin-top: 50px;
+    border: red 1px solid;
+}
+.home-page-container{
+    display: flex;
+    flex-direction: row;
+    border:lawngreen 1px solid;
+}
+.sidebar-container{
+    display: flex;
+    flex-direction: column;
+    flex-grow: 2;
+    margin: 0 3%;
+    border:rgb(100, 174, 25) 1px solid;
+
+}
+.home-main-container{
+    display: flex;
+    flex-direction: column;
+    flex-grow: 8;
+    margin: 0 7%;
+    border:rgb(46, 84, 9) 1px solid;
+
+}

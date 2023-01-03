@@ -1,0 +1,11 @@
+.navbar{
+    border-bottom:solid black 1px;
+    display: flex;
+    justify-content: space-between;
+    padding-inline: 50px;
+    padding-bottom: 10px;
+
+}
+.navar>div{
+    display: inline-block;
+}
