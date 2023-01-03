@@ -5,7 +5,11 @@ const api = axios.create({
     withCredentials:true,
 });
 
-export const loginUser = async(email,password) =>{
-    const results = await api.post('/user',{email,password});
-    return results;
+export const confirmUser = async(email,password,method) =>{
+    try{
+        const results = await api.post(`/user/${method}`,{email,password});
+        return results;
+    }catch(err){
+        return err
+    }
 }

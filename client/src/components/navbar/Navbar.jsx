@@ -1,30 +1,38 @@
 import { Button, Tooltip, Typography } from '@mui/material';
 import React, { useState } from 'react';
-import LoginModal from '../modals/LoginModal';
-import "./navbar.css";
+import LoginModal from '../modals/RegisterModal';
 import LoginIcon from '@mui/icons-material/Login';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import "./navbar.css";
+
 
 function Navbar(props) {
 
     const [isOpenModal, setIsOpenModal] = useState(false);
+    const [isSignup, setIsSignup] = useState(true);
+
     const handleLogin = () => {
+        setIsSignup(false);
         setIsOpenModal(!isOpenModal);
     }
+
     return (
         <>
             <LoginModal 
             isOpenModal={isOpenModal}
+            isSignup={isSignup}
             handleLogin = {handleLogin}
             />
             <div className='navbar'>
                 <Typography>Seeds bank</Typography>
                 <div>
                     <Tooltip title="Login">
-                        <Button onClick={()=>setIsOpenModal(!isOpenModal)}><LoginIcon/></Button>
+                        <Button onClick={()=>{handleLogin();setIsSignup(false)}}><LoginIcon/></Button>
                     </Tooltip>
-                    <Button> Signup </Button>
+                    <Tooltip title="Signup">
+                        <Button onClick={()=>{handleLogin();setIsSignup(true)}}><PersonAddIcon/></Button>
+                    </Tooltip>
                 </div>
-
             </div>
         </>
     );
