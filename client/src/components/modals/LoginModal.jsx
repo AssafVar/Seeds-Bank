@@ -16,7 +16,7 @@ function LoginModal({ isOpenModal, handleLogin }) {
       >
         <Box sx={style}>
             <Typography id="modal-modal-title" variant="h6" component="h2">
-                Login 
+                Login to your account
             </Typography>
             <LoginForm handleLogin={handleLogin}/>
         </Box>

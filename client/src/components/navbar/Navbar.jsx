@@ -1,6 +1,8 @@
+import { Button, Tooltip, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import LoginModal from '../modals/LoginModal';
 import "./navbar.css";
+import LoginIcon from '@mui/icons-material/Login';
 
 function Navbar(props) {
 
@@ -9,17 +11,22 @@ function Navbar(props) {
         setIsOpenModal(!isOpenModal);
     }
     return (
-        <div className='navbar'>
-            <span>Seeds bank</span>
-            <div>
-                <button onClick={()=>setIsOpenModal(!isOpenModal)}> Login </button>
-                <button> Signup </button>
-            </div>
+        <>
             <LoginModal 
-                isOpenModal={isOpenModal}
-                handleLogin = {handleLogin}
+            isOpenModal={isOpenModal}
+            handleLogin = {handleLogin}
             />
-        </div>
+            <div className='navbar'>
+                <Typography>Seeds bank</Typography>
+                <div>
+                    <Tooltip title="Login">
+                        <Button onClick={()=>setIsOpenModal(!isOpenModal)}><LoginIcon/></Button>
+                    </Tooltip>
+                    <Button> Signup </Button>
+                </div>
+
+            </div>
+        </>
     );
 }
 
