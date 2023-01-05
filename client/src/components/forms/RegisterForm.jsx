@@ -1,6 +1,6 @@
 import { Button, TextField } from '@mui/material';
 import { Box } from '@mui/system';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { confirmUser } from '../../libs/serverCalls';
 import "./registerForm.css";
 
@@ -13,9 +13,8 @@ function RegisterForm({isSignup}) {
     const [registerError, setRegisterError] = useState('');
 
     const handleSubmit = async (e) => {
-        e.preventDefault()
+        e.preventDefault();
         if ( (password === confirmPassword && isSignup===true) || (isSignup===false) ){
-            isSignup ? setUrl("signup") : setUrl("login");
             try{
                 const results = await confirmUser(email,password,url);
             }catch(err){
@@ -28,7 +27,10 @@ function RegisterForm({isSignup}) {
             setTimeout(()=>{setRegisterError("")},2000)
         }
     }
-
+    
+    useEffect(()=>{
+        isSignup ? setUrl("signup") : setUrl("login");
+    },[]);
     return (
         <Box component="form"
             sx={{
