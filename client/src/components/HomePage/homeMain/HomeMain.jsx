@@ -1,14 +1,16 @@
 import React from 'react';
-import AppInfo from '../AppInfo';
+import AppInfo from './AppInfo';
+import "./homeMain.css"
 import Weather from '../Weather';
 import Example from '../Example';
-import "./homeMain.css"
 
 function HomeMain(props) {
     return (
         <div className='home-main'>
-            <AppInfo/>
-            <div>
+            <div className="home-first-container">
+                <AppInfo/>
+            </div>
+            <div className='home-second-container'>
                 <Weather/>
                 <Example/>
                 <Example/>

@@ -1,16 +1,22 @@
 .home-main{
     display: flex;
     flex-direction: column;
+    padding: 10px 20px;
+
 }
-.home-main >div{
-    display: flex;
-    flex-direction: row;
+.home-first-container{
     justify-content: space-evenly;
     border:rgb(31, 133, 167) 1px solid;
 }
-.home-main >div >div{
+.home-second-container{
+    display:flex;
+    flex-direction: row;
+}
+.home-second-container>div{
     border:lightblue 1px solid;
     flex-grow: 1;
-    margin:1%;
     text-align: center;
+}
+.app-info{
+    
 }

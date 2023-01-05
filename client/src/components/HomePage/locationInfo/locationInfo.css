@@ -1,0 +1,7 @@
+.location-info{
+    display:flex;
+    padding:20px;
+}
+.location-info>*{
+    padding:5px 10px;
+}

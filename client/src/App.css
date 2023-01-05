@@ -3,8 +3,9 @@ body{
 }
 .App {
   box-sizing: border-box;
-  margin: none !important;
   padding-top: 20px;
   background-color: #fcfefa;
-  height:95vh;
+  margin-top: 20px;
+  height:100vh;
+  border: red 1px solid;
 }

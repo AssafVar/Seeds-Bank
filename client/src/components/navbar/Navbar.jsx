@@ -24,8 +24,16 @@ function Navbar(props) {
             handleLogin = {handleLogin}
             />
             <div className='navbar'>
-                <Typography>Seeds bank</Typography>
-                <div>
+                <div className="nav-left">
+                    <div>
+                        <Typography>Seeds bank</Typography>
+                    </div>
+                    <div>
+                        <Typography>Design </Typography>
+                    </div>
+                </div>
+                <div className='nav-right'>
+                    <Button>My Profile</Button>
                     <Tooltip title="Login">
                         <Button onClick={()=>{handleLogin();setIsSignup(false)}}><LoginIcon/></Button>
                     </Tooltip>

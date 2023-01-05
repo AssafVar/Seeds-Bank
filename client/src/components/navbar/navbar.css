@@ -1,11 +1,17 @@
 .navbar{
     border-bottom:solid black 1px;
     display: flex;
+    padding: 0 20px 10px 20px;
     justify-content: space-between;
-    padding-inline: 50px;
-    padding-bottom: 10px;
+}
+.nav-left{
+    align-items: left;
+    display: flex;
+}
+.nav-left>div{
+    margin-right: 20px;
 
 }
-.navar>div{
-    display: inline-block;
+.nav-right{
+    align-items: right; 
 }
