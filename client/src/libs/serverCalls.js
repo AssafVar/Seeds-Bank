@@ -9,7 +9,7 @@ const api = axios.create({
 export const confirmUser = async(email,password,register) =>{
     const userId = nanoid();
     try{
-        const results = await api.post(`/user/${register}`,{email,password,userId}) 
+        const results = await api.post(`/users/${register}`,{email,password,userId}) 
         return results;
     }catch(err){
         return err

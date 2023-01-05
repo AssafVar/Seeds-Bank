@@ -1,9 +1,11 @@
 import express  from 'express';
 import cors from 'cors';
-import userRoutes from '../routes/userRoutes.js';
+import userRoutes from '../src/routes/userRoutes.js';
+import "dotenv/config";
 
 const app = express();
-const port = 8080;
+const PORT = process.env.PORT;
+
 
 app.use(cors({origin: ['http://localhost:3000'],credentials: true}));
 app.use(express.json());
@@ -11,8 +13,8 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.send('Response from server');
 });
-app.use('/user', userRoutes);
+app.use('/users', userRoutes);
 
-app.listen(port,() => {
-    console.log(`listening on port ${port}`);
+app.listen(PORT,() => {
+    console.log(`listening on port ${PORT}`);
 });
