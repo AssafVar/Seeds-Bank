@@ -1,7 +1,7 @@
 import { Button, TextField } from '@mui/material';
 import { Box } from '@mui/system';
 import React, { useEffect, useState } from 'react';
-import { confirmUser } from '../../libs/serverCalls';
+import useAuth from '../../hooks/useAuth';
 import "./registerForm.css";
 
 function RegisterForm({isSignup}) {
@@ -11,12 +11,12 @@ function RegisterForm({isSignup}) {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [url, setUrl] = useState('');
     const [registerError, setRegisterError] = useState('');
-
+    const {onLogin} = useAuth();
     const handleSubmit = async (e) => {
         e.preventDefault();
         if ( (password === confirmPassword && isSignup===true) || (isSignup===false) ){
             try{
-                const results = await confirmUser(email,password,url);
+                const results = await onLogin(email,password,url);
             }catch(err){
                 console.log(err);
             }

@@ -12,17 +12,22 @@ const signup = async (userId, email, password) => {
     });
 }
 const login = async (email, password) => {
-    const user = db.query("SELECT * FROM users WHERE email =?", [email], 
+    const user = await new Promise((resolve, reject) =>{
+
+        db.query(`SELECT * FROM users WHERE email = ? `,[email], 
         (error,response)=>{
-            if (error) throw error;
-            else {
-                console.log(response)
+            if (error) {
+                reject(error);
+                return
+            } else {
+                resolve (response[0]);
             }
-        })
+        });
+        });
     if (user && (await bcrypt.compare(password, user.password))) {
-    return user;
+        return user;
     } else {
-    return false;
+        return false;
 }
 }
 

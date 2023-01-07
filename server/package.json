@@ -19,7 +19,8 @@
     "fluent-json-schema": "^4.0.0",
     "mysql2": "^2.3.3",
     "nodemon": "^2.0.20",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "react-router-dom": "^6.6.1"
   },
   "type": "module"
 }

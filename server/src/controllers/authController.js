@@ -10,7 +10,6 @@ async function signupUser(req,res,next){
   }
 }
 async function loginUser(req, res, next){
-  console.log("loginUser")
     try {
       const { email, password } = req.body;
       if (!email || !password) {
@@ -29,9 +28,7 @@ async function loginUser(req, res, next){
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         secure: process.env.NODE_ENV === "production" ? true : false,
       }); */
-      console.log(`user is ${user}`)
-
-      res.send(user);
+      res.status(200).send(user);
     } catch (err) {
       res.send(err);
       //next(err);
