@@ -1,6 +1,6 @@
 import './App.css';
 import AuthProvider from './components/AuthProvider';
-import HomePage from './components/HomePage/HomePage';
+import HomePage from './pages/homePage/HomePage';
 import Navbar from './components/navbar/Navbar';
 
 function App() {

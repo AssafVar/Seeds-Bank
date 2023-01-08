@@ -1,7 +1,7 @@
 import React from 'react';
-import LocationInfo from './locationInfo/LocationInfo'
-import HomeMain from './homeMain/HomeMain'
-import Sidebar from './sidebar/Sidebar'
+import LocationInfo from '../../components/locationInfo/LocationInfo'
+import HomeMain from '../../components/homeMain/HomeMain'
+import Sidebar from '../../components/sidebar/Sidebar'
 import "./homePage.css";
 
 function HomePage(props) {
