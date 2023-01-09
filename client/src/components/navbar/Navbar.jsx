@@ -1,4 +1,4 @@
-import { Button, Tooltip, Typography } from '@mui/material';
+import { Button, Link, Tooltip, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import LoginModal from '../modals/RegisterModal';
 import LoginIcon from '@mui/icons-material/Login';
@@ -36,7 +36,7 @@ function Navbar(props) {
                     </div>
                 </div>
                 <div className='nav-right'>
-                    <Button>My Profile</Button>
+                    <Link href='/profile' underline="none" color='black'> My Profile</Link>
                     {!activeUser&&<>
                     <Tooltip title="Login">
                         <Button color='success' onClick={()=>{handleLogin();setIsSignup(false)}}><LoginIcon/></Button>
