@@ -8,7 +8,7 @@ import useAuth from '../../hooks/useAuth';
 import "./navbar.css";
 
 
-function Navbar({props}) {
+function Navbar(props) {
 
     const [isOpenModal, setIsOpenModal] = useState(false);
     const [isSignup, setIsSignup] = useState(true);
