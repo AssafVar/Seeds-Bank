@@ -24,12 +24,12 @@ function Navbar(props) {
     return (
         <>
             <div className='navbar'>
-                <div className="nav-left">
+            <div className="nav-left">
                     <Tooltip title="Home">
                         <Link href='/'><img src={SeedsBankLogo} alt="Logo" style={style.image}/></Link>
                     </Tooltip>
                 </div>
-                <div className="nav-center">
+                <div className='nav-right'>
                     <Tooltip title="About the App">
                         <Link href='/about' underline="none" style={style.link}>About</Link>
                     </Tooltip>
@@ -48,8 +48,7 @@ function Navbar(props) {
                     <Tooltip title="Test the app">
                         <Link href='/projects' underline="none" style={style.link}> My Projects</Link>
                     </Tooltip>
-                </div>
-                <div className='nav-right'>
+                    <div>
                     {!activeUser&&<>
                     <Tooltip title="Login">
                         <Button color='success' onClick={()=>{handleLogin();setIsSignup(false)}}><LoginIcon/></Button>
@@ -62,6 +61,7 @@ function Navbar(props) {
                     <Tooltip title="Logout">
                         <Button color='error' onClick={onLogout} ><LogoutIcon/></Button>
                     </Tooltip></>}
+                    </div>
                 </div>
             </div>
             <LoginModal 
