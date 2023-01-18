@@ -5,6 +5,8 @@ import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import useAuth from '../../hooks/useAuth';
+import SeedsBankLogo from "./SeedsBankLogo.jpg";
+import {style} from "./style.js"
 import "./navbar.css";
 
 
@@ -21,31 +23,30 @@ function Navbar(props) {
 
     return (
         <>
-            <LoginModal 
-            isOpenModal={isOpenModal}
-            isSignup={isSignup}
-            handleLogin = {handleLogin}
-            />
             <div className='navbar'>
-                <div className="nav-left">Logo</div>
+                <div className="nav-left">
+                    <Tooltip title="Home">
+                        <Link href='/'><img src={SeedsBankLogo} alt="Logo" style={style.image}/></Link>
+                    </Tooltip>
+                </div>
                 <div className="nav-center">
                     <Tooltip title="About the App">
-                        <Link href='/about' underline="none" color='black'>About</Link>
+                        <Link href='/about' underline="none" style={style.link}>About</Link>
                     </Tooltip>
                     <Tooltip title="App's Functinoality">
-                    <Link href='/functionality' underline="none" color='black'>Functionality</Link>
+                    <Link href='/functionality' underline="none" style={style.link}>Functionality</Link>
                     </Tooltip>
                     <Tooltip title="Breeding news">
-                        <Link href='/news' underline="none" color='black'>News</Link>
+                        <Link href='/news' underline="none" style={style.link}>News</Link>
                     </Tooltip>
                     <Tooltip title="Test the app">
-                        <Link href='/demo' underline="none" color='black'>Demo</Link>
+                        <Link href='/demo' underline="none" style={style.link}>Demo</Link>
                     </Tooltip>
                     <Tooltip title="User profile">
-                        <Link href='/profile' underline="none" color='black'> My Profile</Link>
+                        <Link href='/profile' underline="none" style={style.link}> My Profile</Link>
                     </Tooltip>
                     <Tooltip title="Test the app">
-                        <Link href='/projects' underline="none" color='black'> My Projects</Link>
+                        <Link href='/projects' underline="none" style={style.link}> My Projects</Link>
                     </Tooltip>
                 </div>
                 <div className='nav-right'>
@@ -63,6 +64,11 @@ function Navbar(props) {
                     </Tooltip></>}
                 </div>
             </div>
+            <LoginModal 
+            isOpenModal={isOpenModal}
+            isSignup={isSignup}
+            handleLogin = {handleLogin}
+            />
         </>
     );
 }

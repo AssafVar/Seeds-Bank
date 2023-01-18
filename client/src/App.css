@@ -4,8 +4,5 @@ body{
 .App {
   box-sizing: border-box;
   padding-top: 20px;
-  background-color: #fcfefa;
-  margin-top: 20px;
   height:100vh;
-  border: red 1px solid;
 }

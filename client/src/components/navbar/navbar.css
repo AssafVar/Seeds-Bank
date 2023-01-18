@@ -1,17 +1,21 @@
 .navbar{
-    border-bottom:solid black 1px;
+    border-bottom:solid #b3cde4 3px;
     display: flex;
     padding: 0 20px 10px 20px;
     justify-content: space-between;
 }
 .nav-center{
-    align-items: left;
-    display: flex;
+    display: inline-flex;
+    align-items: center;
 }
 div.nav-center>* {
     margin-right: 20px;
+    display: inline-block;
 
 }
 .nav-right{
     align-items: right; 
+}
+Link{
+    font-size: 2rem;
 }
