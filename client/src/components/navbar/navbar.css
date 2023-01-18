@@ -4,11 +4,11 @@
     padding: 0 20px 10px 20px;
     justify-content: space-between;
 }
-.nav-left{
+.nav-center{
     align-items: left;
     display: flex;
 }
-.nav-left>div{
+div.nav-center>* {
     margin-right: 20px;
 
 }
