@@ -2,13 +2,26 @@ import { Button, TextField, Typography } from "@mui/material";
 import { Box } from "@mui/system";
 import React, { useState } from "react";
 import { classes } from "../../styles/accountStyle";
+import AlertDialog from "../alert/AlertDialog";
+import { useNavigate } from "react-router-dom";
 
 function AccountDelete(props) {
-  const [password, setPassword] = useState("");
 
-  const onDelete = () => {
-    console.log("onDelete");
+  const [password, setPassword] = useState("");
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+
+  const navigate = useNavigate();
+
+  const handleDeleteAgree = (agree) => {
+    setIsAlertOpen(false);
+    if (agree){
+      console.log("Delete the account");
+      navigate('/');
+    }
   };
+  const handleClose = () => {
+    setIsAlertOpen(false);
+  }
 
   return (
     <Box style={classes.formBox}>
@@ -23,9 +36,10 @@ function AccountDelete(props) {
         onChange={(e) => setPassword(e.target.value)}
       />
       <br />
-      <Button style={classes.formButtonDelete} onClick={onDelete}>
+      <Button style={classes.formButtonDelete} onClick={()=>setIsAlertOpen(true)}>
         Delete
       </Button>
+      <AlertDialog isAlertOpen={isAlertOpen} dialogTitle ={"Delete Account"} dialogText={"Are you sure you want to delete the account"} handleDeleteAgree={handleDeleteAgree} handleClose={handleClose}/>
     </Box>
   );
 }
