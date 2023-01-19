@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { Box } from "@mui/system";
 import { Button, TextField, Typography } from "@mui/material";
 import {classes} from '../../styles/accountStyle'
+import authContext from "../../contexts/AuthContext";
 
 function AccountGeneral(props) {
 
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
+  const {activeUser:user} = useContext(authContext);
+  console.log(user);
+  const [userName, setUserName] = useState(user?.username);
+  const [userEmail, setUserEmail] = useState(user?.email);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 

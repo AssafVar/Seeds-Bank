@@ -10,8 +10,8 @@ function AuthProvider({children}) {
 
     async function handleLogin(username, password, register) {
         const user = await confirmUser(username, password, register);
-        localStorage.activeUser = JSON.stringify(user);
-        setActiveUser(user);
+        localStorage.activeUser = JSON.stringify(user.data);
+        setActiveUser(user.data);
         return user;
     }
     async function handleLogout(e) {
