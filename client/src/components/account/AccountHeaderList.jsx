@@ -5,7 +5,7 @@ import { List, ListItemButton } from "@mui/material";
 function AccountHeaderList(props) {
     const headerList = [
         "General",
-        "account",
+        "Account",
         "Subscriptions",
         "Settings",
         "Delete account",
