@@ -15,15 +15,26 @@ export const classes = {
         borderRadius: "20px",
     },
     formInput:{
+        borderRadius: "10px",
         marginLeft: "10px",
         width: "80%",
     },
     formButton:{
         margin: "10px 0 0 10px",
     },
+    formButtonDelete:{
+        margin: "10px 0 0 10px",
+        color:"red",
+    },
     formText:{
         fontSize: "12px",
         margin: "10px 0 10px 10px",
         color: "#001b2e",
+    },
+    textareaBox:{
+        borderRadius: "10px",
+        marginLeft: "10px",
+        width: "80%",
+        padding: "10px",
     }
 };

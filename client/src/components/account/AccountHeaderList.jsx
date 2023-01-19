@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box } from "@mui/system";
 import { List, ListItemButton } from "@mui/material";
 
-function AccountHeaderList(props) {
+function AccountHeaderList({formType,onFormChange}) {
+
     const headerList = [
         "General",
-        "Account",
+        "Profile",
         "Subscriptions",
         "Settings",
-        "Delete account",
+        "Delete Account",
       ];
-      const [formType, setFormType] = useState(headerList[0]);
 
     return (
         <>
@@ -20,7 +20,7 @@ function AccountHeaderList(props) {
             <ListItemButton
               key={index}
               selected={index === +headerList.indexOf(formType)}
-              onClick={() => setFormType(item)}
+              onClick = {() => onFormChange(item)}
             >
               {item}
             </ListItemButton>
