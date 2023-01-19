@@ -1,6 +1,6 @@
 import React from 'react';
 
-function ProfileInfo(props) {
+function accountInfo(props) {
     return (
         <>
         <span>Name: Name</span><br />
@@ -13,4 +13,4 @@ function ProfileInfo(props) {
     );
 }
 
-export default ProfileInfo;
+export default accountInfo;

@@ -3,7 +3,7 @@ import AuthProvider from './components/AuthProvider';
 import HomePage from './pages/homePage/HomePage';
 import Navbar from './components/navbar/Navbar';
 import {Routes, Route } from 'react-router-dom';
-import ProfilePage from './pages/profile/ProfilePage';
+import AccountPage from './pages/account/AccountPage';
 import AboutPage from './pages/about/AboutPage';
 import FunctionalitiesPage from './pages/functionalities/FunctionalitiesPage';
 import NewsPage from './pages/news/NewsPage';
@@ -22,7 +22,7 @@ function App() {
           <Route path='/news' element={<NewsPage/>}/>
           <Route path='/demo' element={<DemoPage/>}/>
           <Route path='/projects' element={<UserProjectsPage/>}/>
-          <Route path='/profile' element={<ProfilePage/>}/>
+          <Route path='/account' element={<AccountPage/>}/>
         </Routes>
       </AuthProvider>
     </div>

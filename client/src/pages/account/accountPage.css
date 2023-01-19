@@ -1,21 +1,21 @@
-.my-profile{
+.my-account{
     margin-inline: 20px;
     display: grid;
     grid-template-columns: 1fr 2fr;
     border: black 1px solid;
     min-height: 95vh;
 }
-.profile-sidebar{
+.account-sidebar{
     padding: 10px 5px;
     border: rgb(226, 183, 43) 1px solid;
 }
-.profile-main-container{
+.account-main-container{
     margin-inline: 20px;
     border: blue 1px solid;
     min-height: 95vh;
     flex-direction: column;
 }
-.profile-my-projects{
+.account-my-projects{
     padding: 10px 5px;
     min-height:30vh;
     border: rgb(226, 183, 43) 1px solid;

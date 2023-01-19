@@ -42,8 +42,8 @@ function Navbar(props) {
                     <Tooltip title="Test the app">
                         <Link href='/demo' underline="none" style={style.link}>Demo</Link>
                     </Tooltip>
-                    <Tooltip title="User profile">
-                        <Link href='/profile' underline="none" style={style.link}> My Profile</Link>
+                    <Tooltip title="User account">
+                        <Link href='/account' underline="none" style={style.link}> My account</Link>
                     </Tooltip>
                     <Tooltip title="Test the app">
                         <Link href='/projects' underline="none" style={style.link}> My Projects</Link>
