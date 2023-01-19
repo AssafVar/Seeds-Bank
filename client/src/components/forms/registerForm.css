@@ -1,11 +1,9 @@
 .alert{
-    display: flex;
+    display: block;
     justify-content: center;
 }
 .alert >div{
     background-color: lightcoral;
-    display: inline-flex;
     border-radius: 5px;
     padding: 5px;
-
 }

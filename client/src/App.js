@@ -9,10 +9,11 @@ import FunctionalitiesPage from './pages/functionalities/FunctionalitiesPage';
 import NewsPage from './pages/news/NewsPage';
 import DemoPage from './pages/Demo/DemoPage';
 import UserProjectsPage from './pages/projects/UserProjectsPage';
+import { Container } from '@mui/system';
 
 function App() {
   return (
-    <div className="App">
+      <Container>
       <AuthProvider>
         <Navbar/>
         <Routes>
@@ -25,7 +26,7 @@ function App() {
           <Route path='/account' element={<AccountPage/>}/>
         </Routes>
       </AuthProvider>
-    </div>
+      </Container>
   );
 }
 

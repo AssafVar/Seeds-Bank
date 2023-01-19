@@ -1,19 +1,33 @@
-import React, { useState } from "react";
+import React from "react";
 import "./accountPage.css";
-import { Box } from "@mui/system";
 import AccountHeaderList from "../../components/account/AccountHeaderList";
+import AccountGeneral from "../../components/account/AccountGeneral";
+import { Box, Grid, Typography } from "@mui/material";
+import { Container } from "@mui/system";
+import { classes } from "../../styles/accountStyle.js";
 
 function AccountPage(props) {
   return (
-    <div className="account-container">
-      <h1> User Account</h1>
-      <div className="left-container">
-        <AccountHeaderList/>
-        <Box sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}>
-            
-        </Box>
-      </div>
-    </div>
+    <Container>
+      <Typography variant="h3" style={classes.pageHeadline}>
+        {" "}
+        User Account
+      </Typography>
+      <Grid container spacing={8}>
+        <Grid item xs={4}>
+          <Box>
+            {" "}
+            <AccountHeaderList />
+          </Box>
+        </Grid>
+        <Grid item xs={8}>
+          <Box>
+            {" "}
+            <AccountGeneral />
+          </Box>
+        </Grid>
+      </Grid>
+    </Container>
   );
 }
 

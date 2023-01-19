@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import "./registerForm.css";
 
-function RegisterForm({isSignup}) {
+function RegisterForm({isSignup, handleLogin}) {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,6 +17,7 @@ function RegisterForm({isSignup}) {
         if ( (password === confirmPassword && isSignup===true) || (isSignup===false) ){
             try{
                 const results = await onLogin(email,password,url);
+                results.status === 200 ? handleLogin() : setRegisterError("Could not register");
             }catch(err){
                 console.log(err);
             }

@@ -12,6 +12,7 @@ function AuthProvider({children}) {
         const user = await confirmUser(username, password, register);
         localStorage.activeUser = JSON.stringify(user);
         setActiveUser(user);
+        return user;
     }
     async function handleLogout(e) {
         localStorage.removeItem("activeUser");

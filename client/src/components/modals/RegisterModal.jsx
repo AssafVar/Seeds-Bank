@@ -18,7 +18,7 @@ function RegisterModal({ isOpenModal, handleLogin, isSignup }) {
           <Typography id="modal-modal-title" variant="h6" component="h2">
               {isSignup?<>Create a new account</>:<>Login to your account</>}
           </Typography>
-          <RegisterForm isSignup={isSignup}/>
+          <RegisterForm isSignup={isSignup} handleLogin={handleLogin}/>
         </Box>
       </Modal>
     </div>
