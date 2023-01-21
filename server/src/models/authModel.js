@@ -1,34 +1,42 @@
-import {db} from "../data/db.js";
+import { db } from "../data/db.js";
 import bcrypt from "bcrypt";
 
-const signup = async (userId, email, password) => {
-    console.log(userId);
-    const encryptPass = await bcrypt.hash(password,7);
-    console.log(encryptPass);
-    db.query("INSERT INTO users (userId,email,password) VALUES (?,?,?)",[userId, email, encryptPass],
-    (error, response)=>{
+const signup = async (userId, email, password, userName) => {
+  const encryptPass = await bcrypt.hash(password, 7);
+  const result = await new Promise((resolve, reject) => {
+    db.query(
+      "INSERT INTO users (userName, email, password ,userId ) VALUES (?,?,?,?)",
+      [userName, email, encryptPass, userId],
+      (error, response) => {
         if (error) throw error;
-        else console.log(response); 
-    });
-}
-const login = async (email, password) => {
-    const user = await new Promise((resolve, reject) =>{
+        else resolve (response);
+      }
+    );
+});
+return result;
+};
+const login = async (userName, email, password) => {
+  const user = await new Promise((resolve, reject) => {
+    db.query(
+      `SELECT * FROM users WHERE email = ?`,
+      [email],
+      (error, response) => {
+        if (error) {
+          reject(error);
+          return;
+        } else {
+          resolve(response[0]);
+        }
+      }
+    );
+  });
+  const passwordCompare = await bcrypt.compare(password, user.password);
 
-        db.query(`SELECT * FROM users WHERE email = ? `,[email], 
-        (error,response)=>{
-            if (error) {
-                reject(error);
-                return
-            } else {
-                resolve (response[0]);
-            }
-        });
-        });
-    if (user && (await bcrypt.compare(password, user.password))) {
-        return user;
-    } else {
-        return false;
-}
-}
+  if (user && passwordCompare) {
+    return user;
+  } else {
+    return false;
+  }
+};
 
-export {login, signup}
+export { login, signup };

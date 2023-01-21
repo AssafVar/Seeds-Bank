@@ -2,24 +2,23 @@ import {signup, login} from "../models/authModel.js";
 
 async function signupUser(req,res,next){
   try{
-    const { userId, email, password } = req.body;
-    const user = await signup(userId, email, password);
-    res.status(200).send(user);
+    const { userId, email, password ,userName} = req.body;
+    const user = await signup(userId, email, password, userName);
+    user && res.status(200).send("Successfully signed");
   }catch(err){
     res.status(500).send(err.message)
   }
 }
 async function loginUser(req, res, next){
     try {
-      const { email, password } = req.body;
+      const { userName, email, password } = req.body;
       if (!email || !password) {
         res.status(400).send("email or password missing");
         return;
       }
-      const user = await login(email, password);
+      const user = await login(userName, email, password);
       if (!user) {
-        res.status(401).send("invalid username or password");
-        return;
+        res.status(401).send("Wrong username or password!, please try again.");
       }
       //delete user.password;
 /*       const token = jwt.sign(Object.assign({}, user), process.env.JWT_SECRET);

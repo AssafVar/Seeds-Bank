@@ -8,10 +8,12 @@ function AuthProvider({children}) {
         localStorage.activeUser ? JSON.parse(localStorage.activeUser) : null
     );
 
-    async function handleLogin(username, password, register) {
-        const user = await confirmUser(username, password, register);
-        localStorage.activeUser = JSON.stringify(user.data);
-        setActiveUser(user.data);
+    async function handleLogin(userName, email, password, register) {
+        const user = await confirmUser(userName, email, password, register);
+        if (user.data && register === "login") {
+          localStorage.activeUser = JSON.stringify(user.data);
+          setActiveUser(user.data);
+        }
         return user;
     }
     async function handleLogout(e) {
