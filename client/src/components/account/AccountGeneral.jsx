@@ -3,12 +3,12 @@ import { Box } from "@mui/system";
 import { Alert, Button, TextField, Typography } from "@mui/material";
 import {classes} from '../../styles/accountStyle'
 import authContext from "../../contexts/AuthContext";
-import { updateUserAccount } from "../../services/serverCalls";
 
 function AccountGeneral(props) {
 
+
   const {activeUser:user} = useContext(authContext);
-  const [userName, setUserName] = useState(user?.username);
+  const [userName, setUserName] = useState(user?.userName);
   const [userEmail, setUserEmail] = useState(user?.email);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,7 +23,7 @@ function AccountGeneral(props) {
     }
   }
   const onSubmit = ({target}) => {
-    updateUserAccount()
+
   };
 
   return (

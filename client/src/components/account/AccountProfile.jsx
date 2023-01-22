@@ -1,16 +1,19 @@
 import { Button, TextField, Typography } from "@mui/material";
 import { Box } from "@mui/system";
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { classes } from "../../styles/accountStyle";
 import TextareaAutosize from '@mui/base/TextareaAutosize';
+import authContext from "../../contexts/AuthContext";
 
 function AccountProfile(props) {
 
-  const [firstName, setFirstName] = useState("");
-  const [headline, setHeadline] = useState("");
-  const [location, setLocation] = useState("");
-  const [skills, setSkills] = useState("");
-  const [biography, setBiography] = useState("");
+  const {activeUser:user} = useContext(authContext);
+
+  const [userName, setFirstName] = useState(user?.userName? user?.userName : "");
+  const [headline, setHeadline] = useState(user?.headline ? user?.headline : "");
+  const [location, setLocation] = useState(user?.userName ? user?.location : "");
+  const [skills, setSkills] = useState(user?.userName ? user?.skills : "");
+  const [biography, setBiography] = useState(user?.userName ? user.biography : "");
 
 
   return (
@@ -22,7 +25,7 @@ function AccountProfile(props) {
         <TextField
           id="outlined-firstName"
           label="First Name"
-          value={firstName}
+          value={userName}
           style={classes.formInput}
           onChange={(e) => setFirstName(e.target.value)}
         />
