@@ -11,10 +11,9 @@ function AccountProfile(props) {
 
   const [userName, setFirstName] = useState(user?.userName? user?.userName : "");
   const [headline, setHeadline] = useState(user?.headline ? user?.headline : "");
-  const [location, setLocation] = useState(user?.userName ? user?.location : "");
-  const [skills, setSkills] = useState(user?.userName ? user?.skills : "");
-  const [biography, setBiography] = useState(user?.userName ? user.biography : "");
-
+  const [location, setLocation] = useState(user?.location ? user?.location : "");
+  const [skills, setSkills] = useState(user?.skills ? user?.skills : "");
+  const [biography, setBiography] = useState(user?.biography ? user?.biography : "");
 
   return (
     <>

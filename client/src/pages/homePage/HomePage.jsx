@@ -8,8 +8,7 @@ import authContext from '../../contexts/AuthContext';
 function HomePage(props) {
     const {activeUser} = useContext(authContext);
     return (
-        <div classN
-        ame='home-page'>
+        <div className='home-page'>
             <h1> Welcome {activeUser?.userName ? activeUser.userName : "guest"}</h1>
             <LocationInfo/>
             <div className='home-page-container'>
