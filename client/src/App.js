@@ -1,5 +1,4 @@
 import './App.css';
-import AuthProvider from './components/AuthProvider';
 import HomePage from './pages/homePage/HomePage';
 import Navbar from './components/navbar/Navbar';
 import {Routes, Route } from 'react-router-dom';
@@ -14,7 +13,6 @@ import { Container } from '@mui/system';
 function App() {
   return (
       <Container>
-      <AuthProvider>
         <Navbar/>
         <Routes>
           <Route exact path='/' element={<HomePage/>}/>
@@ -25,7 +23,6 @@ function App() {
           <Route path='/projects' element={<UserProjectsPage/>}/>
           <Route path='/account' element={<AccountPage/>}/>
         </Routes>
-      </AuthProvider>
       </Container>
   );
 }

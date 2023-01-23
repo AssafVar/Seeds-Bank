@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import Alert from '@mui/material/Alert';
 import "./registerForm.css";
+import { useNavigate } from 'react-router';
 
 function RegisterForm({isSignup, handleLogin}) {
 
@@ -17,6 +18,7 @@ function RegisterForm({isSignup, handleLogin}) {
     const [registerType, setRegisterType] = useState('');
 
     const {onLogin} = useAuth();
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,6 +30,7 @@ function RegisterForm({isSignup, handleLogin}) {
                     setTimeout(()=>{
                         setRegisterMessage("");
                         handleLogin();
+                        navigate('/');
                     },1000)
                 }else if(response.status === 200 && registerType === "signup"){
                     setRegisterMessage("Signup successful. please login to your account");

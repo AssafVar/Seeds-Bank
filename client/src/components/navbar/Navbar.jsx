@@ -18,7 +18,6 @@ function Navbar(props) {
   const handleLogin = () => {
     setIsSignup(false);
     setIsOpenModal(!isOpenModal);
-    console.log('Handle Login');
   };
 
   return (
@@ -52,19 +51,23 @@ function Navbar(props) {
               Demo
             </Link>
           </Tooltip>
-          <Divider style={classes.divider} />
-          <Tooltip title="User account">
-            <Link href="/account" underline="none" style={classes.link}>
-              {" "}
-              My account
-            </Link>
-          </Tooltip>
-          <Tooltip title="Test the app">
-            <Link href="/projects" underline="none" style={classes.link}>
-              {" "}
-              My Projects
-            </Link>
-          </Tooltip>
+          {activeUser && (
+            <>
+              <Divider style={classes.divider} />
+              <Tooltip title="User account">
+                <Link href="/account" underline="none" style={classes.link}>
+                  {" "}
+                  My account
+                </Link>
+              </Tooltip>
+              <Tooltip title="Test the app">
+                <Link href="/projects" underline="none" style={classes.link}>
+                  {" "}
+                  My Projects
+                </Link>
+              </Tooltip>
+            </>
+          )}
           <Box>
             <Divider style={classes.divider} />
             {!activeUser ? (
