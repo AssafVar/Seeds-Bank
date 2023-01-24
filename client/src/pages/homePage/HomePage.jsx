@@ -4,15 +4,20 @@ import HomeMain from "../../components/homeMain/HomeMain";
 import Sidebar from "../../components/sidebar/Sidebar";
 import "./homePage.css";
 import authContext from "../../contexts/AuthContext";
-import { Container } from "@mui/system";
-import { Grid } from "@mui/material";
+import { Box, Container } from "@mui/system";
+import { Grid, Typography } from "@mui/material";
 
 function HomePage(props) {
   const { activeUser } = useContext(authContext);
   return (
-    <Container>
-      <h1> Welcome {activeUser?.userName ? activeUser.userName : "guest"}</h1>
-      <LocationInfo />
+    <Container spacing={8}>
+      <Typography variant="h3" margin={5}>
+        {" "}
+        Welcome {activeUser?.userName ? activeUser.userName : "guest"}
+      </Typography>
+      <Box>
+        <LocationInfo />
+      </Box>
       <Container>
         <Grid container spacing={8}>
           <Grid item xs={4}>

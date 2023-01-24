@@ -15,3 +15,11 @@ export const confirmUser = async(userName, email,password,register) =>{
         return err
     }
 }
+export const getTempDataAPI = async (lat,lng) =>{
+    try{
+        const results = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m`);
+        return results;
+    }catch(err){
+        console.log(err);
+    }
+}; 
