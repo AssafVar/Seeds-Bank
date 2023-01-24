@@ -10,7 +10,7 @@ import { Grid, Typography } from "@mui/material";
 function HomePage(props) {
   const { activeUser } = useContext(authContext);
   return (
-    <Container spacing={8}>
+    <Container>
       <Typography variant="h3" margin={5}>
         {" "}
         Welcome {activeUser?.userName ? activeUser.userName : "guest"}
