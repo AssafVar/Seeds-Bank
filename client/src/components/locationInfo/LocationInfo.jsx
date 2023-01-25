@@ -8,7 +8,7 @@ import LineChartTemp from "../lineChart/LineChartTemp";
 import Carousel from "react-material-ui-carousel";
 
 function LocationInfo(props) {
-  const [position, setPosition] = useState("");
+  const [position, setPosition] = useState({});
   const [chartData, setChartData] = useState([]);
   const getLocation = () => {
     navigator.geolocation.getCurrentPosition(
@@ -32,33 +32,17 @@ function LocationInfo(props) {
   };
 
   return (
-    <Container>
       <Container>
-        {chartData && (
-          <Carousel axis="vertical" showThumbs={false} animation="slide">
-            {chartData.map((item, index) => (
-              <Box key={index}>
-                <Typography variant="h5">{index}</Typography>
-                <LineChartTemp
-                  chartData={item}
-                  xAxisTitle={"time"}
-                  yAxisTitle={"temp"}
-                />
-                <Button onClick={() => deleteChart(index)}>Delete</Button>
-              </Box>
-            ))}
-          </Carousel>
-        )}
-      </Container>
-      <Grid container spacing={1} style={classes.main}>
-        <Grid item xs={3} style={classes.box}>
-          <Box className={classes.box}>
+        <Typography variant="h5">Temprature data </Typography>
+        <br />
+        <Grid container spacing={2} style={classes.main}>
+          <Grid item xs={3} style={classes.chart}>
             <Button onClick={getLocation}>Get current location</Button>
             <Button
               onClick={() =>
                 getTempData(
-                  position.latitude.toFixed(2),
-                  position.longitude.toFixed(2)
+                  position?.latitude.toFixed(2),
+                  position?.longitude.toFixed(2)
                 )
               }
             >
@@ -71,15 +55,32 @@ function LocationInfo(props) {
                 <Typography>Longtitude: {position.longitude}</Typography>
               </>
             )}
-          </Box>
+          </Grid>
+          <Grid item xs={1}></Grid>
+          <Grid item xs={8} style={classes.chart}>
+            {chartData.length > 0 && (
+              <Carousel axis="vertical" showThumbs={false} animation="slide">
+                {chartData.map((item, index) => (
+                  <Box key={index}>
+                    <Typography variant="h5">{index}</Typography>
+                    <LineChartTemp
+                      chartData={item}
+                      xAxisTitle={"time"}
+                      yAxisTitle={"temp"}
+                    />
+                    <br />
+                    <Button
+                      style={{ marginLeft: "50px" }}
+                      onClick={() => deleteChart(index)}
+                    >
+                      Delete
+                    </Button>
+                  </Box>
+                ))}
+              </Carousel>
+            )}
+          </Grid>
         </Grid>
-        <Grid item xs={3} style={classes.box}>
-          <Typography>Temp:</Typography>
-        </Grid>
-        <Grid item xs={3} style={classes.box}>
-          <Typography>Weather:</Typography>
-        </Grid>
-      </Grid>
     </Container>
   );
 }

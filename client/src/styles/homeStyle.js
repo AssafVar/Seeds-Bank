@@ -8,5 +8,10 @@ export const classes = {
         marginTop:"20px",
         height:"150px",
 
+    },
+    chart:{
+        height:"350px",
+        border:" black solid 1px",
+        borderRadius:"5px",
     }
 }

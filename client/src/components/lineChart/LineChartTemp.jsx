@@ -11,8 +11,8 @@ import {
 
 function LineChartTemp({ chartData, yAxisTitle, xAxisTitle }) {
   return (
-    <Container style={{ width: "100%", height: "300px" }}>
-      <ResponsiveContainer width={700} height="80%">
+    <Container style={{ width: "100%", height: "180px" }}>
+      <ResponsiveContainer width="95%" height="100%">
         <LineChart data={chartData}>
           <XAxis dataKey={xAxisTitle} />
           <YAxis dataKey={yAxisTitle} />

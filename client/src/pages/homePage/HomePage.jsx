@@ -15,16 +15,20 @@ function HomePage(props) {
         {" "}
         Welcome {activeUser?.userName ? activeUser.userName : "guest"}
       </Typography>
-      <Box>
+      <Container style={{ height: "400px" }}>
         <LocationInfo />
-      </Box>
+      </Container>
       <Container>
         <Grid container spacing={8}>
           <Grid item xs={4}>
-            <Sidebar />
+            <Container>
+              <Sidebar />
+            </Container>
           </Grid>
           <Grid item xs={8}>
-            <HomeMain />
+            <Container>
+              <HomeMain />
+            </Container>
           </Grid>
         </Grid>
       </Container>
