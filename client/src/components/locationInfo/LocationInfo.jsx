@@ -18,20 +18,16 @@ function LocationInfo(props) {
   };
   const getTempData = async (lat, lng) => {
     const result = await getTempDataAPI(lat, lng);
-    const { temperature_2m: temp, time } = result.data.hourly;
-    const data = temp.map((item, index) => {
-      const date = new Date(time[index]);
-      const days = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Frirday",
-        "Saturday",
-      ];
-      return { temp: item, time: `${days[date.getDay()]}` };
+    const time = result.data.hourly.time.map((item, index) => {
+      const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      const date = new Date(item);
+      return `${days[date.getDay()]} ${date.getHours()}:${date.getMinutes()}0`;
     });
+
+    const data = {
+      time: time,
+      data: result.data.hourly.temperature_2m,
+    };
     setChartData((prev) => [...prev, data]);
   };
   const deleteChart = (key) => {
@@ -45,8 +41,8 @@ function LocationInfo(props) {
     <Container>
       <Typography variant="h5">Temprature data </Typography>
       <br />
-      <Grid container spacing={2} style={classes.main}>
-        <Grid item xs={3} style={classes.chart}>
+      <Grid container spacing={2} style={classes.locationInfoMainGrid}>
+        <Grid item xs={3} style={classes.locationInfoChart}>
           <Button onClick={getLocation}>Get current location</Button>
           <Button
             onClick={() =>
@@ -67,17 +63,13 @@ function LocationInfo(props) {
           )}
         </Grid>
         <Grid item xs={1}></Grid>
-        <Grid item xs={8} style={classes.chart}>
+        <Grid item xs={8} style={classes.locationInfoChart}>
           {chartData.length > 0 && (
-            <Carousel axis="vertical" showThumbs={false} animation="slide">
+            <Carousel animation="slide">
               {chartData.map((item, index) => (
                 <Box key={index}>
                   <Typography variant="h5">{index}</Typography>
-                  <LineChartTemp
-                    chartData={item}
-                    xAxisTitle={"time"}
-                    yAxisTitle={"temp"}
-                  />
+                  <LineChartTemp chartData={item} />
                   <br />
                   <Button
                     style={{ marginLeft: "50px" }}
