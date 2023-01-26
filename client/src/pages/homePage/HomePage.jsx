@@ -4,8 +4,9 @@ import HomeMain from "../../components/homeMain/HomeMain";
 import Sidebar from "../../components/sidebar/Sidebar";
 import "./homePage.css";
 import authContext from "../../contexts/AuthContext";
-import { Box, Container } from "@mui/system";
+import { Container } from "@mui/system";
 import { Grid, Typography } from "@mui/material";
+import { classes } from "../../styles/homeStyle";
 
 function HomePage(props) {
   const { activeUser } = useContext(authContext);
@@ -15,7 +16,7 @@ function HomePage(props) {
         {" "}
         Welcome {activeUser?.userName ? activeUser.userName : "guest"}
       </Typography>
-      <Container style={{ height: "400px" }}>
+      <Container style={classes.locationInfoContainer}>
         <LocationInfo />
       </Container>
       <Container>
