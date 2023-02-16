@@ -18,5 +18,6 @@ export const classes = {
         borderRadius:"5px",
         padding: "20px 0 5px",
         textAlign:"center",
-    }
+        cursor: "pointer",
+    },
 }

@@ -31,3 +31,12 @@ export const getTempDataAPI = async (lat, lng) => {
     console.log(err);
   }
 };
+
+export const fetchCurrentProject = async(projectId) => {
+  try{
+    const results = await api.get(`/projects/${projectId}`);
+    return results;
+  }catch(err){
+    console.log(err);
+  };
+};

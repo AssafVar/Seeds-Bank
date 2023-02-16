@@ -1,7 +1,8 @@
 import { Grid, Typography } from "@mui/material";
-import { Box, Container } from "@mui/system";
-import React from "react";
+import { Container } from "@mui/system";
+import React, { useState } from "react";
 import { classes } from "../../styles/projectsStyle.js";
+import ProjectItem from "./ProjectItem.jsx";
 
 function ProjectList(props) {
   const projectListArray = [
@@ -48,8 +49,17 @@ function ProjectList(props) {
       projectId: 6,
     },
   ];
+
+  const [isProject, setIsProject] = useState(false);
+  const [projectId, setIsProjectId] = useState(null);
+  const handleChangeProject = (projectId) => {
+    setIsProjectId(projectId);
+    setIsProject(true);
+  };
+  
   return (
     <Container>
+      {!isProject ? <>
       <Typography variant="h3" style={classes.pageHeadline}>
         {" "}
         Projects list
@@ -62,14 +72,18 @@ function ProjectList(props) {
             xs={12}
             key={project.projectId}
             style={classes.projectListItem}
+            onClick={()=>handleChangeProject(project.projectId)}
           >
             <Typography>project Name: {project.projectName}</Typography>
             <Typography>plant Type: {project.plantType}</Typography>
             <Typography>Start Date: {project.startDate}</Typography>
             <Typography>Last Update: {project.recentlyUpdate}</Typography>
-          </Grid>
+          </Grid >
         ))}
       </Grid>
+      </>:<>
+      <ProjectItem projectId ={projectId}/>
+      </>}
     </Container>
   );
 }

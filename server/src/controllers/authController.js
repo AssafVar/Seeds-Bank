@@ -33,4 +33,5 @@ async function loginUser(req, res, next){
       //next(err);
     }
   }
+
   export {loginUser, signupUser}
