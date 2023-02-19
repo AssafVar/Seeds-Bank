@@ -14,7 +14,7 @@ function ProjectModal({ isOpenModal, handleModal }) {
     >
       <Box sx={style}>
         <Typography id="modal-modal-title" variant="h4" component="h2">
-          New project
+          Create New Project
         </Typography>
         <Typography id="modal-modal" variant="h6" component="h2">
           <NewprojectForm />

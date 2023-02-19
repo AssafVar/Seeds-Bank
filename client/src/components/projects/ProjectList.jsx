@@ -70,7 +70,7 @@ function ProjectList(props) {
           </Typography>
           <Box>
             <Button onClick={() => setIsProjectModal(true)}>
-              Start new project
+              Create New Project
             </Button>
           </Box>
           <Grid container spacing={8} style={classes.mainGrid}>
