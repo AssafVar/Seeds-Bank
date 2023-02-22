@@ -5,14 +5,15 @@ import authContext from "../../contexts/AuthContext.js";
 import { createNewProject } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
 
-function NewprojectForm(props) {
+function NewprojectForm({handleModal}) {
+
   const [projectName, setProjectName] = useState("");
   const [plantType, setPlantType] = useState("");
-
   const {activeUser} = useContext(authContext);
+
   const handleNewProject = async() => {
     const results = await createNewProject(activeUser.userId, projectName, plantType);
-    console.log("results:", results);
+    handleModal();
   };
 
   return (

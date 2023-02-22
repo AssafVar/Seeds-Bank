@@ -11,7 +11,7 @@ function ProjectList(props) {
   
   const {activeUser} = useContext(authContext);
   const [isProject, setIsProject] = useState(false);
-  const [projectId, setIsProjectId] = useState(null);
+  const [projectId, setProjectId] = useState(null);
   const [isProjectModal, setIsProjectModal] = useState(false);
   const [projectsList, setProjectsList] = useState([]);
 
@@ -19,17 +19,25 @@ function ProjectList(props) {
     const response = await getUserProjectsList(activeUser.userId);
     setProjectsList(response.data);
   };
+
   const handleChangeProject = (projectId) => {
-    setIsProjectId(projectId);
+    setProjectId(projectId);
     setIsProject(true);
   };
-  useEffect(()=>{
+
+  const handleModal = () =>{
+    setIsProjectModal(false);
     fetchProjectsList();
-  },[])
+  };
 
   const returnToProjectList = () => {
     setIsProject(false);
   };
+
+  useEffect(()=>{
+    fetchProjectsList();
+  },[])
+
   return (
     <Container>
       {!isProject ? (
@@ -51,7 +59,7 @@ function ProjectList(props) {
                 xs={12}
                 key={project.project_id}
                 style={classes.projectListItem}
-                onClick={() => handleChangeProject(project.projectId)}
+                onClick={() => handleChangeProject(project.project_id)}
               >
                 <Typography>project Name: {project.project_name}</Typography>
                 <Typography>plant Type: {project.plant_type}</Typography>
@@ -69,7 +77,7 @@ function ProjectList(props) {
       {isProjectModal && (
         <ProjectModal
           isOpenModal={isProjectModal}
-          handleModal={() => setIsProjectModal(false)}
+          handleModal={handleModal}
         />
       )}
     </Container>

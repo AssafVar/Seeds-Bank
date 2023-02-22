@@ -63,23 +63,21 @@ const rows = [
 ];
 
 function ProjectItem({ projectId, handleReturn }) {
-  const [project, setProject] = useState(null);
   const {activeUser} = useContext(authContext);
 
   const fetchProject = async() => {
-    const response = await fetchCurrentProject(activeUser.userId, project);
+    const response = await fetchCurrentProject(activeUser.userId, projectId);
     console.log(response);
   };
 
   useEffect(() => {
     fetchProject();
-    console.log("fetching project...");
   }, [projectId]);
 
   return (
     <Container>
       <Typography variant="h3" style={classes.pageHeadline}>
-        {projectId} project
+        project
       </Typography>
       <Button onClick={handleReturn}>Return to the Project List</Button>
       <TableContainer component={Paper}>
