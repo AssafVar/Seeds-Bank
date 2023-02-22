@@ -27,6 +27,9 @@ function ProjectList(props) {
     fetchProjectsList();
   },[])
 
+  const returnToProjectList = () => {
+    setIsProject(false);
+  };
   return (
     <Container>
       {!isProject ? (
@@ -60,7 +63,7 @@ function ProjectList(props) {
         </>
       ) : (
         <>
-          <ProjectItem projectId={projectId} />
+          <ProjectItem projectId={projectId} handleReturn={returnToProjectList}/>
         </>
       )}
       {isProjectModal && (

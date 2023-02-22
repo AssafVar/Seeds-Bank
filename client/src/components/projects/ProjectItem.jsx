@@ -1,4 +1,4 @@
-import { Typography } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 import { Container } from "@mui/system";
 import React, { useContext, useEffect, useState } from "react";
 import { fetchCurrentProject } from "../../services/serverCalls.js";
@@ -62,7 +62,7 @@ const rows = [
   },
 ];
 
-function ProjectItem({ projectId }) {
+function ProjectItem({ projectId, handleReturn }) {
   const [project, setProject] = useState(null);
   const {activeUser} = useContext(authContext);
 
@@ -73,13 +73,15 @@ function ProjectItem({ projectId }) {
 
   useEffect(() => {
     fetchProject();
-  }, []);
+    console.log("fetching project...");
+  }, [projectId]);
 
   return (
     <Container>
       <Typography variant="h3" style={classes.pageHeadline}>
         {projectId} project
       </Typography>
+      <Button onClick={handleReturn}>Return to the Project List</Button>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
