@@ -14,7 +14,10 @@ import Paper from "@mui/material/Paper";
 import authContext from "../../contexts/AuthContext.js";
 import LinearProgress from '@mui/material/LinearProgress';
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
+
+function ProjectItem({ projectId, handleReturn }) {
+  
+  const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: theme.palette.common.black,
     color: theme.palette.common.white,
@@ -62,16 +65,16 @@ const rows = [
     photo: "none",
   },
 ];
-
-function ProjectItem({ projectId, handleReturn }) {
-
   const {activeUser} = useContext(authContext);
-  const [project, setProject] = useState(null);
+  const [projectHeaders, setProjectHeaders] = useState(null);
+  const [projectDetails, setProjectDetails] = useState([]);
 
   const fetchProject = async() => {
     const response = await fetchCurrentProject(activeUser.userId, projectId);
-    console.log(response.data);
-    setProject(response.data)
+    console.log(response);
+    setProjectHeaders(response.data.projectHeaders);
+    setProjectDetails(response.data.projectDetails);
+
   };
 
   useEffect(() => {
@@ -80,14 +83,14 @@ function ProjectItem({ projectId, handleReturn }) {
 
   return (
     <Container>
-     {!project ? <><Box sx={{ width: '100%' }}>
+     {!projectHeaders ? <><Box sx={{ width: '100%' }}>
         <br/>
         <Typography variant="h4" style={{margin:"20px"}}>Loading...</Typography>
         <LinearProgress />
       </Box></>
      :<>
        <Typography variant="h3" style={classes.pageHeadline}>
-        project: {project.project_name}
+        project: {projectHeaders.project_name}
       </Typography>
       <Button onClick={handleReturn}>Return to the Project List</Button>
       <TableContainer component={Paper}>

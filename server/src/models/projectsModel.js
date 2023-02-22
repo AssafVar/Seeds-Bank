@@ -1,9 +1,9 @@
 import { db } from "../data/db.js";
 
-const getProjectById = (userId, projectId) => {
-  const project = new Promise((resolve, reject) => {
+const getProjectHeaderById = (userId, projectId) => {
+  const projectHeader = new Promise((resolve, reject) => {
     db.query(
-      "SELECT * FROM project_items WHERE user_id = ? AND project_id = ? ",
+      "SELECT * FROM projects WHERE user_id = ? AND project_id = ? ",
       [userId, projectId],
       (error, response) => {
         if (error) {
@@ -15,7 +15,24 @@ const getProjectById = (userId, projectId) => {
       }
     );
   });
-  return project;
+  return projectHeader;
+};
+const getProjectDetailsById = (projectId) => {
+  const projectDetails = new Promise((resolve, reject) => {
+    db.query(
+      "SELECT * FROM project_items WHERE project_id = ? ",
+      [projectId],
+      (error, response) => {
+        if (error) {
+          reject(error);
+          return;
+        } else {
+          resolve(response);
+        }
+      }
+    );
+  });
+  return projectDetails;
 };
 
 const handleCreateNewProject = (userId, projectId, projectName, plantType) => {
@@ -55,4 +72,9 @@ const getUserProjectsList = async (userId) => {
   });
   return projectsList;
 };
-export { getProjectById, handleCreateNewProject, getUserProjectsList };
+export {
+  getProjectHeaderById,
+  getProjectDetailsById,
+  handleCreateNewProject,
+  getUserProjectsList,
+};

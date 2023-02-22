@@ -1,14 +1,16 @@
 import {
-  getProjectById,
   handleCreateNewProject,
   getUserProjectsList,
+  getProjectHeaderById,
+  getProjectDetailsById,
 } from "../models/projectsModel.js";
 
-async function getProject(req, res) {
+async function getProject (req, res) {
   try {
     const {userId, projectId} = req.params;
-    const project = await getProjectById(userId, projectId);
-    res.status(200).json(project[0]);
+    const projectHeaders = await getProjectHeaderById(userId, projectId);
+    const projectDetails = await getProjectDetailsById(projectId);
+    res.status(200).json({projectHeaders:projectHeaders[0], projectDetails});
   } catch (err) {
     console.log(err);
   }
