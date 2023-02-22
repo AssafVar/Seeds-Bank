@@ -1,6 +1,6 @@
 import { Typography } from "@mui/material";
 import { Container } from "@mui/system";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { fetchCurrentProject } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
 import { styled } from "@mui/material/styles";
@@ -11,6 +11,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
+import authContext from "../../contexts/AuthContext.js";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -63,10 +64,13 @@ const rows = [
 
 function ProjectItem({ projectId }) {
   const [project, setProject] = useState(null);
-  const fetchProject = async () => {
-    const response = await fetchCurrentProject(123);
+  const {activeUser} = useContext(authContext);
+
+  const fetchProject = async() => {
+    const response = await fetchCurrentProject(activeUser.userId, project);
     console.log(response);
   };
+
   useEffect(() => {
     fetchProject();
   }, []);

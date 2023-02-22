@@ -32,23 +32,32 @@ export const getTempDataAPI = async (lat, lng) => {
   }
 };
 
-export const fetchCurrentProject = async (projectId) => {
+export const fetchCurrentProject = async (userId, projectId) => {
   try {
-    const results = await api.get(`/projects/${projectId}`);
+    const results = await api.get(`/projects/${userId}/${projectId}`);
     return results;
   } catch (err) {
     console.log(err);
   }
 };
 
-export const createNewProject = async (activeUser, projectName, plantType) => {
+export const createNewProject = async (userId, projectName, plantType) => {
   const projectId = nanoid();
   try {
-    const results = await api.post(`/projects/${projectId}`, {
-      userId: activeUser,
+    const results = await api.post(`/projects/${userId}`, {
+      projectId,
       projectName,
       plantType,
     });
+    return results;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const getUserProjectsList = async (userId) => {
+  try {
+    const results = await api.get(`/projects/${userId}`);
     return results;
   } catch (err) {
     console.log(err);

@@ -1,64 +1,31 @@
 import { Button, Grid, Typography } from "@mui/material";
 import { Box, Container } from "@mui/system";
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
+import authContext from "../../contexts/AuthContext.js";
+import { getUserProjectsList } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
 import ProjectModal from "../modals/ProjectModal.jsx";
 import ProjectItem from "./ProjectItem.jsx";
 
 function ProjectList(props) {
-  const projectListArray = [
-    {
-      projectName: "1",
-      plantType: "tomato",
-      startDate: "1/1/2023",
-      recentlyUpdate: "1/1/2023",
-      projectId: 1,
-    },
-    {
-      projectName: "2",
-      plantType: "tomato",
-      startDate: "1/1/2023",
-      recentlyUpdate: "1/1/2023",
-      projectId: 2,
-    },
-    {
-      projectName: "3",
-      plantType: "tomato",
-      startDate: "1/1/2023",
-      recentlyUpdate: "1/1/2023",
-      projectId: 3,
-    },
-    {
-      projectName: "4",
-      plantType: "tomato",
-      startDate: "1/1/2023",
-      recentlyUpdate: "1/1/2023",
-      projectId: 4,
-    },
-    {
-      projectName: "5",
-      plantType: "tomato",
-      startDate: "1/1/2023",
-      recentlyUpdate: "1/1/2023",
-      projectId: 5,
-    },
-    {
-      projectName: "6",
-      plantType: "tomato",
-      startDate: "1/1/2023",
-      recentlyUpdate: "1/1/2023",
-      projectId: 6,
-    },
-  ];
-
+  
+  const {activeUser} = useContext(authContext);
   const [isProject, setIsProject] = useState(false);
   const [projectId, setIsProjectId] = useState(null);
   const [isProjectModal, setIsProjectModal] = useState(false);
+  const [projectsList, setProjectsList] = useState([]);
 
+  const fetchProjectsList = async() => {
+    const response = await getUserProjectsList(activeUser.userId);
+    setProjectsList(response.data);
+  };
   const handleChangeProject = (projectId) => {
     setIsProjectId(projectId);
     setIsProject(true);
   };
+  useEffect(()=>{
+    fetchProjectsList();
+  },[])
 
   return (
     <Container>
@@ -74,19 +41,19 @@ function ProjectList(props) {
             </Button>
           </Box>
           <Grid container spacing={8} style={classes.mainGrid}>
-            {projectListArray.map((project) => (
+            {projectsList.map((project) => (
               <Grid
                 item
                 md={3.5}
                 xs={12}
-                key={project.projectId}
+                key={project.project_id}
                 style={classes.projectListItem}
                 onClick={() => handleChangeProject(project.projectId)}
               >
-                <Typography>project Name: {project.projectName}</Typography>
-                <Typography>plant Type: {project.plantType}</Typography>
-                <Typography>Start Date: {project.startDate}</Typography>
-                <Typography>Last Update: {project.recentlyUpdate}</Typography>
+                <Typography>project Name: {project.project_name}</Typography>
+                <Typography>plant Type: {project.plant_type}</Typography>
+                <Typography>Start Date: {project.start_date}</Typography>
+                <Typography>Last Update: {project.last_update}</Typography>
               </Grid>
             ))}
           </Grid>
