@@ -1,6 +1,7 @@
 import {
   getProjectById,
   handleCreateNewProject,
+  getUserProjectsList,
 } from "../models/projectsModel.js";
 
 async function getProject(req, res, next) {
@@ -13,8 +14,8 @@ async function getProject(req, res, next) {
 }
 async function createNewProject(req, res, next) {
   try {
-    const projectId = req.params.id;
-    const { userId, projectName, plantType } = req.body;
+    const userId = req.params.userId;
+    const { projectName, plantType, projectId } = req.body;
     const newProject = await handleCreateNewProject(
       userId,
       projectId,
@@ -27,4 +28,14 @@ async function createNewProject(req, res, next) {
   }
 }
 
-export { getProject, createNewProject };
+async function getUserProjectList(req, res) {
+  try {
+    const userId = req.params.userId;
+    const results = await getUserProjectsList(userId);
+    res.status(200).json(results);
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+export { getProject, createNewProject, getUserProjectList };
