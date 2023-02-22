@@ -32,11 +32,25 @@ export const getTempDataAPI = async (lat, lng) => {
   }
 };
 
-export const fetchCurrentProject = async(projectId) => {
-  try{
+export const fetchCurrentProject = async (projectId) => {
+  try {
     const results = await api.get(`/projects/${projectId}`);
     return results;
-  }catch(err){
+  } catch (err) {
     console.log(err);
-  };
+  }
+};
+
+export const createNewProject = async (activeUser, projectName, plantType) => {
+  const projectId = nanoid();
+  try {
+    const results = await api.post(`/projects/${projectId}`, {
+      userId: activeUser,
+      projectName,
+      plantType,
+    });
+    return results;
+  } catch (err) {
+    console.log(err);
+  }
 };

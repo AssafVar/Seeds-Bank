@@ -1,15 +1,20 @@
-import { Button, Grid, TextField, Typography } from "@mui/material";
-import { Box, Container } from "@mui/system";
-import React, { useState } from "react";
+import { Button, Grid, TextField } from "@mui/material";
+import { Container } from "@mui/system";
+import React, { useContext, useState } from "react";
+import authContext from "../../contexts/AuthContext.js";
+import { createNewProject } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
 
 function NewprojectForm(props) {
   const [projectName, setProjectName] = useState("");
   const [plantType, setPlantType] = useState("");
 
-  const createNewProject = () => {
-    console.log("Creating new project: " + projectName + " " + plantType);
+  const {activeUser} = useContext(authContext);
+  const handleNewProject = async() => {
+    const results = await createNewProject(activeUser.userId, projectName, plantType);
+    console.log("results:", results);
   };
+
   return (
     <Container>
       <Grid container spacing={8} style={classes.newProjectModalMainGrid}>
@@ -37,7 +42,7 @@ function NewprojectForm(props) {
         <Grid item xs={2} style={classes.newProjectModalButtonGrid}>
           <Button
             style={classes.newProjectModalApplyButton}
-            onClick={createNewProject}
+            onClick={handleNewProject}
           >
             Create
           </Button>
