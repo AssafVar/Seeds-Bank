@@ -16,7 +16,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 
 
 function ProjectItem({ projectId, handleReturn }) {
-  
+
   const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: theme.palette.common.black,
@@ -37,34 +37,6 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-function createData(
-  name: string,
-  calories: number,
-  fat: number,
-  carbs: number,
-  protein: number
-) {
-  return { name, calories, fat, carbs, protein };
-}
-
-const rows = [
-  {
-    name: "Tomato",
-    calories: 159,
-    fat: 6.0,
-    carbs: 24,
-    protein: 4.0,
-    photo: "none",
-  },
-  {
-    name: "Frozen yoghurt",
-    calories: 159,
-    fat: 6.0,
-    carbs: 24,
-    protein: 4.0,
-    photo: "none",
-  },
-];
   const {activeUser} = useContext(authContext);
   const [projectHeaders, setProjectHeaders] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
@@ -106,15 +78,15 @@ const rows = [
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row) => (
-              <StyledTableRow key={row.name}>
+            {projectDetails.map((row, index) => (
+              <StyledTableRow key={row.plant_id}>
                 <StyledTableCell component="th" scope="row">
-                  {row.name}
+                  {index+1}
                 </StyledTableCell>
-                <StyledTableCell align="right">{row.calories}</StyledTableCell>
-                <StyledTableCell align="right">{row.fat}</StyledTableCell>
-                <StyledTableCell align="right">{row.carbs}</StyledTableCell>
-                <StyledTableCell align="right">{row.protein}</StyledTableCell>
+                <StyledTableCell align="right">{row.fruit_color}</StyledTableCell>
+                <StyledTableCell align="right">{row.fruit_weigth}</StyledTableCell>
+                <StyledTableCell align="right">{row.seed_color}</StyledTableCell>
+                <StyledTableCell align="right">{row.seed_weight}</StyledTableCell>
                 <StyledTableCell align="right">{row.photo}</StyledTableCell>
               </StyledTableRow>
             ))}
