@@ -1,5 +1,5 @@
 import { Button, Typography } from "@mui/material";
-import { Container } from "@mui/system";
+import { Box, Container } from "@mui/system";
 import React, { useContext, useEffect, useState } from "react";
 import { fetchCurrentProject } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
@@ -12,6 +12,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import authContext from "../../contexts/AuthContext.js";
+import LinearProgress from '@mui/material/LinearProgress';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -63,21 +64,30 @@ const rows = [
 ];
 
 function ProjectItem({ projectId, handleReturn }) {
+
   const {activeUser} = useContext(authContext);
+  const [project, setProject] = useState(null);
 
   const fetchProject = async() => {
     const response = await fetchCurrentProject(activeUser.userId, projectId);
-    console.log(response);
+    console.log(response.data);
+    setProject(response.data)
   };
 
   useEffect(() => {
     fetchProject();
-  }, [projectId]);
+  },[]);
 
   return (
     <Container>
-      <Typography variant="h3" style={classes.pageHeadline}>
-        project
+     {!project ? <><Box sx={{ width: '100%' }}>
+        <br/>
+        <Typography variant="h4" style={{margin:"20px"}}>Loading...</Typography>
+        <LinearProgress />
+      </Box></>
+     :<>
+       <Typography variant="h3" style={classes.pageHeadline}>
+        project: {project.project_name}
       </Typography>
       <Button onClick={handleReturn}>Return to the Project List</Button>
       <TableContainer component={Paper}>
@@ -108,6 +118,8 @@ function ProjectItem({ projectId, handleReturn }) {
           </TableBody>
         </Table>
       </TableContainer>
+      </>
+    }
     </Container>
   );
 }

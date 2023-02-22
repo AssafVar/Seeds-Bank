@@ -4,10 +4,11 @@ import {
   getUserProjectsList,
 } from "../models/projectsModel.js";
 
-async function getProject(req, res, next) {
+async function getProject(req, res) {
   try {
-    const project = await getProjectById(req.params.id);
-    console.log(project);
+    const {userId, projectId} = req.params;
+    const project = await getProjectById(userId, projectId);
+    res.status(200).json(project[0]);
   } catch (err) {
     console.log(err);
   }

@@ -6,6 +6,6 @@ import {
 } from "../controllers/projectsController.js";
 const router = express.Router();
 
-router.route("/:userId/:project").get(getProject);
+router.route("/:userId/:projectId").get(getProject);
 router.route("/:userId").get(getUserProjectList).post(createNewProject);
 export default router;
