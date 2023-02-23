@@ -1,7 +1,10 @@
 import { Button, Grid, TextField, Typography } from "@mui/material";
 import { Box, Container } from "@mui/system";
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { fetchCurrentProject } from "../../services/serverCalls.js";
+import {
+  fetchCurrentProject,
+  saveProject,
+} from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
 import { styled } from "@mui/material/styles";
 import Table from "@mui/material/Table";
@@ -14,18 +17,40 @@ import Paper from "@mui/material/Paper";
 import authContext from "../../contexts/AuthContext.js";
 import LinearProgress from "@mui/material/LinearProgress";
 import { nanoid } from "nanoid";
+import InfoModal from "../modals/InfoModal.jsx";
 
 function ProjectItem({ projectId, handleReturn }) {
   const { activeUser } = useContext(authContext);
   const [projectHeaders, setProjectHeaders] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
   const [currentTarget, setCurrentTarget] = useState(null);
+  const [isInfoModal, setIsInfoModal] = useState(false);
+  const [message, setMessage] = useState({});
+  const [modalColor, setModalColor] = useState({});
   const inputRef = useRef(null);
 
   const fetchProject = async () => {
     const response = await fetchCurrentProject(activeUser.userId, projectId);
     setProjectHeaders(response.data.projectHeaders);
     setProjectDetails(response.data.projectDetails);
+  };
+
+  const saveDetails = async () => {
+    setMessage({title:"Pending",description:"Saving project details..."});
+    setIsInfoModal(true);
+    const response = await saveProject(projectHeaders, projectDetails);
+    if (response) {
+      setMessage({title:"Success",description: "Database updated successfully"});
+      setModalColor({color:"green"});
+    } else {
+      setMessage({title:"Fail",description: "Error Updating project"});
+      setModalColor({color:"red"})
+    }
+    setTimeout(() => {
+      setMessage(null);
+      setModalColor(null);
+      setIsInfoModal(false);
+    },2000)
   };
 
   const handleNewLine = () => {
@@ -39,11 +64,11 @@ function ProjectItem({ projectId, handleReturn }) {
         null,
         project_id,
         plantId,
-        "",
-        "",
-        "",
-        "",
-        ""
+        "---",
+        "---",
+        "---",
+        "---",
+        "---"
       ),
     ];
     setProjectDetails(newProjectDetails);
@@ -64,7 +89,7 @@ function ProjectItem({ projectId, handleReturn }) {
     project_id: string,
     plant_id: string,
     fruit_color: string,
-    fruit_weigth: string,
+    fruit_weight: string,
     seed_color: string,
     seed_weight: string,
     photo: string
@@ -76,7 +101,7 @@ function ProjectItem({ projectId, handleReturn }) {
       plant_father_id,
       plant_mother_id,
       fruit_color,
-      fruit_weigth,
+      fruit_weight,
       seed_color,
       seed_weight,
       photo,
@@ -115,9 +140,9 @@ function ProjectItem({ projectId, handleReturn }) {
   }, []);
 
   return (
-    <Container>
+    <>
       {!projectHeaders ? (
-        <>
+        <Container>
           <Box sx={{ width: "100%" }}>
             <br />
             <Typography variant="h4" style={{ margin: "20px" }}>
@@ -125,9 +150,9 @@ function ProjectItem({ projectId, handleReturn }) {
             </Typography>
             <LinearProgress />
           </Box>
-        </>
+        </Container>
       ) : (
-        <>
+        <Container>
           <Typography variant="h3" style={classes.pageHeadline}>
             project: {projectHeaders.project_name}
           </Typography>
@@ -151,16 +176,18 @@ function ProjectItem({ projectId, handleReturn }) {
                     </Grid>
                     <Grid item xs={2.25} style={classes.tableCellGrid}>
                       <StyledTableCell align="right">
-                        Fruit size
+                        Fruit Weight
                       </StyledTableCell>
                     </Grid>
                     <Grid item xs={2.25} style={classes.tableCellGrid}>
                       <StyledTableCell align="right">
-                        Seed color
+                        Seed Color
                       </StyledTableCell>
                     </Grid>
                     <Grid item xs={2.25} style={classes.tableCellGrid}>
-                      <StyledTableCell align="right">Seed Size</StyledTableCell>
+                      <StyledTableCell align="right">
+                        Seed Weight
+                      </StyledTableCell>
                     </Grid>
                     <Grid item xs={2.25} style={classes.tableCellGrid}>
                       <StyledTableCell align="right">Photo</StyledTableCell>
@@ -209,13 +236,12 @@ function ProjectItem({ projectId, handleReturn }) {
                           sx={{
                             "& fieldset": { border: "none" },
                           }}
-                          name="fruit_weigth"
-                          id={`fruit_weigth${index}`}
-                          value={row.fruit_weigth}
+                          name="fruit_weight"
+                          id={`fruit_weight${index}`}
+                          value={row.fruit_weight}
                           style={{
                             display: "flex",
                             flex: 1,
-                            alignItems: "center",
                           }}
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
@@ -266,9 +292,20 @@ function ProjectItem({ projectId, handleReturn }) {
             </Table>
           </TableContainer>
           <Button onClick={handleNewLine}>Add new variety </Button>
-        </>
+          <Button onClick={saveDetails}>Save Project </Button>
+        </Container>
       )}
-    </Container>
+      <>
+        {isInfoModal && (
+          <InfoModal
+            isInfoModal={isInfoModal}
+            handleCloseInfoModal={() => setIsInfoModal(false)}
+            message={message}
+            modalColor={modalColor}
+          />
+        )}
+      </>
+    </>
   );
 }
 

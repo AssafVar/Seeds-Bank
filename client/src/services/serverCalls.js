@@ -63,3 +63,13 @@ export const getUserProjectsList = async (userId) => {
     console.log(err);
   }
 };
+
+export const saveProject = async (projectHeaders, projectDetails) => {
+  const { project_id, user_id } = projectHeaders;
+  try {
+    const response = await api.post(`projects/${user_id}/${project_id}`,projectDetails);
+    return response.status === 200 ? true : false;
+  } catch (err) {
+    console.log(err);
+  }
+};

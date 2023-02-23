@@ -3,9 +3,10 @@ import {
   getUserProjectsList,
   getProjectHeaderById,
   getProjectDetailsById,
+  updateProjectDetails,
 } from "../models/projectsModel.js";
 
-async function getProject (req, res) {
+export async function getProject (req, res) {
   try {
     const {userId, projectId} = req.params;
     const projectHeaders = await getProjectHeaderById(userId, projectId);
@@ -15,7 +16,7 @@ async function getProject (req, res) {
     console.log(err);
   }
 }
-async function createNewProject(req, res, next) {
+export async function createNewProject(req, res, next) {
   try {
     const userId = req.params.userId;
     const { projectName, plantType, projectId } = req.body;
@@ -31,7 +32,7 @@ async function createNewProject(req, res, next) {
   }
 }
 
-async function getUserProjectList(req, res) {
+export async function getUserProjectList(req, res) {
   try {
     const userId = req.params.userId;
     const results = await getUserProjectsList(userId);
@@ -41,4 +42,15 @@ async function getUserProjectList(req, res) {
   }
 }
 
-export { getProject, createNewProject, getUserProjectList };
+export async function updateProject(req, res){
+  try{
+    const {user_id, project_id} = req.params;
+    const projectDetails = req.body;
+    const results = await updateProjectDetails(user_id, project_id, projectDetails);
+    if (results === "Database updated successfully"){
+      res.status(200).send();
+    }
+  }catch(err){
+    console.log(err);
+  }
+};
