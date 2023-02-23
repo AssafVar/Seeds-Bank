@@ -34,4 +34,7 @@ export const classes = {
     display: "inline",
     alignSelf: "flex-end",
   },
+  tableCellGrid:{
+    padding:"0 5px",
+  }
 };
