@@ -18,7 +18,7 @@ const style = {
   };
 
 export default function InfoModal({isInfoModal, handleCloseInfoModal, message, modalColor}) {
-        console.log(modalColor);
+  
   return (
     <div>
       <Modal

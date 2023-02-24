@@ -59,6 +59,7 @@ function ProjectItem({ projectId, handleReturn }) {
   const handleNewLine = (row) => {
     const plantId = nanoid();
     const plantMotherId = row==="new-line" ? "---" : row.plant_id;
+    const generation = row==="new-line" ? 0 : row.generation+1;
     const { project_name, project_id } = projectHeaders;
     const newProjectDetails = [
       ...projectDetails,
@@ -72,7 +73,8 @@ function ProjectItem({ projectId, handleReturn }) {
         "---",
         "---",
         "---",
-        "---"
+        "---",
+        generation
       ),
     ];
     setProjectDetails(newProjectDetails);
@@ -96,7 +98,8 @@ function ProjectItem({ projectId, handleReturn }) {
     fruit_weight: string,
     seed_color: string,
     seed_weight: string,
-    photo: string
+    photo: string,
+    generation: number,
   ) {
     return {
       project_name,
@@ -109,6 +112,7 @@ function ProjectItem({ projectId, handleReturn }) {
       seed_color,
       seed_weight,
       photo,
+      generation,
     };
   }
 
@@ -277,6 +281,7 @@ function ProjectItem({ projectId, handleReturn }) {
                         ></TextField>
                       </Grid>
                       <Grid item xs={1.25} style={classes.tableCellGrid}>
+                        {row.generation}
                         <Button onClick={()=>setIsOpenDetailsModal(true)}>
                           More Details
                         </Button>
