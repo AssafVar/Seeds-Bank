@@ -20,13 +20,15 @@ import { nanoid } from "nanoid";
 import InfoModal from "../modals/InfoModal.jsx";
 
 function ProjectItem({ projectId, handleReturn }) {
-  const { activeUser } = useContext(authContext);
   const [projectHeaders, setProjectHeaders] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
   const [currentTarget, setCurrentTarget] = useState(null);
   const [isInfoModal, setIsInfoModal] = useState(false);
   const [message, setMessage] = useState({});
   const [modalColor, setModalColor] = useState({});
+  const [isOpenDetailsModal, setIsOpenDetailsModal] = useState(false);
+
+  const { activeUser } = useContext(authContext);
   const inputRef = useRef(null);
 
   const fetchProject = async () => {
@@ -53,15 +55,17 @@ function ProjectItem({ projectId, handleReturn }) {
     },2000)
   };
 
-  const handleNewLine = () => {
+
+  const handleNewLine = (row) => {
     const plantId = nanoid();
+    const plantMotherId = row==="new-line" ? "---" : row.plant_id;
     const { project_name, project_id } = projectHeaders;
     const newProjectDetails = [
       ...projectDetails,
       createData(
         project_name,
-        null,
-        null,
+        "---",
+        plantMotherId,
         project_id,
         plantId,
         "---",
@@ -84,8 +88,8 @@ function ProjectItem({ projectId, handleReturn }) {
 
   function createData(
     project_name: string,
-    plant_father_id: null,
-    plant_mother_id: null,
+    plant_father_id: string,
+    plant_mother_id: string,
     project_id: string,
     plant_id: string,
     fruit_color: string,
@@ -272,18 +276,15 @@ function ProjectItem({ projectId, handleReturn }) {
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
-                      <Grid item xs={2.25} style={classes.tableCellGrid}>
-                        <TextField
-                          inputRef={inputRef}
-                          sx={{
-                            "& fieldset": { border: "none" },
-                          }}
-                          name="photo"
-                          id={`photo${index}`}
-                          value={row.photo}
-                          style={{ display: "flex", flex: 1 }}
-                          onChange={(e) => changeCellValue(index, e.target)}
-                        ></TextField>
+                      <Grid item xs={1.25} style={classes.tableCellGrid}>
+                        <Button onClick={()=>setIsOpenDetailsModal(true)}>
+                          More Details
+                        </Button>
+                      </Grid>
+                      <Grid xs={1}>
+                        <Button onClick={()=>handleNewLine(row)}>
+                          +child
+                        </Button>
                       </Grid>
                     </Grid>
                   </StyledTableRow>
@@ -291,7 +292,7 @@ function ProjectItem({ projectId, handleReturn }) {
               </TableBody>
             </Table>
           </TableContainer>
-          <Button onClick={handleNewLine}>Add new variety </Button>
+          <Button onClick={()=>handleNewLine("new-line")}>Add new variety </Button>
           <Button onClick={saveDetails}>Save Project </Button>
         </Container>
       )}
