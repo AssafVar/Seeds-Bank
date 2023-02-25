@@ -1,4 +1,13 @@
-import { Button, Grid, TextField, Typography } from "@mui/material";
+import {
+  Button,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { Box, Container } from "@mui/system";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import {
@@ -27,6 +36,8 @@ function ProjectItem({ projectId, handleReturn }) {
   const [message, setMessage] = useState({});
   const [modalColor, setModalColor] = useState({});
   const [isOpenDetailsModal, setIsOpenDetailsModal] = useState(false);
+  const [generations, setGenerations] = useState([]);
+  const [generation, setGeneration] = useState(0);
 
   const { activeUser } = useContext(authContext);
   const inputRef = useRef(null);
@@ -38,28 +49,30 @@ function ProjectItem({ projectId, handleReturn }) {
   };
 
   const saveDetails = async () => {
-    setMessage({title:"Pending",description:"Saving project details..."});
+    setMessage({ title: "Pending", description: "Saving project details..." });
     setIsInfoModal(true);
     const response = await saveProject(projectHeaders, projectDetails);
     if (response) {
-      setMessage({title:"Success",description: "Database updated successfully"});
-      setModalColor({color:"green"});
+      setMessage({
+        title: "Success",
+        description: "Database updated successfully",
+      });
+      setModalColor({ color: "green" });
     } else {
-      setMessage({title:"Fail",description: "Error Updating project"});
-      setModalColor({color:"red"})
+      setMessage({ title: "Fail", description: "Error Updating project" });
+      setModalColor({ color: "red" });
     }
     setTimeout(() => {
       setMessage(null);
       setModalColor(null);
       setIsInfoModal(false);
-    },2000)
+    }, 2000);
   };
-
 
   const handleNewLine = (row) => {
     const plantId = nanoid();
-    const plantMotherId = row==="new-line" ? "---" : row.plant_id;
-    const generation = row==="new-line" ? 0 : row.generation+1;
+    const plantMotherId = row === "new-line" ? "---" : row.plant_id;
+    const generation = row === "new-line" ? 0 : row.generation + 1;
     const { project_name, project_id } = projectHeaders;
     const newProjectDetails = [
       ...projectDetails,
@@ -99,7 +112,7 @@ function ProjectItem({ projectId, handleReturn }) {
     seed_color: string,
     seed_weight: string,
     photo: string,
-    generation: number,
+    generation: number
   ) {
     return {
       project_name,
@@ -144,6 +157,19 @@ function ProjectItem({ projectId, handleReturn }) {
   }, [projectDetails]);
 
   useEffect(() => {
+    const allGenerations = [];
+    const generationSet = new Set();
+    for (const line of projectDetails) {
+      generationSet.add(line.generation);
+    }
+    for (const generation of generationSet) {
+      allGenerations.push(generation);
+    }
+    allGenerations.sort((a, b) => a - b);
+    setGenerations(allGenerations);
+  }, [projectHeaders]);
+
+  useEffect(() => {
     fetchProject();
   }, []);
 
@@ -165,6 +191,25 @@ function ProjectItem({ projectId, handleReturn }) {
             project: {projectHeaders.project_name}
           </Typography>
           <Button onClick={handleReturn}>Return to the Project List</Button>
+          {generations.length > 1 &&<FormControl style={{width:"100px"}}>
+            <InputLabel id="generations">Generation</InputLabel>
+            <Select
+              labelId="generations-label"
+              id="generations-select"
+              label="Generation"
+              value={+generation}
+            >
+              {generations.map((newGeneration) => (
+                  <MenuItem
+                    key={newGeneration}
+                    onClick={() => setGeneration(+newGeneration)}
+                    value={+newGeneration}
+                  >
+                    {+newGeneration}
+                  </MenuItem>
+                ))}
+            </Select>
+          </FormControl>}
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
               <TableHead>
@@ -281,13 +326,12 @@ function ProjectItem({ projectId, handleReturn }) {
                         ></TextField>
                       </Grid>
                       <Grid item xs={1.25} style={classes.tableCellGrid}>
-                        {row.generation}
-                        <Button onClick={()=>setIsOpenDetailsModal(true)}>
+                        <Button onClick={() => setIsOpenDetailsModal(true)}>
                           More Details
                         </Button>
                       </Grid>
-                      <Grid xs={1}>
-                        <Button onClick={()=>handleNewLine(row)}>
+                      <Grid item xs={1}>
+                        <Button onClick={() => handleNewLine(row)}>
                           +child
                         </Button>
                       </Grid>
@@ -297,7 +341,9 @@ function ProjectItem({ projectId, handleReturn }) {
               </TableBody>
             </Table>
           </TableContainer>
-          <Button onClick={()=>handleNewLine("new-line")}>Add new variety </Button>
+          <Button onClick={() => handleNewLine("new-line")}>
+            Add new variety{" "}
+          </Button>
           <Button onClick={saveDetails}>Save Project </Button>
         </Container>
       )}
