@@ -118,7 +118,10 @@ function ProjectItem({ projectId, handleReturn }) {
     const filterGeneration = projectDetails.filter((item) => {
       return item.generation === generation && item;
     });
-    setProjectToPresent(filterGeneration);
+    const sortedFilters = filterGeneration.sort((a, b) =>{
+      return a.line - b.line;
+    });
+    setProjectToPresent(sortedFilters);
   }, [generation, projectDetails]);
 
   useEffect(() => {
@@ -218,7 +221,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           inputRef={inputRef}
                           sx={classes.sxTableCell}
                           name="line"
-                          id={`line${index}`}
+                          id={`line${row.plant_id}`}
                           value={row.line}
                           style={classes.tableCell}
                           style={classes.tableCell}

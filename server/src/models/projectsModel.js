@@ -79,9 +79,10 @@ export const getUserProjectsList = async (userId) => {
 };
 
 export const updateProjectDetails = async(user_id, project_id, projectDetails) => {
-  for (const line of projectDetails) {
+  for (const row of projectDetails) {
     const updateProject = new Promise((resolve, reject) => {
       const {
+        line,
         project_name,
         project_id,
         fruit_color,
@@ -92,7 +93,7 @@ export const updateProjectDetails = async(user_id, project_id, projectDetails) =
         plant_father_id,
         plant_mother_id,
         generation
-      } = line;
+      } = row;
       db.query(
         "SELECT * FROM project_items WHERE plant_id=?",
         plant_id,
@@ -102,8 +103,9 @@ export const updateProjectDetails = async(user_id, project_id, projectDetails) =
             return;
           } else if (response.length === 0) {
             db.query(
-              "INSERT INTO project_items SET project_name=?, project_id=?, fruit_color=?, fruit_weight=?, seed_color=?, seed_weight=?, plant_father_id=?, plant_mother_id=?, plant_id=?, generation=?",
+              "INSERT INTO project_items SET line=?, project_name=?, project_id=?, fruit_color=?, fruit_weight=?, seed_color=?, seed_weight=?, plant_father_id=?, plant_mother_id=?, plant_id=?, generation=?",
               [
+                line,
                 project_name,
                 project_id,
                 fruit_color,
@@ -126,8 +128,9 @@ export const updateProjectDetails = async(user_id, project_id, projectDetails) =
             );
           } else {
             db.query(
-              "UPDATE project_items SET project_name=?, project_id=?, fruit_color=?, fruit_weight=?, seed_color=?, seed_weight=?, plant_father_id=?, plant_mother_id=?,generation=? WHERE plant_id=?",
+              "UPDATE project_items SET line=?, project_name=?, project_id=?, fruit_color=?, fruit_weight=?, seed_color=?, seed_weight=?, plant_father_id=?, plant_mother_id=?,generation=? WHERE plant_id=?",
               [
+                line,
                 project_name,
                 project_id,
                 fruit_color,
