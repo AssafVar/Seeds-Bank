@@ -36,5 +36,9 @@ export const classes = {
   },
   tableCellGrid:{
     padding:"0 5px",
+    borderBottom:"none",
+  },
+  tableMoreInfoGrid:{
+    display: "flex",
   }
 };

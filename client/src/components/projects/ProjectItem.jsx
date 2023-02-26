@@ -190,6 +190,7 @@ function ProjectItem({ projectId, handleReturn }) {
           <Typography variant="h3" style={classes.pageHeadline}>
             project: {projectHeaders.project_name}
           </Typography>
+          <Box style={{display: "flex", justifyContent: "space-between", margin: "5px 40px"}}>
           <Button onClick={handleReturn}>Return to the Project List</Button>
           {generations.length > 1 &&<FormControl style={{width:"100px"}}>
             <InputLabel id="generations">Generation</InputLabel>
@@ -198,18 +199,19 @@ function ProjectItem({ projectId, handleReturn }) {
               id="generations-select"
               label="Generation"
               value={+generation}
-            >
+              >
               {generations.map((newGeneration) => (
-                  <MenuItem
-                    key={newGeneration}
-                    onClick={() => setGeneration(+newGeneration)}
-                    value={+newGeneration}
-                  >
+                <MenuItem
+                key={newGeneration}
+                onClick={() => setGeneration(+newGeneration)}
+                value={+newGeneration}
+                >
                     {+newGeneration}
                   </MenuItem>
                 ))}
             </Select>
           </FormControl>}
+                </Box>
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
               <TableHead>
@@ -218,32 +220,35 @@ function ProjectItem({ projectId, handleReturn }) {
                     container={true}
                     style={{ width: "100%", backgroundColor: "black" }}
                   >
-                    <Grid item xs={0.75} style={classes.tableCellGrid}>
+                    <Grid item xs={1} style={classes.tableCellGrid}>
                       <StyledTableCell>Line </StyledTableCell>
                     </Grid>
-                    <Grid item xs={2.25} style={classes.tableCellGrid}>
+                    <Grid item xs={1.6} style={classes.tableCellGrid}>
                       {" "}
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="right" >
                         Fruit Color
                       </StyledTableCell>
                     </Grid>
-                    <Grid item xs={2.25} style={classes.tableCellGrid}>
+                    <Grid item xs={1.6} style={classes.tableCellGrid}>
                       <StyledTableCell align="right">
                         Fruit Weight
                       </StyledTableCell>
                     </Grid>
-                    <Grid item xs={2.25} style={classes.tableCellGrid}>
+                    <Grid item xs={1.6} style={classes.tableCellGrid}>
                       <StyledTableCell align="right">
                         Seed Color
                       </StyledTableCell>
                     </Grid>
-                    <Grid item xs={2.25} style={classes.tableCellGrid}>
+                    <Grid item xs={1.6} style={classes.tableCellGrid}>
                       <StyledTableCell align="right">
                         Seed Weight
                       </StyledTableCell>
                     </Grid>
-                    <Grid item xs={2.25} style={classes.tableCellGrid}>
-                      <StyledTableCell align="right">Photo</StyledTableCell>
+                    <Grid item xs={1.6} style={classes.tableCellGrid}>
+                      <StyledTableCell align="right">Generation</StyledTableCell>
+                    </Grid>
+                    <Grid item xs={3} style={classes.tableCellGrid}>
+                      <StyledTableCell align="right">More actions</StyledTableCell>
                     </Grid>
                   </Grid>
                 </TableRow>
@@ -259,7 +264,7 @@ function ProjectItem({ projectId, handleReturn }) {
                     key={row.plant_id}
                   >
                     <Grid container={true}>
-                      <Grid item xs={0.75}>
+                      <Grid item xs={1}>
                         <StyledTableCell
                           component="th"
                           scope="row"
@@ -270,7 +275,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           {index + 1}
                         </StyledTableCell>
                       </Grid>
-                      <Grid item xs={2.25} style={classes.tableCellGrid}>
+                      <Grid item xs={1.6} style={classes.tableCellGrid}>
                         <TextField
                           inputRef={inputRef}
                           sx={{
@@ -283,7 +288,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           onInput={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
-                      <Grid item xs={2.25} style={classes.tableCellGrid}>
+                      <Grid item xs={1.6} style={classes.tableCellGrid}>
                         <TextField
                           inputRef={inputRef}
                           sx={{
@@ -299,7 +304,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
-                      <Grid item xs={2.25} style={classes.tableCellGrid}>
+                      <Grid item xs={1.6} style={classes.tableCellGrid}>
                         <TextField
                           inputRef={inputRef}
                           sx={{
@@ -312,7 +317,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
-                      <Grid item xs={2.25} style={classes.tableCellGrid}>
+                      <Grid item xs={1.6} style={classes.tableCellGrid}>
                         <TextField
                           inputRef={inputRef}
                           sx={{
@@ -325,12 +330,23 @@ function ProjectItem({ projectId, handleReturn }) {
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
-                      <Grid item xs={1.25} style={classes.tableCellGrid}>
+                      <Grid item xs={1.6} style={classes.tableCellGrid}>
+                        <TextField
+                          inputRef={inputRef}
+                          sx={{
+                            "& fieldset": { border: "none" },
+                          }}
+                          name="generation"
+                          id={`generation${index}`}
+                          value={row.generation}
+                          style={{ outline: "none" }}
+                          onChange={(e) => changeCellValue(index, e.target)}
+                        ></TextField>
+                      </Grid>
+                      <Grid item xs={3} style={classes.tableMoreInfoGrid}>
                         <Button onClick={() => setIsOpenDetailsModal(true)}>
                           More Details
                         </Button>
-                      </Grid>
-                      <Grid item xs={1}>
                         <Button onClick={() => handleNewLine(row)}>
                           +child
                         </Button>
