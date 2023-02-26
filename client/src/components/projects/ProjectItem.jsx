@@ -33,6 +33,25 @@ import {
 } from "../../libs/projects.js";
 import DialogModal from "../dialog/DialogModal.jsx";
 
+
+const rowItems = [
+  "Line",
+  "Fruit Color",
+  "Fruit Weight",
+  "Seed Color",
+  "Seed Weight",
+  "Generation",
+];
+const rowHeadlines = [
+  "line",
+  "fruit_color",
+  "fruit_weight",
+  "seed_color",
+  "seed_weight",
+  "generation",
+];
+
+
 function ProjectItem({ projectId, handleReturn }) {
   const [projectHeaders, setProjectHeaders] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
@@ -47,7 +66,7 @@ function ProjectItem({ projectId, handleReturn }) {
   const [isOpenDeleteModal, setIsOpenDeleteModal] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deleteTitle, setDeleteTitle] = useState("");
-
+  const [sortBy, setSortBy] = useState("");
 
   const { activeUser } = useContext(authContext);
   const inputRef = useRef(null);
@@ -102,6 +121,15 @@ function ProjectItem({ projectId, handleReturn }) {
     setIsOpenDeleteModal(true);
     
   };
+
+  const sortTable = (columnToSort) => {
+    setSortBy(columnToSort);
+    const sortedFilters = projectToPresent.sort((a, b) =>{
+      return a[columnToSort] - b[columnToSort];
+    });
+    setProjectToPresent(sortedFilters);
+    setSortBy(columnToSort);
+  }
   useEffect(() => {
     if (inputRef.current !== null) {
       inputRef.current = document.getElementById(currentTarget?.id);
@@ -118,24 +146,14 @@ function ProjectItem({ projectId, handleReturn }) {
     const filterGeneration = projectDetails.filter((item) => {
       return item.generation === generation && item;
     });
-    const sortedFilters = filterGeneration.sort((a, b) =>{
-      return a.line - b.line;
-    });
-    setProjectToPresent(sortedFilters);
+    setProjectToPresent(filterGeneration);
   }, [generation, projectDetails]);
 
   useEffect(() => {
     fetchProject();
   }, []);
 
-  const rowItems = [
-    "Line",
-    "Fruit Color",
-    "Fruit Weight",
-    "Seed Color",
-    "Seed Weight",
-    "Generation",
-  ];
+
   return (
     <>
       {!projectHeaders ? (
@@ -182,6 +200,25 @@ function ProjectItem({ projectId, handleReturn }) {
                 </Select>
               </FormControl>
             )}
+              <FormControl style={{ width: "100px" }}>
+                <InputLabel id="generations">Sort By</InputLabel>
+                <Select
+                  labelId="sort-by-label"
+                  id="sort-by-select"
+                  label="Sort-by"
+                  value={sortBy}
+                >
+                  {rowHeadlines.map((sortBy) => (
+                    <MenuItem
+                      key={sortBy}
+                      onClick={() => sortTable(sortBy)}
+                      value={sortBy}
+                    >
+                      {sortBy}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
           </Box>
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
