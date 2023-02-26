@@ -75,7 +75,7 @@ function Navbar(props) {
                       My account
                     </Link>
                   </Tooltip>
-                  <Tooltip title="Test the app">
+                  <Tooltip title="Projects">
                     <Link
                       href="/projects"
                       underline="none"
