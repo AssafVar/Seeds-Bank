@@ -36,9 +36,14 @@ export const classes = {
   },
   tableCellGrid:{
     padding:"0 5px",
+    textAlign:"center",
+  },
+  tableCell:{
     borderBottom:"none",
+    textAlign:"center",
   },
   tableMoreInfoGrid:{
     display: "flex",
+    justifyContent:"space-around"
   }
 };

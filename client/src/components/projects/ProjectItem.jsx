@@ -6,6 +6,7 @@ import {
   MenuItem,
   Select,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { Box, Container } from "@mui/system";
@@ -38,6 +39,7 @@ function ProjectItem({ projectId, handleReturn }) {
   const [isOpenDetailsModal, setIsOpenDetailsModal] = useState(false);
   const [generations, setGenerations] = useState([]);
   const [generation, setGeneration] = useState(0);
+  const [projectToPresent, setProjectToPresent] = useState([]);
 
   const { activeUser } = useContext(authContext);
   const inputRef = useRef(null);
@@ -133,6 +135,7 @@ function ProjectItem({ projectId, handleReturn }) {
     [`&.${tableCellClasses.head}`]: {
       backgroundColor: theme.palette.common.black,
       color: theme.palette.common.white,
+      fontSize: "16px",
     },
     [`&.${tableCellClasses.body}`]: {
       fontSize: 14,
@@ -170,6 +173,18 @@ function ProjectItem({ projectId, handleReturn }) {
   }, [projectHeaders]);
 
   useEffect(() => {
+    const filterGeneration = projectDetails.filter((item) => {
+      console.log(generation)
+      if (item.generation === "all") {
+        return item;
+      } else if (item.generation === generation) {
+        return item;
+      }
+    });
+    setProjectToPresent(filterGeneration);
+  }, [generation]);
+
+  useEffect(() => {
     fetchProject();
   }, []);
 
@@ -190,28 +205,36 @@ function ProjectItem({ projectId, handleReturn }) {
           <Typography variant="h3" style={classes.pageHeadline}>
             project: {projectHeaders.project_name}
           </Typography>
-          <Box style={{display: "flex", justifyContent: "space-between", margin: "5px 40px"}}>
-          <Button onClick={handleReturn}>Return to the Project List</Button>
-          {generations.length > 1 &&<FormControl style={{width:"100px"}}>
-            <InputLabel id="generations">Generation</InputLabel>
-            <Select
-              labelId="generations-label"
-              id="generations-select"
-              label="Generation"
-              value={+generation}
-              >
-              {generations.map((newGeneration) => (
-                <MenuItem
-                key={newGeneration}
-                onClick={() => setGeneration(+newGeneration)}
-                value={+newGeneration}
+          <Box
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              margin: "5px 40px",
+            }}
+          >
+            <Button onClick={handleReturn}>Return to the Project List</Button>
+            {generations.length > 1 && (
+              <FormControl style={{ width: "100px" }}>
+                <InputLabel id="generations">Generation</InputLabel>
+                <Select
+                  labelId="generations-label"
+                  id="generations-select"
+                  label="Generation"
+                  value={+generation}
                 >
-                    {+newGeneration}
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>}
-                </Box>
+                  {generations.map((newGeneration) => (
+                    <MenuItem
+                      key={newGeneration}
+                      onClick={() => setGeneration(+newGeneration)}
+                      value={+newGeneration}
+                    >
+                      {+newGeneration}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          </Box>
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
               <TableHead>
@@ -221,40 +244,46 @@ function ProjectItem({ projectId, handleReturn }) {
                     style={{ width: "100%", backgroundColor: "black" }}
                   >
                     <Grid item xs={1} style={classes.tableCellGrid}>
-                      <StyledTableCell>Line </StyledTableCell>
+                      <StyledTableCell style={classes.tableCell}>
+                        Line{" "}
+                      </StyledTableCell>
                     </Grid>
                     <Grid item xs={1.6} style={classes.tableCellGrid}>
                       {" "}
-                      <StyledTableCell align="right" >
+                      <StyledTableCell align="right" style={classes.tableCell}>
                         Fruit Color
                       </StyledTableCell>
                     </Grid>
                     <Grid item xs={1.6} style={classes.tableCellGrid}>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="right" style={classes.tableCell}>
                         Fruit Weight
                       </StyledTableCell>
                     </Grid>
                     <Grid item xs={1.6} style={classes.tableCellGrid}>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="right" style={classes.tableCell}>
                         Seed Color
                       </StyledTableCell>
                     </Grid>
                     <Grid item xs={1.6} style={classes.tableCellGrid}>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="right" style={classes.tableCell}>
                         Seed Weight
                       </StyledTableCell>
                     </Grid>
                     <Grid item xs={1.6} style={classes.tableCellGrid}>
-                      <StyledTableCell align="right">Generation</StyledTableCell>
+                      <StyledTableCell align="right" style={classes.tableCell}>
+                        Generation
+                      </StyledTableCell>
                     </Grid>
                     <Grid item xs={3} style={classes.tableCellGrid}>
-                      <StyledTableCell align="right">More actions</StyledTableCell>
+                      <StyledTableCell align="right" style={classes.tableCell}>
+                        More actions
+                      </StyledTableCell>
                     </Grid>
                   </Grid>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {projectDetails.map((row, index) => (
+                {projectToPresent.map((row, index) => (
                   <StyledTableRow
                     style={{
                       display: "flex",
@@ -264,13 +293,15 @@ function ProjectItem({ projectId, handleReturn }) {
                     key={row.plant_id}
                   >
                     <Grid container={true}>
-                      <Grid item xs={1}>
+                      <Grid item xs={1} style={classes.tableCellGrid}>
                         <StyledTableCell
                           component="th"
                           scope="row"
                           sx={{
+                            border: "none",
                             "& fieldset": { border: "none" },
                           }}
+                          style={classes.tableCell}
                         >
                           {index + 1}
                         </StyledTableCell>
@@ -284,7 +315,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           name="fruit_color"
                           id={`fruit_color${index}`}
                           value={row.fruit_color}
-                          style={{ display: "flex", flex: 1 }}
+                          style={classes.tableCell}
                           onInput={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
@@ -297,10 +328,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           name="fruit_weight"
                           id={`fruit_weight${index}`}
                           value={row.fruit_weight}
-                          style={{
-                            display: "flex",
-                            flex: 1,
-                          }}
+                          style={classes.tableCell}
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
@@ -313,7 +341,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           name="seed_color"
                           id={`seed_color${index}`}
                           value={row.seed_color}
-                          style={{ display: "flex", flex: 1 }}
+                          style={classes.tableCell}
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
@@ -326,7 +354,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           name="seed_weight"
                           id={`seed_weight${index}`}
                           value={row.seed_weight}
-                          style={{ outline: "none" }}
+                          style={classes.tableCell}
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
@@ -339,17 +367,26 @@ function ProjectItem({ projectId, handleReturn }) {
                           name="generation"
                           id={`generation${index}`}
                           value={row.generation}
-                          style={{ outline: "none" }}
+                          style={classes.tableCell}
                           onChange={(e) => changeCellValue(index, e.target)}
                         ></TextField>
                       </Grid>
                       <Grid item xs={3} style={classes.tableMoreInfoGrid}>
-                        <Button onClick={() => setIsOpenDetailsModal(true)}>
+                        <Button
+                          onClick={() => setIsOpenDetailsModal(true)}
+                          style={{ color: "black" }}
+                        >
                           More Details
                         </Button>
-                        <Button onClick={() => handleNewLine(row)}>
-                          +child
-                        </Button>
+                        <Tooltip title="Add Child">
+                          <Button
+                            onClick={() => handleNewLine(row)}
+                            variant="text"
+                            color="secondary"
+                          >
+                            +
+                          </Button>
+                        </Tooltip>
                       </Grid>
                     </Grid>
                   </StyledTableRow>

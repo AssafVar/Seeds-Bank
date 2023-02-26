@@ -6,3 +6,17 @@ body{
   padding-top: 20px;
   height:100vh;
 }
+.css-1t8l2tu-MuiInputBase-input-MuiOutlinedInput-input {
+  text-align: center;
+}
+.css-1wvnaxz-MuiTableCell-root.MuiTableCell-head{
+  text-align: center;
+}
+.css-1equabv-MuiGrid-root{
+  justify-content: center;
+  display: flex;
+}
+.css-n0lkwh-MuiGrid-root{
+  justify-content: center;
+  display: flex;
+}
