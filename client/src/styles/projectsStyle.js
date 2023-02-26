@@ -34,6 +34,15 @@ export const classes = {
     display: "inline",
     alignSelf: "flex-end",
   },
+  tableRow:{
+    display: "flex",
+    justifyContent: "space-around",
+    width: "inherit",
+  },
+  tableRowGrid:{
+    width: "100%", 
+    backgroundColor: "black"
+  },
   tableCellGrid:{
     padding:"0 5px",
     textAlign:"center",
@@ -45,5 +54,9 @@ export const classes = {
   tableMoreInfoGrid:{
     display: "flex",
     justifyContent:"space-around"
+  },
+  sxTableCell:{
+    border: "none",
+    "& fieldset": { border: "none" },
   }
 };
