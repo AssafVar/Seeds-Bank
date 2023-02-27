@@ -105,9 +105,9 @@ function ProjectItem({ projectId, handleReturn }) {
 
   const changeCellValue = (index, target) => {
     const { name, value } = target;
-    const newProjectDetails = [...projectDetails];
+    const newProjectDetails = [...projectToPresent];
     newProjectDetails[index][name] = value;
-    setProjectDetails(newProjectDetails);
+    setProjectToPresent(newProjectDetails);
     setCurrentTarget(target);
   };
 
@@ -260,7 +260,6 @@ function ProjectItem({ projectId, handleReturn }) {
                           name="line"
                           id={`line${row.plant_id}`}
                           value={row.line}
-                          style={classes.tableCell}
                           style={classes.tableCell}
                           onInput={(e) => changeCellValue(index, e.target)}
                         >
