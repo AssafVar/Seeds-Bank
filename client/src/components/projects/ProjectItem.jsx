@@ -28,10 +28,13 @@ import InfoModal from "../modals/InfoModal.jsx";
 import {
   addNewLine,
   getGenerations,
+  sortTable,
   StyledTableCell,
   StyledTableRow,
 } from "../../libs/projects.js";
 import DialogModal from "../dialog/DialogModal.jsx";
+import DeleteIcon from '@mui/icons-material/Delete';
+import GrassIcon from '@mui/icons-material/Grass';
 
 
 const rowItems = [
@@ -64,9 +67,9 @@ function ProjectItem({ projectId, handleReturn }) {
   const [generation, setGeneration] = useState(0);
   const [projectToPresent, setProjectToPresent] = useState([]);
   const [isOpenDeleteModal, setIsOpenDeleteModal] = useState(false);
-  const [deleteMessage, setDeleteMessage] = useState("");
-  const [deleteTitle, setDeleteTitle] = useState("");
+  const [deleteMessage, setDeleteMessage] = useState({});
   const [sortBy, setSortBy] = useState("");
+  const [plantIdToDelete, setPlantIdToDelete] = useState({});
 
   const { activeUser } = useContext(authContext);
   const inputRef = useRef(null);
@@ -111,31 +114,19 @@ function ProjectItem({ projectId, handleReturn }) {
     setCurrentTarget(target);
   };
 
-  const handleDialogModal = () =>{
-    setIsOpenDeleteModal(false);
-  };
-
   const deleteLine = (row) => {
-    setDeleteMessage("Are you sure you want to delete this plant?");
-    setDeleteTitle("Delete Plant ");
-    setIsOpenDeleteModal(true);
-    
+    setDeleteMessage({title:"Delete Plant ", body:"Are you sure you want to delete this plant?"});
+    setPlantIdToDelete(row)
+    setIsOpenDeleteModal(true); 
   };
 
-  const sortTable = (columnToSort) => {
-    setSortBy(columnToSort);
-    const sortedFilters = projectToPresent.sort((a, b) =>{
-      return a[columnToSort] - b[columnToSort];
-    });
-    setProjectToPresent(sortedFilters);
-    setSortBy(columnToSort);
-  }
+
   useEffect(() => {
     if (inputRef.current !== null) {
       inputRef.current = document.getElementById(currentTarget?.id);
       inputRef.current && inputRef.current.focus();
     }
-  }, [projectDetails]);
+  },[projectDetails]);
 
   useEffect(() => {
     const sortedGenerations = getGenerations(projectDetails);
@@ -149,10 +140,14 @@ function ProjectItem({ projectId, handleReturn }) {
     setProjectToPresent(filterGeneration);
   }, [generation, projectDetails]);
 
+  useEffect(()=> {
+    const sortedProject = sortTable(projectToPresent, sortBy);
+    setProjectToPresent(sortedProject);
+  },[sortBy]);
+
   useEffect(() => {
     fetchProject();
   }, []);
-
 
   return (
     <>
@@ -201,20 +196,20 @@ function ProjectItem({ projectId, handleReturn }) {
               </FormControl>
             )}
               <FormControl style={{ width: "100px" }}>
-                <InputLabel id="generations">Sort By</InputLabel>
+                <InputLabel id="sort-by">Sort By</InputLabel>
                 <Select
                   labelId="sort-by-label"
                   id="sort-by-select"
                   label="Sort-by"
                   value={sortBy}
                 >
-                  {rowHeadlines.map((sortBy) => (
+                  {rowHeadlines.map((item) => (
                     <MenuItem
-                      key={sortBy}
-                      onClick={() => sortTable(sortBy)}
-                      value={sortBy}
+                      key={item}
+                      onClick={() => setSortBy(item)}
+                      value={item}
                     >
-                      {sortBy}
+                      {item}
                     </MenuItem>
                   ))}
                 </Select>
@@ -353,7 +348,7 @@ function ProjectItem({ projectId, handleReturn }) {
                             variant="text"
                             color="secondary"
                           >
-                            +
+                            <GrassIcon color="success"/>
                           </Button>
                           </Tooltip>
                           <Tooltip title="Remove plant">
@@ -362,7 +357,7 @@ function ProjectItem({ projectId, handleReturn }) {
                             variant="text"
                             color="secondary"
                           >
-                            -
+                            <DeleteIcon color="error"/>
                           </Button>
                           </Tooltip>
 
@@ -388,8 +383,8 @@ function ProjectItem({ projectId, handleReturn }) {
             modalColor={modalColor}
           />
         )}
-        {isOpenDeleteModal && <DialogModal isOpen={isOpenDeleteModal}
-         handleDialogModal={handleDialogModal} title={deleteTitle} message={deleteMessage}/>}
+        {isOpenDeleteModal && <DialogModal isOpen={isOpenDeleteModal} fetchProject={()=>fetchProject()} user_id={activeUser.userId}
+         handleDialogModal={()=>setIsOpenDeleteModal(false)} message={deleteMessage} plantIdToDelete={plantIdToDelete}/>}
       </>
     </>
   );

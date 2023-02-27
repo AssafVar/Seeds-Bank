@@ -67,8 +67,23 @@ export const getUserProjectsList = async (userId) => {
 export const saveProject = async (projectHeaders, projectDetails) => {
   const { project_id, user_id } = projectHeaders;
   try {
-    const response = await api.post(`projects/${user_id}/${project_id}`,projectDetails);
+    const response = await api.post(
+      `projects/${user_id}/${project_id}`,
+      projectDetails
+    );
     return response.status === 200 ? true : false;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const deletePlant = async (user_id, plantIdToDelete) => {
+  const { project_id, plant_id } = plantIdToDelete;
+  try {
+    const response = await api.delete(
+      `projects/${user_id}/${project_id}/${plant_id}`
+    );
+    return response;
   } catch (err) {
     console.log(err);
   }

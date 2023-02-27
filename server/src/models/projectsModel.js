@@ -158,3 +158,19 @@ export const updateProjectDetails = async(user_id, project_id, projectDetails) =
   }
   return "Database updated successfully";
 };
+
+export const handleDeletePlant = async (plantId) => {
+  console.log(plantId)
+  const response = new Promise((resolve, reject) => {
+    db.query(`DELETE from project_items WHERE plant_id ='${plantId}'`,
+    (error, response) => {
+      if (error) {
+        reject(error);
+        return;
+      } else {
+        resolve("Database updated successfully");
+      }
+    });
+  });
+  return response;
+};
