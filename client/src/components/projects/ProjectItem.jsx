@@ -33,9 +33,8 @@ import {
   StyledTableRow,
 } from "../../libs/projects.js";
 import DialogModal from "../dialog/DialogModal.jsx";
-import DeleteIcon from '@mui/icons-material/Delete';
-import GrassIcon from '@mui/icons-material/Grass';
-
+import DeleteIcon from "@mui/icons-material/Delete";
+import GrassIcon from "@mui/icons-material/Grass";
 
 const rowItems = [
   "Line",
@@ -53,7 +52,6 @@ const rowHeadlines = [
   "seed_weight",
   "generation",
 ];
-
 
 function ProjectItem({ projectId, handleReturn }) {
   const [projectHeaders, setProjectHeaders] = useState(null);
@@ -115,18 +113,20 @@ function ProjectItem({ projectId, handleReturn }) {
   };
 
   const deleteLine = (row) => {
-    setDeleteMessage({title:"Delete Plant ", body:"Are you sure you want to delete this plant?"});
-    setPlantIdToDelete(row)
-    setIsOpenDeleteModal(true); 
+    setDeleteMessage({
+      title: "Delete Plant ",
+      body: "Are you sure you want to delete this plant?",
+    });
+    setPlantIdToDelete(row);
+    setIsOpenDeleteModal(true);
   };
-
 
   useEffect(() => {
     if (inputRef.current !== null) {
       inputRef.current = document.getElementById(currentTarget?.id);
       inputRef.current && inputRef.current.focus();
     }
-  },[projectDetails]);
+  }, [projectDetails]);
 
   useEffect(() => {
     const sortedGenerations = getGenerations(projectDetails);
@@ -140,10 +140,10 @@ function ProjectItem({ projectId, handleReturn }) {
     setProjectToPresent(filterGeneration);
   }, [generation, projectDetails]);
 
-  useEffect(()=> {
+  useEffect(() => {
     const sortedProject = sortTable(projectToPresent, sortBy);
     setProjectToPresent(sortedProject);
-  },[sortBy]);
+  }, [sortBy]);
 
   useEffect(() => {
     fetchProject();
@@ -166,7 +166,7 @@ function ProjectItem({ projectId, handleReturn }) {
           <Typography variant="h3" style={classes.pageHeadline}>
             project: {projectHeaders.project_name}
           </Typography>
-          <Box
+          <div
             style={{
               display: "flex",
               justifyContent: "space-between",
@@ -174,27 +174,29 @@ function ProjectItem({ projectId, handleReturn }) {
             }}
           >
             <Button onClick={handleReturn}>Return to the Project List</Button>
-            {generations.length > 1 && (
-              <FormControl style={{ width: "100px" }}>
-                <InputLabel id="generations">Generation</InputLabel>
-                <Select
-                  labelId="generations-label"
-                  id="generations-select"
-                  label="Generation"
-                  value={+generation}
-                >
-                  {generations.map((newGeneration) => (
-                    <MenuItem
-                      key={newGeneration}
-                      onClick={() => setGeneration(+newGeneration)}
-                      value={+newGeneration}
-                    >
-                      {+newGeneration}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
+            <div style={{display:"inline-flex"}}>
+              sdfds
+              {generations.length > 1 && (
+                <FormControl style={{ width: "100px" }}>
+                  <InputLabel id="generations">Generation</InputLabel>
+                  <Select
+                    labelId="generations-label"
+                    id="generations-select"
+                    label="Generation"
+                    value={+generation}
+                  >
+                    {generations.map((newGeneration) => (
+                      <MenuItem
+                        key={newGeneration}
+                        onClick={() => setGeneration(+newGeneration)}
+                        value={+newGeneration}
+                      >
+                        {+newGeneration}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
               <FormControl style={{ width: "100px" }}>
                 <InputLabel id="sort-by">Sort By</InputLabel>
                 <Select
@@ -214,7 +216,8 @@ function ProjectItem({ projectId, handleReturn }) {
                   ))}
                 </Select>
               </FormControl>
-          </Box>
+            </div>
+          </div>
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
               <TableHead>
@@ -257,8 +260,7 @@ function ProjectItem({ projectId, handleReturn }) {
                           value={row.line}
                           style={classes.tableCell}
                           onInput={(e) => changeCellValue(index, e.target)}
-                        >
-                        </TextField>
+                        ></TextField>
                       </Grid>
                       <Grid
                         item
@@ -348,19 +350,18 @@ function ProjectItem({ projectId, handleReturn }) {
                             variant="text"
                             color="secondary"
                           >
-                            <GrassIcon color="success"/>
+                            <GrassIcon color="success" />
                           </Button>
-                          </Tooltip>
-                          <Tooltip title="Remove plant">
+                        </Tooltip>
+                        <Tooltip title="Remove plant">
                           <Button
                             onClick={() => deleteLine(row)}
                             variant="text"
                             color="secondary"
                           >
-                            <DeleteIcon color="error"/>
+                            <DeleteIcon color="error" />
                           </Button>
-                          </Tooltip>
-
+                        </Tooltip>
                       </Grid>
                     </Grid>
                   </StyledTableRow>
@@ -383,8 +384,16 @@ function ProjectItem({ projectId, handleReturn }) {
             modalColor={modalColor}
           />
         )}
-        {isOpenDeleteModal && <DialogModal isOpen={isOpenDeleteModal} fetchProject={()=>fetchProject()} user_id={activeUser.userId}
-         handleDialogModal={()=>setIsOpenDeleteModal(false)} message={deleteMessage} plantIdToDelete={plantIdToDelete}/>}
+        {isOpenDeleteModal && (
+          <DialogModal
+            isOpen={isOpenDeleteModal}
+            fetchProject={() => fetchProject()}
+            user_id={activeUser.userId}
+            handleDialogModal={() => setIsOpenDeleteModal(false)}
+            message={deleteMessage}
+            plantIdToDelete={plantIdToDelete}
+          />
+        )}
       </>
     </>
   );
