@@ -1,9 +1,10 @@
 import axios from "axios";
 import { nanoid } from "nanoid";
+import { converToCitiesList } from "../libs/cities";
 
 const api = axios.create({
   baseURL: "http://localhost:8080/",
-  withCredentials: true,
+  withCredentials: false,
 });
 
 export const confirmUser = async (userName, email, password, register) => {
@@ -22,8 +23,7 @@ export const confirmUser = async (userName, email, password, register) => {
 };
 export const getTempDataAPI = async (lat, lng) => {
   try {
-    /*         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,relativehumidity_2m,apparent_temperature,precipitation,direct_radiation`
-     */ const results = await axios.get(
+ const results = await axios.get(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m`
     );
     return results;
@@ -88,3 +88,10 @@ export const deletePlant = async (user_id, plantIdToDelete) => {
     console.log(err);
   }
 };
+
+export const fetchCities = async (city) => {
+  const response = await api.get(`https://api.teleport.org/api/cities/?search=${city}`);
+  const citiesResults = response.data._embedded["city:search-results"];
+  const citiesList = converToCitiesList(citiesResults);
+  return citiesList; 
+}

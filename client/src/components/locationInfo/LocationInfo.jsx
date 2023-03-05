@@ -5,6 +5,7 @@ import "./locationInfo.css";
 import { getTempDataAPI } from "../../services/serverCalls";
 import LineChartTemp from "../lineChart/LineChartTemp";
 import Carousel from "react-material-ui-carousel";
+import SearchCities from "../search/SearchCities";
 
 function LocationInfo(props) {
   const [position, setPosition] = useState({});
@@ -39,6 +40,7 @@ function LocationInfo(props) {
   return (
     <Container>
       <Typography variant="h5">Temprature data </Typography><br />
+      <SearchCities/>
           <div style={{height:"350px"}}>
             {chartData.length > 0 && (
               <Carousel animation="slide">

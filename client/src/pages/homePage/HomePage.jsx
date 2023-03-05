@@ -12,6 +12,7 @@ function HomePage(props) {
   const welcomingTitle = activeUser?.userName
     ? `Welcome ${activeUser.userName}`
     : `Welcome new member`;
+
   return (
     <Container>
       <PageHeadline title={welcomingTitle} />
@@ -21,7 +22,6 @@ function HomePage(props) {
         </Grid>
         <Grid item xs={12} md={8}> <LocationInfo /></Grid>
       </Grid>
-
       <Container>
         <Grid container spacing={8}>
           <Grid item xs={4}>
