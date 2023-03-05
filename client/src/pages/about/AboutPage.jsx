@@ -1,22 +1,15 @@
 import { Button, Card, CardMedia, Grid, Typography } from "@mui/material";
-import { Box, color, Container } from "@mui/system";
+import { Container } from "@mui/system";
 import React, { useState } from "react";
-
-const imageUrl =
-  "https://c.pxhere.com/photos/a6/1e/large_broad_leaf_plant_leaves_lush_colorful_green_nature_foliage_plant_large_leaves_green_clustered-969259.jpg!d";
+import PageHeadline from "../../components/headline/PageHeadline";
 
 function AboutPage(props) {
+
   const [readMore, setReadMore] = useState(false);
 
   return (
     <Container>
-      <Box
-        sx={{ backgroundImage: `url(${imageUrl})`, backgroundSize: "cover" }}
-      >
-        <Typography variant="h3" padding={5} margin={"3rem 0"} color={"white"}>
-          About Us
-        </Typography>
-      </Box>
+      <PageHeadline title="About Us"/>
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
           <Typography variant="body1">

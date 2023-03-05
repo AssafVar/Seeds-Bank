@@ -53,7 +53,7 @@ function LineChartTemp({ chartData }) {
   };
 
   return (
-    <Container style={{ width: "100%", height: "250px" }}>
+    <Container style={{ width: "120vw", height: "220px" }}>
       <Line options={options} data={data} />;
     </Container>
   );

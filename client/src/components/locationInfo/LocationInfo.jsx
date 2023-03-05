@@ -1,8 +1,7 @@
-import { Button, Grid, Typography } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 import { Box, Container } from "@mui/system";
 import React, { useState } from "react";
 import "./locationInfo.css";
-import { classes } from "../../styles/homeStyle";
 import { getTempDataAPI } from "../../services/serverCalls";
 import LineChartTemp from "../lineChart/LineChartTemp";
 import Carousel from "react-material-ui-carousel";
@@ -39,33 +38,10 @@ function LocationInfo(props) {
 
   return (
     <Container>
-      <Typography variant="h5">Temprature data </Typography>
-      <br />
-      <Grid container spacing={2} style={classes.locationInfoMainGrid}>
-        <Grid item xs={3} style={classes.locationInfoChart}>
-          <Button onClick={getLocation}>Get current location</Button>
-          <Button
-            onClick={() =>
-              getTempData(
-                position?.latitude.toFixed(2),
-                position?.longitude.toFixed(2)
-              )
-            }
-          >
-            Get temp data
-          </Button>
-
-          {position && (
-            <>
-              <Typography>Latitude: {position.latitude}</Typography>
-              <Typography>Longtitude: {position.longitude}</Typography>
-            </>
-          )}
-        </Grid>
-        <Grid item xs={1}></Grid>
-        <Grid item xs={8} style={classes.locationInfoChart}>
-          {chartData.length > 0 && (
-            <Carousel animation="slide">
+      <Typography variant="h5">Temprature data </Typography><br />
+          <div style={{height:"350px"}}>
+            {chartData.length > 0 && (
+              <Carousel animation="slide">
               {chartData.map((item, index) => (
                 <Box key={index}>
                   <Typography variant="h5">{index}</Typography>
@@ -74,15 +50,41 @@ function LocationInfo(props) {
                   <Button
                     style={{ marginLeft: "50px" }}
                     onClick={() => deleteChart(index)}
-                  >
+                    >
                     Delete
                   </Button>
                 </Box>
               ))}
             </Carousel>
           )}
-        </Grid>
-      </Grid>
+          </div><br/>
+          <Box style={{display:"flex", justifyContent:"space-around"}}>
+        <div>
+        <Button onClick={getLocation} variant="contained" style={{margin:"5px"}}>
+          Get location
+        </Button><br/>
+        {position.latitude&&<>
+        <Button
+          onClick={() =>
+            getTempData(
+              position?.latitude.toFixed(2),
+              position?.longitude.toFixed(2)
+              )
+            }
+            variant="contained"
+            style={{margin:"5px"}}
+            >
+          Get Temprature
+        </Button>
+              </>}
+          </div>
+          <div>
+            {position.latitude &&<>
+            <Typography variant="body1">Latitude: {position.latitude} </Typography>
+            <Typography variant="body1">Longtitude: {position.longitude}</Typography>
+            </>}
+          </div>
+      </Box>
     </Container>
   );
 }

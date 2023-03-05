@@ -1,10 +1,4 @@
 export const classes = {
-  locationInfoContainer: {
-    height: "450px",
-  },
-  locationInfoMainGrid: {
-    height: "200px",
-  },
   box: {
     border: " black solid 1px",
     borderRadius: "5px",
