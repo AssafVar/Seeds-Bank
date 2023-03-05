@@ -21,10 +21,10 @@ export const confirmUser = async (userName, email, password, register) => {
     return err;
   }
 };
-export const getTempDataAPI = async (lat, lng) => {
+export const getTempDataAPI = async (lat, log) => {
   try {
  const results = await axios.get(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${log}&hourly=temperature_2m`
     );
     return results;
   } catch (err) {
@@ -95,3 +95,10 @@ export const fetchCities = async (city) => {
   const citiesList = converToCitiesList(citiesResults);
   return citiesList; 
 }
+
+export const getCoords = async(location) => {
+  const country = location.country.indexOf('(')===-1?location.country:location.country.slice(0,location.country.indexOf('('));
+  const locationinfo = await api.get(`https://nominatim.openstreetmap.org/search?q=${location.city}+${country}&format=json&limit=1`);
+  const {lat, lon} = locationinfo.data[0];
+  return {lat,lon};
+};

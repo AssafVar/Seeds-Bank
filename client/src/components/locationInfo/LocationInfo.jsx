@@ -2,34 +2,35 @@ import { Button, Typography } from "@mui/material";
 import { Box, Container } from "@mui/system";
 import React, { useState } from "react";
 import "./locationInfo.css";
-import { getTempDataAPI } from "../../services/serverCalls";
+import { getCoords, getTempDataAPI } from "../../services/serverCalls";
 import LineChartTemp from "../lineChart/LineChartTemp";
 import Carousel from "react-material-ui-carousel";
 import SearchCities from "../search/SearchCities";
 
 function LocationInfo(props) {
-  const [position, setPosition] = useState({});
   const [chartData, setChartData] = useState([]);
-  const getLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => setPosition(position.coords),
-      (error) => console.log(error)
-    );
-  };
-  const getTempData = async (lat, lng) => {
-    const result = await getTempDataAPI(lat, lng);
+  const [location, setLocation] = useState({});
+
+  const getTempData = async (lat, log) => {
+    const result = await getTempDataAPI(lat, log);
     const time = result.data.hourly.time.map((item, index) => {
       const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       const date = new Date(item);
       return `${days[date.getDay()]} ${date.getHours()}:${date.getMinutes()}0`;
     });
-
     const data = {
       time: time,
       data: result.data.hourly.temperature_2m,
+      location:location,
     };
     setChartData((prev) => [...prev, data]);
   };
+
+  const getLocationCoords = async() =>{
+    const {lat, lon} = await getCoords(location);
+    getTempData(lat, lon);
+  };
+
   const deleteChart = (key) => {
     const newChartData = chartData.filter((item, index) => {
       return index !== key;
@@ -39,54 +40,42 @@ function LocationInfo(props) {
 
   return (
     <Container>
-      <Typography variant="h5">Temprature data </Typography><br />
-      <SearchCities/>
-          <div style={{height:"350px"}}>
-            {chartData.length > 0 && (
-              <Carousel animation="slide">
-              {chartData.map((item, index) => (
-                <Box key={index}>
-                  <Typography variant="h5">{index}</Typography>
-                  <LineChartTemp chartData={item} />
-                  <br />
-                  <Button
-                    style={{ marginLeft: "50px" }}
-                    onClick={() => deleteChart(index)}
-                    >
-                    Delete
-                  </Button>
-                </Box>
-              ))}
-            </Carousel>
-          )}
-          </div><br/>
-          <Box style={{display:"flex", justifyContent:"space-around"}}>
-        <div>
-        <Button onClick={getLocation} variant="contained" style={{margin:"5px"}}>
-          Get location
-        </Button><br/>
-        {position.latitude&&<>
+      <Typography variant="h5">Temprature data </Typography>
+      <br />
+      <div style={{alignItems:"center"}}>
+        <SearchCities handleLocation={(city) => setLocation(city)} />
         <Button
           onClick={() =>
-            getTempData(
-              position?.latitude.toFixed(2),
-              position?.longitude.toFixed(2)
-              )
-            }
-            variant="contained"
-            style={{margin:"5px"}}
-            >
-          Get Temprature
+            getLocationCoords()
+          }
+          variant="contained"
+          style={{ marginLeft: "5px", height: "55px", borderRadius: "20px"}}
+          disabled={!!!location?.city}
+        >
+          Get Location Info
         </Button>
-              </>}
-          </div>
-          <div>
-            {position.latitude &&<>
-            <Typography variant="body1">Latitude: {position.latitude} </Typography>
-            <Typography variant="body1">Longtitude: {position.longitude}</Typography>
-            </>}
-          </div>
-      </Box>
+      </div>
+      <div style={{ height: "350px" }}>
+        {chartData.length > 0 && (
+          <Carousel animation="slide">
+            {chartData.map((item, index) => (
+              <Box key={index}>
+                <br/>
+                <Typography variant="h5" margin="20px" >{item.location.city}</Typography>
+                <LineChartTemp chartData={item}/>
+                <br />
+                <Button
+                  style={{ marginLeft: "50px" }}
+                  onClick={() => deleteChart(index)}
+                >
+                  Delete
+                </Button>
+              </Box>
+            ))}
+          </Carousel>
+        )}
+      </div>
+      <br />
     </Container>
   );
 }

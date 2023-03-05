@@ -22,14 +22,17 @@ ChartJS.register(
 );
 
 function LineChartTemp({ chartData }) {
+
+  const chartTitle = `${chartData.location.city}, ${chartData.location.country} Weather prediction`
   const labels = chartData.time;
+
   const options = {
     responsive: true,
     plugins: {
       scales: {},
       title: {
         display: true,
-        text: "Weather prediction",
+        text: chartTitle,
       },
       legend: {
         position: "right",
