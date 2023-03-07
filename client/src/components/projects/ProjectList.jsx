@@ -4,7 +4,9 @@ import React, { useContext, useEffect, useState } from "react";
 import authContext from "../../contexts/AuthContext.js";
 import { getUserProjectsList } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
+import PageHeadline from "../headline/PageHeadline.jsx";
 import ProjectModal from "../modals/ProjectModal.jsx";
+import ProjectCard from "./ProjectCard.jsx";
 import ProjectItem from "./ProjectItem.jsx";
 
 function ProjectList(props) {
@@ -42,10 +44,7 @@ function ProjectList(props) {
     <Container>
       {!isProject ? (
         <>
-          <Typography variant="h3" style={classes.pageHeadline}>
-            {" "}
-            Projects list
-          </Typography>
+          <PageHeadline title={"Projects List"}/>
           <Box>
             <Button onClick={() => setIsProjectModal(true)}>
               Create New Project
@@ -59,12 +58,8 @@ function ProjectList(props) {
                 xs={12}
                 key={project.project_id}
                 style={classes.projectListItem}
-                onClick={() => handleChangeProject(project.project_id)}
               >
-                <Typography>project Name: {project.project_name}</Typography>
-                <Typography>plant Type: {project.plant_type}</Typography>
-                <Typography>Start Date: {project.start_date}</Typography>
-                <Typography>Last Update: {project.last_update}</Typography>
+                <ProjectCard project={project}  handleChangeProject={handleChangeProject}/>
               </Grid>
             ))}
           </Grid>
