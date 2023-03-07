@@ -5,6 +5,7 @@ import {
   Grid,
   Link,
   Tooltip,
+  Typography,
 } from "@mui/material";
 import React, { useState } from "react";
 import LoginModal from "../modals/RegisterModal";
@@ -12,7 +13,7 @@ import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import useAuth from "../../hooks/useAuth";
-import SeedsBankLogo from "./SeedsBankLogo.jpg";
+import SeedsBankLogo from "./SeedsBank.png";
 import { classes } from "../../styles/navbarStyles";
 import "./navbar.css";
 import { Container } from "@mui/system";
@@ -34,8 +35,9 @@ function Navbar(props) {
           <Grid item xs={3}>
             <Box className="nav-left">
               <Tooltip title="Home">
-                <Link href="/">
+                <Link href="/" style={{display:"flex", alignItems:"center", textDecoration:"none"}}>
                   <img src={SeedsBankLogo} alt="Logo" style={classes.image} />
+                  <Typography variant="h6" style={{color:"black",}}>Home</Typography>
                 </Link>
               </Tooltip>
             </Box>
@@ -59,11 +61,6 @@ function Navbar(props) {
               <Tooltip title="Breeding news">
                 <Link href="/news" underline="none" style={classes.link}>
                   News
-                </Link>
-              </Tooltip>
-              <Tooltip title="Test the app">
-                <Link href="/demo" underline="none" style={classes.link}>
-                  Demo
                 </Link>
               </Tooltip>
               {activeUser && (

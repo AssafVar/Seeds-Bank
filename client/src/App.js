@@ -6,7 +6,6 @@ import AccountPage from './pages/account/AccountPage';
 import AboutPage from './pages/about/AboutPage';
 import FunctionalitiesPage from './pages/functionalities/FunctionalitiesPage';
 import NewsPage from './pages/news/NewsPage';
-import DemoPage from './pages/Demo/DemoPage';
 import UserProjectsPage from './pages/projects/UserProjectsPage';
 import { Container } from '@mui/system';
 import ProtectedRoute from './contexts/ProtectedRoute';
@@ -20,7 +19,6 @@ function App() {
           <Route path='/about' element={<AboutPage/>}/>
           <Route path='/functionality' element={<FunctionalitiesPage/>}/>
           <Route path='/news' element={<NewsPage/>}/>
-          <Route path='/demo' element={<DemoPage/>}/>
           <Route path='/projects' element={<ProtectedRoute><UserProjectsPage/></ProtectedRoute>}/>
           <Route path='/account' element={<ProtectedRoute><AccountPage/></ProtectedRoute>}/>
         </Routes>
