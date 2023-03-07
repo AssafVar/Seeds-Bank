@@ -20,7 +20,9 @@ function LocationInfo(props) {
     });
     const data = {
       time: time,
-      data: result.data.hourly.temperature_2m,
+      temprature: result.data.hourly.temperature_2m,
+      precipitation:result.data.hourly.precipitation,
+      vpd:result.data.hourly.vapor_pressure_deficit,
       location:location,
     };
     setChartData((prev) => [...prev, data]);
@@ -55,7 +57,7 @@ function LocationInfo(props) {
           Get Location Info
         </Button>
       </div>
-      <div style={{ height: "350px" }}>
+      <div style={{ height: "1000px" }}>
         {chartData.length > 0 && (
           <Carousel animation="slide">
             {chartData.map((item, index) => (
@@ -65,10 +67,12 @@ function LocationInfo(props) {
                 <LineChartTemp chartData={item}/>
                 <br />
                 <Button
-                  style={{ marginLeft: "50px" }}
+                  style={{ marginLeft: "50px", borderRadius: "20px" }}
                   onClick={() => deleteChart(index)}
+                  variant="contained"
+                  color="warning"
                 >
-                  Delete
+                  Delete Chart
                 </Button>
               </Box>
             ))}

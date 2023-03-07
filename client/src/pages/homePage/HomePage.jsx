@@ -17,10 +17,10 @@ function HomePage(props) {
     <Container>
       <PageHeadline title={welcomingTitle} />
       <Grid container spacing={2}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <HomePageAbout />
         </Grid>
-        <Grid item xs={12} md={8}> <LocationInfo /></Grid>
+        <Grid item xs={12} md={9}> <LocationInfo /></Grid>
       </Grid>
       <Container>
         <Grid container spacing={8}>

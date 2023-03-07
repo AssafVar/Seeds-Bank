@@ -27,15 +27,40 @@ function LineChartTemp({ chartData }) {
   const labels = chartData.time;
 
   const options = {
+   scales: {
+        temprature: {
+          position: "left",
+          display: true,
+          title: {
+            display: true,
+            text: 'Temperature [°C]',
+          },
+        },
+        precipitation: {
+          position: "left",
+          display: true,
+          title: {
+            display: true,
+            text: 'Precipitation [mm]',
+          },
+        },
+        vpd: {
+          position: "left",
+          display: true,
+          title: {
+            display: true,
+            text: 'VPD [kPa]',
+          },
+        },
+    },
     responsive: true,
     plugins: {
-      scales: {},
       title: {
         display: true,
         text: chartTitle,
       },
       legend: {
-        position: "right",
+        position: 'bottom',
         labels: {
           boxWidth: 1,
           boxHeight: 1,
@@ -43,21 +68,38 @@ function LineChartTemp({ chartData }) {
       },
     },
   };
+  
+
   const data = {
     labels,
     datasets: [
       {
-        label: "°C",
-        data: chartData.data,
-        borderColor: "rgb(255, 99, 132)",
-        backgroundColor: "rgba(255, 99, 132, 0.5)",
+        label: "Temprature",
+        data: chartData.temprature,
+        borderColor: "rgb(124, 181, 24)",
+        backgroundColor: "rgba(124, 181, 24, 0.1)",
+        yAxisID:"temprature"
+      },
+      {
+        label: "Precipitation",
+        data: chartData.precipitation,
+        borderColor: "rgb(251, 97, 7)",
+        backgroundColor: "rgba(251, 97, 7, 0.1)",
+        yAxisID:"precipitation",
+      },
+      {
+        label: "VPD",
+        data: chartData.vpd,
+        borderColor: "rgb(243, 222, 44)",
+        backgroundColor: "rgba(243, 222, 44, 0.1)",
+        yAxisID:"vpd"
       },
     ],
   };
 
   return (
-    <Container style={{ width: "120vw", height: "220px" }}>
-      <Line options={options} data={data} />;
+    <Container style={{ width: "120vw", height: "350px" }}>
+      <Line options={options} data={data} />
     </Container>
   );
 }
