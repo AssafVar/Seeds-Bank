@@ -97,18 +97,23 @@ export const fetchCities = async (city) => {
 }
 
 export const getCoords = async(location) => {
-  const country = location.country.indexOf('(')===-1?location.country:location.country.slice(0,location.country.indexOf('('));
-  const locationinfo = await api.get(`https://nominatim.openstreetmap.org/search?q=${location.city}+${location.state}+${country}&format=json&`);
+  let country = location.country.indexOf('(') === -1 ?
+   location.country :
+   location.country.slice(0,location.country.indexOf('('));
+  if (country === "UnitedStates"){
+    country = "usa";
+  };
+  const locationinfo = await api.get(`https://nominatim.openstreetmap.org/search?q=${location.city}+${location.state}+${country}&format=json`);
   if (locationinfo.data.length != 0){
     const {lat, lon} = locationinfo.data[0];
     return {lat,lon};
   }else{
-    const locationinfo2 = await api.get(`https://nominatim.openstreetmap.org/search?q=${location.city}+${country}&format=json&`);
+    const locationinfo2 = await api.get(`https://nominatim.openstreetmap.org/search?q=${location.state}+${country}&format=json`);
     if (locationinfo2.data.length != 0){
       const {lat, lon} = locationinfo2.data[0];
       return {lat,lon};
     }else{
-      const final = await api.get(`https://nominatim.openstreetmap.org/search?q=${country}&format=json&`);
+      const final = await api.get(`https://nominatim.openstreetmap.org/search?q=${country}&format=json`);
       const {lat, lon} = final.data[0];
       return {lat,lon};
     }
