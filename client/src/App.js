@@ -11,6 +11,7 @@ import { Container } from '@mui/system';
 import ProtectedRoute from './contexts/ProtectedRoute';
 import AdminRoute from './contexts/AdminRoute';
 import AdminPage from './pages/admin/AdminPage';
+import ClimatePage from './pages/climate/ClimatePage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route exact path='/' element={<HomePage/>}/>
           <Route path='/about' element={<AboutPage/>}/>
           <Route path='/functionality' element={<FunctionalitiesPage/>}/>
+          <Route path='/climate' element={<ClimatePage/>}/>
           <Route path='/news' element={<NewsPage/>}/>
           <Route path='/projects' element={<ProtectedRoute><UserProjectsPage/></ProtectedRoute>}/>
           <Route path='/account' element={<ProtectedRoute><AccountPage/></ProtectedRoute>}/>

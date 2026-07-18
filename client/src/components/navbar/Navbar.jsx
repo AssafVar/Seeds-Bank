@@ -29,6 +29,7 @@ import { Container } from "@mui/system";
 const PUBLIC_LINKS = [
   { to: "/about", label: "About", tooltip: "About the App" },
   { to: "/functionality", label: "Functionality", tooltip: "App's Functionality" },
+  { to: "/climate", label: "Climate", tooltip: "Explore climate data by location" },
   { to: "/news", label: "News", tooltip: "Breeding news" },
 ];
 

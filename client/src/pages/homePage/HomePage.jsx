@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from "react";
-import LocationInfo from "../../components/locationInfo/LocationInfo";
 import authContext from "../../contexts/AuthContext";
 import { Container } from "@mui/system";
 import { Card, CardContent, Grid, Typography } from "@mui/material";
@@ -8,6 +7,8 @@ import HomePageAbout from "./HomePageAbout";
 import ContactSection from "./ContactSection";
 import GallerySection from "./GallerySection";
 import VideoSection from "./VideoSection";
+import FeatureHighlights from "./FeatureHighlights";
+import GettingStarted from "./GettingStarted";
 import { getSiteContent } from "../../services/serverCalls";
 
 function HomePage(props) {
@@ -25,11 +26,12 @@ function HomePage(props) {
   return (
     <Container>
       <PageHeadline title={welcomingTitle} />
-      <Grid container spacing={2} sx={{ mt: 1 }}>
-        <Grid item xs={12} md={3}>
+      <GettingStarted />
+      <FeatureHighlights />
+      <Grid container spacing={2} sx={{ mt: 3 }}>
+        <Grid item xs={12} md={6}>
           <HomePageAbout />
         </Grid>
-        <Grid item xs={12} md={9}> <LocationInfo /></Grid>
       </Grid>
       {siteContent?.description && (
         <Card variant="outlined" sx={{ mt: 2 }}>

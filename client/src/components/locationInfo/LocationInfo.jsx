@@ -42,7 +42,7 @@ function LocationInfo(props) {
 
   return (
     <Container>
-      <Typography variant="h5">Temprature data </Typography>
+      <Typography variant="h5">Search a location to explore its climate</Typography>
       <br />
       <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "5px" }}>
         <SearchCities handleLocation={(city) => setLocation(city)} />
