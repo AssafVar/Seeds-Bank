@@ -73,6 +73,61 @@ export const addNewLine = (row, projectHeaders, projectDetails) => {
   return newProjectDetails;
 };
 
+const TRAIT_FIELDS = ["fruit_color", "fruit_weight", "seed_color", "seed_weight"];
+const PLACEHOLDER = "---";
+export const MIN_STABLE_GENERATIONS = 2;
+
+const traitsMatch = (a, b) =>
+  TRAIT_FIELDS.every((field) => a[field] === b[field]);
+
+const hasObservedTraits = (item) =>
+  TRAIT_FIELDS.every((field) => item[field] && item[field] !== PLACEHOLDER);
+
+// Advisory-only: a line is "stable" once its most recent generations were
+// observed with identical traits back-to-back. It never blocks crossing.
+export const getLinePurityMap = (projectDetails) => {
+  const byLine = new Map();
+  for (const item of projectDetails) {
+    if (!hasObservedTraits(item)) continue;
+    if (!byLine.has(item.line)) byLine.set(item.line, []);
+    byLine.get(item.line).push(item);
+  }
+
+  const purityMap = {};
+  for (const [line, items] of byLine) {
+    const recent = [...items]
+      .sort((a, b) => a.generation - b.generation)
+      .slice(-MIN_STABLE_GENERATIONS);
+    const isStable =
+      recent.length === MIN_STABLE_GENERATIONS &&
+      recent.every((item) => traitsMatch(item, recent[0]));
+    purityMap[line] = {
+      isStable,
+      stableGenerations: isStable ? recent.length : 0,
+    };
+  }
+  return purityMap;
+};
+
+export const crossPlants = (parentA, parentB, projectHeaders, projectDetails) => {
+  const { project_name, project_id } = projectHeaders;
+  const newRow = createData(
+    `${parentA.line} x ${parentB.line}`,
+    project_name,
+    parentA.plant_id,
+    parentB.plant_id,
+    project_id,
+    nanoid(),
+    "---",
+    "---",
+    "---",
+    "---",
+    "---",
+    Math.max(parentA.generation, parentB.generation) + 1
+  );
+  return [...projectDetails, newRow];
+};
+
 export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: theme.palette.common.black,

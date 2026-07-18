@@ -8,9 +8,12 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { Box, Container } from "@mui/system";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import Stack from "@mui/material/Stack";
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchCurrentProject,
   saveProject,
@@ -27,14 +30,19 @@ import LinearProgress from "@mui/material/LinearProgress";
 import InfoModal from "../modals/InfoModal.jsx";
 import {
   addNewLine,
+  crossPlants,
   getGenerations,
+  getLinePurityMap,
   sortTable,
   StyledTableCell,
   StyledTableRow,
 } from "../../libs/projects.js";
 import DialogModal from "../dialog/DialogModal.jsx";
+import CrossPlantsModal from "../modals/CrossPlantsModal.jsx";
+import PlantCard from "./PlantCard.jsx";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GrassIcon from "@mui/icons-material/Grass";
+import VerifiedIcon from "@mui/icons-material/Verified";
 
 const rowItems = [
   "Line",
@@ -60,7 +68,6 @@ function ProjectItem({ projectId, handleReturn }) {
   const [isInfoModal, setIsInfoModal] = useState(false);
   const [message, setMessage] = useState({});
   const [modalColor, setModalColor] = useState({});
-  const [isOpenDetailsModal, setIsOpenDetailsModal] = useState(false);
   const [generations, setGenerations] = useState([]);
   const [generation, setGeneration] = useState(0);
   const [projectToPresent, setProjectToPresent] = useState([]);
@@ -68,15 +75,19 @@ function ProjectItem({ projectId, handleReturn }) {
   const [deleteMessage, setDeleteMessage] = useState({});
   const [sortBy, setSortBy] = useState("");
   const [plantIdToDelete, setPlantIdToDelete] = useState({});
+  const [isOpenCrossModal, setIsOpenCrossModal] = useState(false);
 
   const { activeUser } = useContext(authContext);
   const inputRef = useRef(null);
+  const linePurity = useMemo(() => getLinePurityMap(projectDetails), [projectDetails]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     const response = await fetchCurrentProject(activeUser.userId, projectId);
     setProjectHeaders(response.data.projectHeaders);
     setProjectDetails(response.data.projectDetails);
-  };
+  }, [activeUser, projectId]);
 
   const saveDetails = async () => {
     setMessage({ title: "Pending", description: "Saving project details..." });
@@ -112,6 +123,12 @@ function ProjectItem({ projectId, handleReturn }) {
     setCurrentTarget(target);
   };
 
+  const handleCrossPlants = (parentA, parentB) => {
+    const projectWithCross = crossPlants(parentA, parentB, projectHeaders, projectDetails);
+    setProjectDetails(projectWithCross);
+    setIsOpenCrossModal(false);
+  };
+
   const deleteLine = (row) => {
     setDeleteMessage({
       title: "Delete Plant ",
@@ -126,12 +143,12 @@ function ProjectItem({ projectId, handleReturn }) {
       inputRef.current = document.getElementById(currentTarget?.id);
       inputRef.current && inputRef.current.focus();
     }
-  }, [projectDetails]);
+  }, [projectDetails, currentTarget]);
 
   useEffect(() => {
     const sortedGenerations = getGenerations(projectDetails);
     setGenerations(sortedGenerations);
-  }, [projectHeaders]);
+  }, [projectHeaders, projectDetails]);
 
   useEffect(() => {
     const filterGeneration = projectDetails.filter((item) => {
@@ -143,11 +160,14 @@ function ProjectItem({ projectId, handleReturn }) {
   useEffect(() => {
     const sortedProject = sortTable(projectToPresent, sortBy);
     setProjectToPresent(sortedProject);
+    // projectToPresent intentionally excluded: sortTable always returns a
+    // new array, so including it here would re-sort on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy]);
 
   useEffect(() => {
     fetchProject();
-  }, []);
+  }, [fetchProject]);
 
   return (
     <>
@@ -166,16 +186,17 @@ function ProjectItem({ projectId, handleReturn }) {
           <Typography variant="h3" style={classes.pageHeadline}>
             project: {projectHeaders.project_name}
           </Typography>
-          <div
-            style={{
+          <Box
+            sx={{
               display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
               justifyContent: "space-between",
-              margin: "5px 40px",
+              gap: 1,
+              margin: { xs: "5px 10px", sm: "5px 40px" },
             }}
           >
             <Button onClick={handleReturn}>Return to the Project List</Button>
-            <div style={{display:"inline-flex"}}>
-              sdfds
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
               {generations.length > 1 && (
                 <FormControl style={{ width: "100px" }}>
                   <InputLabel id="generations">Generation</InputLabel>
@@ -216,8 +237,24 @@ function ProjectItem({ projectId, handleReturn }) {
                   ))}
                 </Select>
               </FormControl>
-            </div>
-          </div>
+            </Box>
+          </Box>
+          {isMobile ? (
+            <Stack spacing={2}>
+              {projectToPresent.map((row, index) => (
+                <PlantCard
+                  key={row.plant_id}
+                  row={row}
+                  index={index}
+                  isStable={linePurity[row.line]?.isStable}
+                  stableGenerations={linePurity[row.line]?.stableGenerations}
+                  onFieldChange={(target) => changeCellValue(index, target)}
+                  onAddChild={() => handleNewLine(row)}
+                  onDelete={() => deleteLine(row)}
+                />
+              ))}
+            </Stack>
+          ) : (
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 700 }} aria-label="customized table">
               <TableHead>
@@ -261,6 +298,13 @@ function ProjectItem({ projectId, handleReturn }) {
                           style={classes.tableCell}
                           onInput={(e) => changeCellValue(index, e.target)}
                         ></TextField>
+                        {linePurity[row.line]?.isStable && (
+                          <Tooltip
+                            title={`Stable for ${linePurity[row.line].stableGenerations} generations`}
+                          >
+                            <VerifiedIcon color="success" fontSize="small" />
+                          </Tooltip>
+                        )}
                       </Grid>
                       <Grid
                         item
@@ -338,10 +382,7 @@ function ProjectItem({ projectId, handleReturn }) {
                         ></TextField>
                       </Grid>
                       <Grid item xs={3} style={classes.tableMoreInfoGrid}>
-                        <Button
-                          onClick={() => setIsOpenDetailsModal(true)}
-                          style={{ color: "black" }}
-                        >
+                        <Button style={{ color: "black" }}>
                           More Details
                         </Button>
                         <Tooltip title="Add Child">
@@ -369,10 +410,31 @@ function ProjectItem({ projectId, handleReturn }) {
               </TableBody>
             </Table>
           </TableContainer>
-          <Button onClick={() => handleNewLine("new-line")}>
-            Add new variety{" "}
-          </Button>
-          <Button onClick={saveDetails}>Save Project </Button>
+          )}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 1,
+              mt: 2,
+            }}
+          >
+            <Button
+              sx={{ width: { xs: "100%", sm: "auto" } }}
+              onClick={() => handleNewLine("new-line")}
+            >
+              Add new variety
+            </Button>
+            <Button
+              sx={{ width: { xs: "100%", sm: "auto" } }}
+              onClick={() => setIsOpenCrossModal(true)}
+            >
+              Cross Lines
+            </Button>
+            <Button sx={{ width: { xs: "100%", sm: "auto" } }} onClick={saveDetails}>
+              Save Project
+            </Button>
+          </Box>
         </Container>
       )}
       <>
@@ -392,6 +454,14 @@ function ProjectItem({ projectId, handleReturn }) {
             handleDialogModal={() => setIsOpenDeleteModal(false)}
             message={deleteMessage}
             plantIdToDelete={plantIdToDelete}
+          />
+        )}
+        {isOpenCrossModal && (
+          <CrossPlantsModal
+            isOpen={isOpenCrossModal}
+            projectDetails={projectDetails}
+            onConfirm={handleCrossPlants}
+            onClose={() => setIsOpenCrossModal(false)}
           />
         )}
       </>

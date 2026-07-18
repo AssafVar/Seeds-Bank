@@ -2,7 +2,7 @@ export const classes = {
 
     sxContainer:{
         display: "flex",
-        flexDirection: { xs: "column", sm: "row" },
+        alignItems: "center",
         borderBottom:"solid #b3cde4 3px",
         padding: "0 20px 10px 20px",
         justifyContent: "space-between",

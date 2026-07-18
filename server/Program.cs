@@ -26,8 +26,13 @@ builder.Services.AddCors(options =>
 });
 
 var connectionString = builder.Configuration.GetConnectionString("Default");
+// Pinned rather than ServerVersion.AutoDetect: auto-detect opens a blocking
+// DB connection during startup (and during EF tooling like `dotnet ef
+// migrations add`) just to sniff the server version. Bump this if your
+// MySQL server is on a materially different 8.x version.
+var mySqlServerVersion = new MySqlServerVersion(new Version(8, 0, 34));
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, mySqlServerVersion));
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 builder.Services
@@ -50,10 +55,14 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireClaim("isAdmin", "true"));
+});
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProjectsService, ProjectsService>();
+builder.Services.AddScoped<ISiteContentService, SiteContentService>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 builder.Services.AddControllers().AddJsonOptions(options =>
@@ -91,6 +100,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
 app.UseCors(CorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();

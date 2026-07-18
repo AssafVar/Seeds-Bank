@@ -2,8 +2,10 @@ import axios from "axios";
 import { nanoid } from "nanoid";
 import { converToCitiesList } from "../libs/cities";
 
+export const SERVER_BASE_URL = "http://localhost:8080";
+
 const api = axios.create({
-  baseURL: "http://localhost:8080/",
+  baseURL: `${SERVER_BASE_URL}/`,
   withCredentials: false,
 });
 
@@ -106,6 +108,51 @@ export const deletePlant = async (user_id, plantIdToDelete) => {
     return response;
   } catch (err) {
     console.log(err);
+  }
+};
+
+export const getSiteContent = async () => {
+  try {
+    const results = await api.get("/site-content");
+    return results.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const updateSiteContent = async (content) => {
+  try {
+    const response = await api.put("/site-content", content);
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
+export const uploadGalleryImage = async (file, caption) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (caption) {
+    formData.append("caption", caption);
+  }
+  try {
+    const response = await api.post("/site-content/gallery", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const deleteGalleryImage = async (imageId) => {
+  try {
+    const response = await api.delete(`/site-content/gallery/${imageId}`);
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
   }
 };
 

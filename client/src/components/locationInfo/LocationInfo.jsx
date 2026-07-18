@@ -44,21 +44,21 @@ function LocationInfo(props) {
     <Container>
       <Typography variant="h5">Temprature data </Typography>
       <br />
-      <div style={{alignItems:"center"}}>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "5px" }}>
         <SearchCities handleLocation={(city) => setLocation(city)} />
         <Button
           onClick={() =>
             getLocationCoords()
           }
           variant="contained"
-          style={{ marginLeft: "5px", height: "55px", borderRadius: "20px"}}
+          style={{ height: "55px", borderRadius: "20px"}}
           disabled={!!!location?.city}
         >
           Get Location Info
         </Button>
       </div>
-      <div style={{ height: "1000px" }}>
-        {chartData.length > 0 && (
+      {chartData.length > 0 && (
+        <div style={{ height: "1000px" }}>
           <Carousel animation="slide">
             {chartData.map((item, index) => (
               <Box key={index}>
@@ -77,8 +77,8 @@ function LocationInfo(props) {
               </Box>
             ))}
           </Carousel>
-        )}
-      </div>
+        </div>
+      )}
       <br />
     </Container>
   );

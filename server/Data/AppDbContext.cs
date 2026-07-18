@@ -12,4 +12,6 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectItem> ProjectItems => Set<ProjectItem>();
+    public DbSet<SiteContent> SiteContents => Set<SiteContent>();
+    public DbSet<GalleryImage> GalleryImages => Set<GalleryImage>();
 }

@@ -19,4 +19,7 @@ public class User
 
     [Column("password")]
     public string Password { get; set; } = null!;
+
+    [Column("isAdmin")]
+    public bool IsAdmin { get; set; }
 }

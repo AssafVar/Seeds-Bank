@@ -46,6 +46,7 @@ public class AuthService : IAuthService
             UserName = user.UserName,
             Email = user.Email,
             Token = _jwtTokenService.GenerateToken(user),
+            IsAdmin = user.IsAdmin,
         };
     }
 }

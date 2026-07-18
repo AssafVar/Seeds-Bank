@@ -9,9 +9,24 @@ const imageUrl =
 function PageHeadline({title}) {
     return (
       <Box
-        sx={{ backgroundImage: `url(${imageUrl})`, backgroundSize: "cover" }}
+        sx={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${imageUrl})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          borderRadius: "8px",
+          minHeight: { xs: 140, sm: 200 },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <Typography variant="h3" padding={5} margin={"3rem 0"} color={"white"}>
+        <Typography
+          variant="h3"
+          padding={2}
+          textAlign="center"
+          color="white"
+          sx={{ fontSize: { xs: "1.75rem", sm: "3rem" }, textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+        >
           {title}
         </Typography>
       </Box>

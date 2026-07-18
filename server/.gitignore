@@ -3,3 +3,5 @@ obj/
 appsettings.Development.json
 appsettings.*.local.json
 *.user
+wwwroot/uploads/gallery/*
+!wwwroot/uploads/gallery/.gitkeep
