@@ -3,7 +3,6 @@ import authContext from "../../contexts/AuthContext";
 import { Container } from "@mui/system";
 import { Card, CardContent, Grid, Typography } from "@mui/material";
 import PageHeadline from "../../components/headline/PageHeadline";
-import HomePageAbout from "./HomePageAbout";
 import ContactSection from "./ContactSection";
 import GallerySection from "./GallerySection";
 import VideoSection from "./VideoSection";
@@ -28,13 +27,8 @@ function HomePage(props) {
       <PageHeadline title={welcomingTitle} />
       <GettingStarted />
       <FeatureHighlights />
-      <Grid container spacing={2} sx={{ mt: 3 }}>
-        <Grid item xs={12} md={6}>
-          <HomePageAbout />
-        </Grid>
-      </Grid>
       {siteContent?.description && (
-        <Card variant="outlined" sx={{ mt: 2 }}>
+        <Card variant="outlined" sx={{ mt: 3 }}>
           <CardContent>
             <Typography variant="body1">{siteContent.description}</Typography>
           </CardContent>

@@ -1,87 +1,71 @@
-import { Button, Card, CardMedia, Grid, Typography } from "@mui/material";
+import { Card, CardContent, Grid, Typography } from "@mui/material";
 import { Container } from "@mui/system";
-import React, { useState } from "react";
+import React from "react";
 import PageHeadline from "../../components/headline/PageHeadline";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import CallSplitIcon from "@mui/icons-material/CallSplit";
+import HealthAndSafetyIcon from "@mui/icons-material/HealthAndSafety";
+import InsightsIcon from "@mui/icons-material/Insights";
 
-function AboutPage(props) {
+const CAPABILITIES = [
+  {
+    icon: AccountTreeIcon,
+    title: "Pedigree & trait tracking",
+    description:
+      "Keep a full record of each plant's pedigree, genotype, and phenotype, and trace its lineage generation by generation.",
+  },
+  {
+    icon: CallSplitIcon,
+    title: "Smart breeding pairs",
+    description:
+      "See which lines have gone stable and cross the ones most likely to produce the traits you're after.",
+  },
+  {
+    icon: HealthAndSafetyIcon,
+    title: "Health & performance records",
+    description:
+      "Track disease resistance, environmental tolerance, yield, and growth rate alongside every plant's data.",
+  },
+  {
+    icon: InsightsIcon,
+    title: "Streamlined decisions",
+    description:
+      "Spend less time on spreadsheets and more time breeding — spot desirable traits and act on them faster.",
+  },
+];
 
-  const [readMore, setReadMore] = useState(false);
-
+function AboutPage() {
   return (
     <Container>
-      <PageHeadline title="About Us"/>
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Typography variant="body1">
-            Our application is a software tool that helps plant breeders manage
-            and organize their breeding programs.
-          </Typography>
-          <Typography variant="body1">
-            With the aid of SeedsBank, breeders can maintain a comprehensive
-            database of their plants, including their pedigree, genotype, and
-            phenotype information. They can track each plant's lineage and use
-            this information to determine the optimal breeding pairs to produce
-            desired traits in their offspring.
-          </Typography>
-          <br />
-          {readMore && (
-            <>
-              <Typography variant="body1">
-                {" "}
-                SeedsBank application also includes tools for managing plant
-                health records, such as disease resistance, susceptibility, and
-                environmental tolerance. This information can be used to ensure
-                that the breeding program produces healthy plants with desirable
-                traits.
-              </Typography>
-              <Typography variant="body1">
-                {" "}
-                In addition, it provides features for tracking plant performance
-                metrics, such as yield, quality, and growth rate. This
-                information can help breeders make informed decisions about
-                which plants to keep for breeding and which ones to discard.
-              </Typography>
-              <br />
-              <Typography variant="body1">
-                {" "}
-                One of the main benefits of a plant breeding application is that
-                it can help breeders streamline their breeding program, by
-                allowing them to quickly and easily identify plants with
-                desirable traits and select optimal breeding pairs.
-              </Typography>
-              <Typography variant="body1">
-                {" "}
-                This can help save time, reduce costs, and increase the
-                likelihood of producing high-quality plants with desirable
-                traits.
-              </Typography>
-              <Typography variant="body1">
-                <br /> Overall, SeedsBank application can be a powerful tool for
-                plant breeders, helping them to manage and optimize their
-                breeding programs, and ultimately produce better, more
-                resilient, and more productive plants.
-              </Typography>
-              <Typography variant="body1">
-                {" "}
-                The purpose of a plant breeding application is to enable
-                breeders to keep track of their plants' genetic traits, monitor
-                their health and performance, and make informed decisions about
-                breeding.
-              </Typography><br/>
-            </>
-          )}
-          <Button onClick={() => setReadMore(!readMore)} style={{borderRadius:"5px", }} variant="contained" color="success">
-            {!readMore ? "More Info" : "Less Info"}
-          </Button>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardMedia
-              image="https://pxhere.com/en/photo/1130736?utm_content=shareClip&utm_medium=referral&utm_source=pxhere"
-              title="About Us Image"
-            />
-          </Card>
-        </Grid>
+      <PageHeadline title="About Us" />
+      <Typography variant="h6" sx={{ mt: 2, maxWidth: 720 }}>
+        SeedsBank helps plant breeders manage and organize their breeding
+        programs — from a single seedling to a fully mapped pedigree.
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 720 }}>
+        Whether you're a professional breeder or just getting started, it
+        gives you one place to track lineage, plan crosses, and make
+        informed decisions about which plants to keep.
+      </Typography>
+
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        {CAPABILITIES.map(({ icon: Icon, title, description }) => (
+          <Grid item xs={12} sm={6} key={title}>
+            <Card variant="outlined" sx={{ height: "100%" }}>
+              <CardContent sx={{ display: "flex", gap: 2 }}>
+                <Icon color="success" fontSize="large" sx={{ flexShrink: 0 }} />
+                <div>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    {title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {description}
+                  </Typography>
+                </div>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
       </Grid>
     </Container>
   );
