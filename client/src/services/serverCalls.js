@@ -7,6 +7,26 @@ const api = axios.create({
   withCredentials: false,
 });
 
+api.interceptors.request.use((config) => {
+  const isOwnServerRequest = !/^https?:\/\//i.test(config.url);
+  const activeUser = localStorage.activeUser && JSON.parse(localStorage.activeUser);
+  if (isOwnServerRequest && activeUser?.token) {
+    config.headers.Authorization = `Bearer ${activeUser.token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      delete localStorage.activeUser;
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const confirmUser = async (userName, email, password, register) => {
   const userId = nanoid();
   try {
@@ -104,12 +124,12 @@ export const getCoords = async(location) => {
     country = "usa";
   };
   const locationinfo = await api.get(`https://nominatim.openstreetmap.org/search?q=${location.city}+${location.state}+${country}&format=json`);
-  if (locationinfo.data.length != 0){
+  if (locationinfo.data.length !== 0){
     const {lat, lon} = locationinfo.data[0];
     return {lat,lon};
   }else{
     const locationinfo2 = await api.get(`https://nominatim.openstreetmap.org/search?q=${location.state}+${country}&format=json`);
-    if (locationinfo2.data.length != 0){
+    if (locationinfo2.data.length !== 0){
       const {lat, lon} = locationinfo2.data[0];
       return {lat,lon};
     }else{
