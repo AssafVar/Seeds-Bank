@@ -40,6 +40,7 @@ import {
 import DialogModal from "../dialog/DialogModal.jsx";
 import CrossPlantsModal from "../modals/CrossPlantsModal.jsx";
 import PlantCard from "./PlantCard.jsx";
+import FieldsSection from "./FieldsSection.jsx";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GrassIcon from "@mui/icons-material/Grass";
 import VerifiedIcon from "@mui/icons-material/Verified";
@@ -435,6 +436,7 @@ function ProjectItem({ projectId, handleReturn }) {
               Save Project
             </Button>
           </Box>
+          <FieldsSection userId={activeUser.userId} projectId={projectId} />
         </Container>
       )}
       <>

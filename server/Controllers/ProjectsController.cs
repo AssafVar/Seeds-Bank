@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SeedsBank.Server.DTOs;
@@ -9,7 +8,7 @@ namespace SeedsBank.Server.Controllers;
 [ApiController]
 [Authorize]
 [Route("projects")]
-public class ProjectsController : ControllerBase
+public class ProjectsController : OwnedResourceControllerBase
 {
     private readonly IProjectsService _projectsService;
 
@@ -65,18 +64,5 @@ public class ProjectsController : ControllerBase
         return deleted
             ? Ok("Database updated successfully")
             : NotFound(new { message = "Plant not found" });
-    }
-
-    private bool IsCallerOwner(string routeUserId, out IActionResult? forbidden)
-    {
-        var callerUserId = User.FindFirstValue("userId");
-        if (callerUserId == routeUserId)
-        {
-            forbidden = null;
-            return true;
-        }
-
-        forbidden = Forbid();
-        return false;
     }
 }

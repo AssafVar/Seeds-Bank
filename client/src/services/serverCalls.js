@@ -130,6 +130,34 @@ export const deletePlant = async (user_id, plantIdToDelete) => {
   }
 };
 
+export const getFields = async (userId, projectId) => {
+  try {
+    const results = await api.get(`/projects/${userId}/${projectId}/fields`);
+    return results.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const createField = async (userId, projectId, field) => {
+  try {
+    const response = await api.post(`/projects/${userId}/${projectId}/fields`, field);
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const deleteField = async (userId, projectId, fieldId) => {
+  try {
+    const response = await api.delete(`/projects/${userId}/${projectId}/fields/${fieldId}`);
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
 export const getSiteContent = async () => {
   try {
     const results = await api.get("/site-content");
