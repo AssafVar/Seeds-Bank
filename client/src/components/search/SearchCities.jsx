@@ -1,5 +1,5 @@
-import { Autocomplete, Button, TextField } from "@mui/material";
-import React, { useEffect, useState } from "react";
+import { Autocomplete, TextField } from "@mui/material";
+import React, { useCallback, useEffect, useState } from "react";
 import SearchIcon from '@mui/icons-material/Search';
 import { fetchCities } from "../../services/serverCalls";
 
@@ -9,10 +9,10 @@ function SearchCities({handleLocation}) {
     const [isMounted, setIsMounted] = useState(false);
     const [city, setCity] = useState('');
 
-    const getCities = async() => {
+    const getCities = useCallback(async() => {
         const cities = await fetchCities(city);
         setOptions(cities);
-    };
+    }, [city]);
 
     const handleCityChange = (event, value) => {
       const location = value.replaceAll(' ','').split(',');
@@ -25,7 +25,7 @@ function SearchCities({handleLocation}) {
         } else {
           setIsMounted(true);
         }
-      }, [isMounted, city]);
+      }, [isMounted, city, getCities]);
 
   return (
     <Autocomplete

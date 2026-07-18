@@ -1,6 +1,6 @@
-import { Button, Grid, Typography } from "@mui/material";
+import { Button, Grid } from "@mui/material";
 import { Box, Container } from "@mui/system";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import authContext from "../../contexts/AuthContext.js";
 import { getUserProjectsList } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
@@ -17,10 +17,10 @@ function ProjectList(props) {
   const [isProjectModal, setIsProjectModal] = useState(false);
   const [projectsList, setProjectsList] = useState([]);
 
-  const fetchProjectsList = async() => {
+  const fetchProjectsList = useCallback(async() => {
     const response = await getUserProjectsList(activeUser.userId);
     setProjectsList(response.data);
-  };
+  }, [activeUser]);
 
   const handleChangeProject = (projectId) => {
     setProjectId(projectId);
@@ -38,7 +38,7 @@ function ProjectList(props) {
 
   useEffect(()=>{
     fetchProjectsList();
-  },[])
+  },[fetchProjectsList])
 
   return (
     <Container>

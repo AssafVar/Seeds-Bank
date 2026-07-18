@@ -12,7 +12,7 @@ function NewprojectForm({handleModal}) {
   const {activeUser} = useContext(authContext);
 
   const handleNewProject = async() => {
-    const results = await createNewProject(activeUser.userId, projectName, plantType);
+    await createNewProject(activeUser.userId, projectName, plantType);
     handleModal();
   };
 

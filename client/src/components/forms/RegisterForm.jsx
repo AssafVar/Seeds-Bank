@@ -56,7 +56,7 @@ function RegisterForm({isSignup, handleLogin}) {
     
     useEffect(()=>{
         isSignup ? setRegisterType("signup") : setRegisterType("login");
-    },[]);
+    },[isSignup]);
 
     return (
         <Box component="form"
