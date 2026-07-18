@@ -63,6 +63,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProjectsService, ProjectsService>();
 builder.Services.AddScoped<ISiteContentService, SiteContentService>();
+builder.Services.AddScoped<INewsService, NewsService>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 builder.Services.AddControllers().AddJsonOptions(options =>

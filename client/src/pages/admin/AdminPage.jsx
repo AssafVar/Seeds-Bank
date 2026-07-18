@@ -11,11 +11,16 @@ import {
 } from "@mui/material";
 import { Container } from "@mui/system";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import PageHeadline from "../../components/headline/PageHeadline";
 import {
   SERVER_BASE_URL,
+  createNewsPost,
   deleteGalleryImage,
+  deleteNewsPost,
+  getNews,
   getSiteContent,
+  updateNewsPost,
   updateSiteContent,
   uploadGalleryImage,
 } from "../../services/serverCalls";
@@ -35,6 +40,11 @@ function AdminPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [caption, setCaption] = useState("");
   const [uploadMessage, setUploadMessage] = useState("");
+  const [newsPosts, setNewsPosts] = useState([]);
+  const [newsTitle, setNewsTitle] = useState("");
+  const [newsBody, setNewsBody] = useState("");
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [newsMessage, setNewsMessage] = useState("");
 
   const loadContent = async () => {
     const data = await getSiteContent();
@@ -50,8 +60,16 @@ function AdminPage() {
     }
   };
 
+  const loadNews = async () => {
+    const data = await getNews();
+    if (data) {
+      setNewsPosts(data);
+    }
+  };
+
   useEffect(() => {
     loadContent();
+    loadNews();
   }, []);
 
   const handleFieldChange = (field) => (e) => {
@@ -85,11 +103,53 @@ function AdminPage() {
     }
   };
 
+  const resetNewsForm = () => {
+    setEditingPostId(null);
+    setNewsTitle("");
+    setNewsBody("");
+  };
+
+  const handleEditPost = (post) => {
+    setEditingPostId(post.id);
+    setNewsTitle(post.title);
+    setNewsBody(post.body);
+  };
+
+  const handleSaveNewsPost = async () => {
+    if (!newsTitle || !newsBody) return;
+    if (editingPostId) {
+      const success = await updateNewsPost(editingPostId, newsTitle, newsBody);
+      setNewsMessage(success ? "Saved" : "Failed to save");
+      if (success) {
+        await loadNews();
+        resetNewsForm();
+      }
+    } else {
+      const created = await createNewsPost(newsTitle, newsBody);
+      setNewsMessage(created ? "Published" : "Failed to publish");
+      if (created) {
+        setNewsPosts([created, ...newsPosts]);
+        resetNewsForm();
+      }
+    }
+    setTimeout(() => setNewsMessage(""), 2000);
+  };
+
+  const handleDeleteNewsPost = async (id) => {
+    const success = await deleteNewsPost(id);
+    if (success) {
+      setNewsPosts(newsPosts.filter((post) => post.id !== id));
+      if (editingPostId === id) {
+        resetNewsForm();
+      }
+    }
+  };
+
   return (
     <Container>
       <PageHeadline title="Admin" />
       <Grid container spacing={2} sx={{ mt: 1 }}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <Card variant="outlined">
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -135,7 +195,7 @@ function AdminPage() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <Card variant="outlined">
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -189,6 +249,74 @@ function AdminPage() {
                   </Typography>
                 )}
               </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                News posts
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
+                <TextField
+                  label="Title"
+                  value={newsTitle}
+                  onChange={(e) => setNewsTitle(e.target.value)}
+                />
+                <TextField
+                  label="Body"
+                  multiline
+                  minRows={3}
+                  value={newsBody}
+                  onChange={(e) => setNewsBody(e.target.value)}
+                />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={handleSaveNewsPost}
+                    disabled={!newsTitle || !newsBody}
+                  >
+                    {editingPostId ? "Save" : "Publish"}
+                  </Button>
+                  {editingPostId && <Button onClick={resetNewsForm}>Cancel</Button>}
+                  {newsMessage && <Typography variant="body2">{newsMessage}</Typography>}
+                </Box>
+              </Box>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {newsPosts.map((post) => (
+                  <Box
+                    key={post.id}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      p: 1,
+                    }}
+                  >
+                    <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                      {post.title}
+                    </Typography>
+                    <Box>
+                      <IconButton size="small" onClick={() => handleEditPost(post)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDeleteNewsPost(post.id)}>
+                        <DeleteIcon color="error" fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                ))}
+                {newsPosts.length === 0 && (
+                  <Typography variant="body2" sx={{ p: 2 }}>
+                    No posts yet.
+                  </Typography>
+                )}
+              </Box>
             </CardContent>
           </Card>
         </Grid>

@@ -156,6 +156,44 @@ export const deleteGalleryImage = async (imageId) => {
   }
 };
 
+export const getNews = async () => {
+  try {
+    const results = await api.get("/news");
+    return results.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const createNewsPost = async (title, body) => {
+  try {
+    const response = await api.post("/news", { title, body });
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const updateNewsPost = async (id, title, body) => {
+  try {
+    const response = await api.put(`/news/${id}`, { title, body });
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
+export const deleteNewsPost = async (id) => {
+  try {
+    const response = await api.delete(`/news/${id}`);
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
 export const fetchCities = async (city) => {
   const response = await api.get(`https://api.teleport.org/api/cities/?search=${city}`);
   const citiesResults = response.data._embedded["city:search-results"];
