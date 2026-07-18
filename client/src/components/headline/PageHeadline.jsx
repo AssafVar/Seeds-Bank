@@ -1,34 +1,56 @@
 import { Typography } from '@mui/material';
 import { Box } from '@mui/system';
+import SpaIcon from '@mui/icons-material/Spa';
 import React from 'react';
-
-const imageUrl =
-  "https://c.pxhere.com/photos/a6/1e/large_broad_leaf_plant_leaves_lush_colorful_green_nature_foliage_plant_large_leaves_green_clustered-969259.jpg!d";
-
 
 function PageHeadline({title}) {
     return (
       <Box
         sx={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${imageUrl})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          borderRadius: "8px",
-          minHeight: { xs: 140, sm: 200 },
+          position: "relative",
+          overflow: "hidden",
+          borderRadius: "12px",
+          minHeight: { xs: 110, sm: 160 },
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          px: { xs: 3, sm: 6 },
+          background: (theme) =>
+            `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
         }}
       >
-        <Typography
-          variant="h3"
-          padding={2}
-          textAlign="center"
-          color="white"
-          sx={{ fontSize: { xs: "1.75rem", sm: "3rem" }, textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
-        >
-          {title}
-        </Typography>
+        <Box
+          sx={{
+            position: "absolute",
+            top: -60,
+            right: -60,
+            width: 220,
+            height: 220,
+            borderRadius: "50%",
+            bgcolor: "secondary.main",
+            opacity: 0.18,
+          }}
+        />
+        <Box
+          sx={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 6,
+            bgcolor: "secondary.main",
+          }}
+        />
+        <Box sx={{ position: "relative", display: "flex", alignItems: "center", gap: 1.5 }}>
+          <SpaIcon sx={{ color: "secondary.main", fontSize: { xs: 28, sm: 36 } }} />
+          <Typography
+            variant="h3"
+            color="white"
+            fontWeight={700}
+            sx={{ fontSize: { xs: "1.5rem", sm: "2.5rem" } }}
+          >
+            {title}
+          </Typography>
+        </Box>
       </Box>
     );
 }

@@ -1,12 +1,12 @@
 import {
   Box,
-  Button,
   Divider,
   Drawer,
   IconButton,
   Link,
   List,
   ListItemButton,
+  ListItemIcon,
   ListItemText,
   Tooltip,
   Typography,
@@ -18,34 +18,55 @@ import { Link as RouterLink } from "react-router-dom";
 import LoginModal from "../modals/RegisterModal";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import LocalFloristIcon from "@mui/icons-material/LocalFlorist";
 import MenuIcon from "@mui/icons-material/Menu";
+import NatureIcon from "@mui/icons-material/Nature";
+import ParkIcon from "@mui/icons-material/Park";
+import YardIcon from "@mui/icons-material/Yard";
+import WbSunnyIcon from "@mui/icons-material/WbSunny";
+import SpaIcon from "@mui/icons-material/Spa";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import useAuth from "../../hooks/useAuth";
 import SeedsBankLogo from "./SeedsBank.png";
 import { classes } from "../../styles/navbarStyles";
-import "./navbar.css";
 import { Container } from "@mui/system";
 
+// Grouped so the order reads: informational pages, the public climate
+// tool, then (once logged in) the app's actual functionality, admin last.
 const PUBLIC_LINKS = [
-  { to: "/about", label: "About", tooltip: "About the App" },
-  { to: "/functionality", label: "Functionality", tooltip: "App's Functionality" },
-  { to: "/climate", label: "Climate", tooltip: "Explore climate data by location" },
-  { to: "/news", label: "News", tooltip: "Breeding news" },
+  { to: "/about", label: "About", tooltip: "About the App", icon: NatureIcon },
+  { to: "/functionality", label: "Functionality", tooltip: "App's Functionality", icon: ParkIcon },
+  { to: "/news", label: "News", tooltip: "Breeding news", icon: YardIcon },
+  { to: "/climate", label: "Climate", tooltip: "Explore climate data by location", icon: WbSunnyIcon },
 ];
 
 const PROTECTED_LINKS = [
-  { to: "/account", label: "My account", tooltip: "User account" },
-  { to: "/projects", label: "My Projects", tooltip: "Projects" },
+  { to: "/projects", label: "My Projects", tooltip: "Projects", icon: SpaIcon },
+  { to: "/account", label: "My account", tooltip: "User account", icon: AccountCircleIcon },
 ];
 
 const ADMIN_LINKS = [
-  { to: "/admin", label: "Admin", tooltip: "Manage home page content" },
+  { to: "/admin", label: "Admin", tooltip: "Manage home page content", icon: AdminPanelSettingsIcon },
 ];
 
-function NavLink({ to, label, tooltip }) {
+function NavLink({ to, label, tooltip, icon: Icon }) {
   return (
     <Tooltip title={tooltip}>
-      <Link component={RouterLink} to={to} underline="none" style={classes.link}>
+      <Link
+        component={RouterLink}
+        to={to}
+        underline="none"
+        sx={{
+          ...classes.link,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.5,
+          whiteSpace: "nowrap",
+          "&:hover": { color: "success.main" },
+        }}
+      >
+        <Icon fontSize="small" />
         {label}
       </Link>
     </Tooltip>
@@ -75,24 +96,26 @@ function Navbar() {
     ? [...PUBLIC_LINKS, ...PROTECTED_LINKS, ...(activeUser.isAdmin ? ADMIN_LINKS : [])]
     : PUBLIC_LINKS;
 
+  const iconButtonSx = { color: "text.primary", "&:hover": { color: "success.main" } };
+
   const authButtons = !activeUser ? (
     <>
       <Tooltip title="Login">
-        <Button style={{ minWidth: 0 }} color="success" onClick={() => openAuthModal(false)}>
+        <IconButton sx={iconButtonSx} onClick={() => openAuthModal(false)}>
           <LoginIcon />
-        </Button>
+        </IconButton>
       </Tooltip>
       <Tooltip title="Signup">
-        <Button style={{ minWidth: 0 }} color="success" onClick={() => openAuthModal(true)}>
-          <PersonAddIcon />
-        </Button>
+        <IconButton sx={iconButtonSx} onClick={() => openAuthModal(true)}>
+          <LocalFloristIcon />
+        </IconButton>
       </Tooltip>
     </>
   ) : (
     <Tooltip title="Logout">
-      <Button style={{ minWidth: 0 }} color="error" onClick={onLogout}>
+      <IconButton sx={{ color: "text.primary", "&:hover": { color: "error.main" } }} onClick={onLogout}>
         <LogoutIcon />
-      </Button>
+      </IconButton>
     </Tooltip>
   );
 
@@ -104,7 +127,7 @@ function Navbar() {
         style={{ display: "flex", alignItems: "center", textDecoration: "none" }}
       >
         <img src={SeedsBankLogo} alt="Logo" style={classes.image} />
-        <Typography variant="h6" style={{ color: "black" }}>
+        <Typography variant="h6">
           Home
         </Typography>
       </Link>
@@ -114,13 +137,13 @@ function Navbar() {
   return (
     <>
       <Container sx={classes.sxContainer}>
-        <Box className="nav-left">{logo}</Box>
+        <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>{logo}</Box>
         {isMobile ? (
           <IconButton onClick={() => setIsDrawerOpen(true)} aria-label="Open menu">
             <MenuIcon />
           </IconButton>
         ) : (
-          <Box className="nav-right">
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
             {links.map((link) => (
               <NavLink key={link.to} {...link} />
             ))}
@@ -132,13 +155,16 @@ function Navbar() {
       <Drawer anchor="right" open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)}>
         <Box sx={{ width: 220 }} role="presentation">
           <List>
-            {links.map((link) => (
+            {links.map(({ icon: Icon, ...link }) => (
               <ListItemButton
                 key={link.to}
                 component={RouterLink}
                 to={link.to}
                 onClick={() => setIsDrawerOpen(false)}
               >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <Icon fontSize="small" />
+                </ListItemIcon>
                 <ListItemText primary={link.label} />
               </ListItemButton>
             ))}
@@ -147,7 +173,12 @@ function Navbar() {
           <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>{authButtons}</Box>
         </Box>
       </Drawer>
-      <LoginModal isOpenModal={isOpenModal} isSignup={isSignup} handleLogin={handleLogin} />
+      <LoginModal
+        isOpenModal={isOpenModal}
+        isSignup={isSignup}
+        setIsSignup={setIsSignup}
+        handleLogin={handleLogin}
+      />
     </>
   );
 }

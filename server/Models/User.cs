@@ -12,7 +12,7 @@ public class User
     public string UserId { get; set; } = null!;
 
     [Column("userName")]
-    public string UserName { get; set; } = null!;
+    public string? UserName { get; set; }
 
     [Column("email")]
     public string Email { get; set; } = null!;

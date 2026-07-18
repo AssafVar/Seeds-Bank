@@ -1,14 +1,14 @@
-import { Button, TextField } from '@mui/material';
-import { Box } from '@mui/system';
+import { Alert, Box, Button, Link as MuiLink, TextField, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
-import Alert from '@mui/material/Alert';
-import "./registerForm.css";
 import { useNavigate } from 'react-router';
+import { extractErrorMessage } from '../../services/serverCalls';
 
-function RegisterForm({isSignup, handleLogin}) {
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 6;
 
-    const [userName, setUserName] = useState('');
+function RegisterForm({isSignup, setIsSignup, handleLogin}) {
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,68 +20,95 @@ function RegisterForm({isSignup, handleLogin}) {
     const {onLogin} = useAuth();
     const navigate = useNavigate();
 
+    const showError = (message) => {
+        setRegisterError(message);
+        setTimeout(() => setRegisterError(""), 2000);
+    };
+
+    const validate = () => {
+        if (!email || !password || (isSignup && !confirmPassword)) {
+            return "Please fill in all fields";
+        }
+        if (!EMAIL_REGEX.test(email)) {
+            return "Please enter a valid email address";
+        }
+        if (isSignup && password.length < MIN_PASSWORD_LENGTH) {
+            return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+        }
+        if (isSignup && password !== confirmPassword) {
+            return "Passwords do not match";
+        }
+        return null;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if ( (password === confirmPassword && isSignup===true) || (isSignup===false) ){
-            try{
-                const response = await onLogin(userName, email, password ,registerType);
-                if (response.status === 200 && registerType === "login") {
-                    setRegisterMessage("Login successful");
-                    setTimeout(()=>{
-                        setRegisterMessage("");
-                        handleLogin();
-                        navigate('/');
-                    },1000)
-                }else if(response.status === 200 && registerType === "signup"){
-                    setRegisterMessage("Signup successful. please login to your account");
-                    setTimeout(()=>{
-                        setRegisterMessage("");
-                        handleLogin();
-                    },2000)
-                    
-                }else{
-                    setRegisterError(response.response.data);
-                    setTimeout(()=>{setRegisterError("")},2000)
-                }
-            }catch(err){
-                console.log(err);
+        const validationError = validate();
+        if (validationError) {
+            showError(validationError);
+            return;
+        }
+        try {
+            await onLogin(email, password, registerType);
+            if (registerType === "login") {
+                setRegisterMessage("Login successful");
+                setTimeout(() => {
+                    setRegisterMessage("");
+                    handleLogin();
+                    navigate('/');
+                }, 1000);
+            } else {
+                setRegisterMessage("Account created — log in to continue");
+                setPassword('');
+                setConfirmPassword('');
+                setTimeout(() => {
+                    setRegisterMessage("");
+                    setIsSignup(false);
+                }, 1500);
             }
-        }else if (password !== confirmPassword){
-            setPassword('');
-            setConfirmPassword('');
-            setRegisterError("Passwords do not match");
-            setTimeout(()=>{setRegisterError("")},2000)
+        } catch (err) {
+            showError(extractErrorMessage(err));
         }
     }
-    
+
     useEffect(()=>{
-        isSignup ? setRegisterType("signup") : setRegisterType("login");
+        setRegisterType(isSignup ? "signup" : "login");
     },[isSignup]);
 
     return (
-        <Box component="form"
-            sx={{
-            '& .MuiTextField-root': { m: 2, width: '25ch' },
-          }}
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
           noValidate
-          autoComplete="off">
-            <div >
-                <TextField id="userName" label="userName" variant="standard" required
-                value={userName} autoComplete='username' onChange={(e) =>setUserName(e.target.value)}
-                /><br/>
-                <TextField id="email" label="email" variant="standard" required
-                value={email} autoComplete='email' onChange={(e) =>setEmail(e.target.value)}
-                /><br/>
-                <TextField id="password" label="Password" type="password" variant="standard" required
-                value={password} autoComplete='current-password' onChange={(e) =>setPassword(e.target.value)}
-                /><br/>
-                {isSignup&&<TextField id="confirm-password" label="Confirm password" type="password" variant="standard" required
-                value={confirmPassword} autoComplete='' onChange={(e) =>setConfirmPassword(e.target.value)}
-                />}
-            </div>
-            <Button onClick={handleSubmit}>Submit </Button><br/>
+          sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
+        >
+            <TextField
+                label="Email" type="email" fullWidth required
+                value={email} autoComplete="email" onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+                label="Password" type="password" fullWidth required
+                value={password}
+                autoComplete={isSignup ? "new-password" : "current-password"}
+                onChange={(e) => setPassword(e.target.value)}
+            />
+            {isSignup && (
+                <TextField
+                    label="Confirm password" type="password" fullWidth required
+                    value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+            )}
+            <Button type="submit" variant="contained" size="large" fullWidth>
+                {isSignup ? "Create Account" : "Log In"}
+            </Button>
             {registerError && <Alert severity="error">{registerError}</Alert>}
-            {registerMessage && <Alert severity='success'>{registerMessage}</Alert>}
+            {registerMessage && <Alert severity="success">{registerMessage}</Alert>}
+            <Typography variant="body2" textAlign="left">
+                {isSignup ? "Already have an account? " : "Don't have an account? "}
+                <MuiLink component="button" type="button" onClick={() => setIsSignup(!isSignup)}>
+                    {isSignup ? "Log in" : "Sign up"}
+                </MuiLink>
+            </Typography>
         </Box>
     );
 }

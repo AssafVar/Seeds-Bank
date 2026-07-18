@@ -33,11 +33,12 @@ public class SiteContentController : ControllerBase
 
     [HttpPost("gallery")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> AddGalleryImage([FromForm] IFormFile file, [FromForm] string? caption)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> AddGalleryImage([FromForm] UploadGalleryImageRequest request)
     {
         try
         {
-            var image = await _siteContentService.AddGalleryImageAsync(file, caption);
+            var image = await _siteContentService.AddGalleryImageAsync(request.File, request.Caption);
             return Ok(image);
         }
         catch (ArgumentException ex)

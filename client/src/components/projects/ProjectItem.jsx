@@ -382,7 +382,7 @@ function ProjectItem({ projectId, handleReturn }) {
                         ></TextField>
                       </Grid>
                       <Grid item xs={3} style={classes.tableMoreInfoGrid}>
-                        <Button style={{ color: "black" }}>
+                        <Button color="inherit">
                           More Details
                         </Button>
                         <Tooltip title="Add Child">

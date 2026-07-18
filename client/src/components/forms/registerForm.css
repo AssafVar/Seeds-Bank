@@ -1,9 +1,0 @@
-.alert{
-    display: block;
-    justify-content: center;
-}
-.alert >div{
-    background-color: lightcoral;
-    border-radius: 5px;
-    padding: 5px;
-}

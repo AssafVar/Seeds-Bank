@@ -39,7 +39,7 @@ function SearchCities({handleLocation}) {
           variant="standard"
           style={{
             width: "400px",
-            border: "1px solid #D8D4D3",
+            border: "1px solid var(--color-divider)",
             borderRadius: "20px",
             textAlign: "left",
             padding: "10px",

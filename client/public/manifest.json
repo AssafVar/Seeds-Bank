@@ -1,8 +1,15 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "SeedsBank",
+  "name": "SeedsBank",
+  "icons": [
+    {
+      "src": "SeedsBank.png",
+      "type": "image/png",
+      "sizes": "136x113"
+    }
+  ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1F4D3A",
+  "background_color": "#F7F1E3"
 }

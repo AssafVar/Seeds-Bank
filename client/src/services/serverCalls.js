@@ -18,10 +18,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+const AUTH_ENDPOINTS = ["/users/login", "/users/signup"];
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthEndpoint = AUTH_ENDPOINTS.some((path) => error.config?.url?.endsWith(path));
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       delete localStorage.activeUser;
       window.location.href = "/";
     }
@@ -29,19 +32,35 @@ api.interceptors.response.use(
   }
 );
 
-export const confirmUser = async (userName, email, password, register) => {
-  const userId = nanoid();
-  try {
-    const results = await api.post(`/users/${register}`, {
-      userName,
-      email,
-      password,
-      userId,
-    });
-    return results;
-  } catch (err) {
-    return err;
+// Extracts a human-readable message from the various error body shapes the
+// server can return: a plain string (BadRequest/Unauthorized), a {message}
+// object (Conflict), or ASP.NET Core's automatic ValidationProblemDetails
+// ({title, errors}) from DataAnnotations validation failures.
+export const extractErrorMessage = (err, fallback = "Something went wrong. Please try again.") => {
+  const data = err?.response?.data;
+  if (!data) return fallback;
+  if (typeof data === "string") return data;
+  if (data.message) return data.message;
+  if (data.errors) {
+    const firstError = Object.values(data.errors)[0];
+    return Array.isArray(firstError) ? firstError[0] : data.title || fallback;
   }
+  return data.title || fallback;
+};
+
+export const confirmUser = async (email, password, register) => {
+  const userId = nanoid();
+  const results = await api.post(`/users/${register}`, {
+    email,
+    password,
+    userId,
+  });
+  return results;
+};
+
+export const updateProfile = async (userName) => {
+  const response = await api.put("/users/profile", { userName });
+  return response.data;
 };
 export const getTempDataAPI = async (lat, log) => {
   try {

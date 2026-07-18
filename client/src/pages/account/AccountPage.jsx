@@ -1,5 +1,4 @@
 import React, {useContext, useState} from "react";
-import "./accountPage.css";
 import AccountHeaderList from "../../components/account/AccountHeaderList";
 import AccountGeneral from "../../components/account/AccountGeneral";
 import { Box, Grid, Typography } from "@mui/material";
@@ -21,7 +20,7 @@ function AccountPage(props) {
     <Container>
       <Typography variant="h3" style={classes.pageHeadline}>
         {" "}
-        {activeUser.userName}'s Account
+        {activeUser.userName ? `${activeUser.userName}'s Account` : "My Account"}
       </Typography>
       <Grid container spacing={8}>
         <Grid item xs={4}>

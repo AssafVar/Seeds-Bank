@@ -8,22 +8,27 @@ function AuthProvider({children}) {
         localStorage.activeUser ? JSON.parse(localStorage.activeUser) : null
     );
 
-    async function handleLogin(userName, email, password, register) {
-        const user = await confirmUser(userName, email, password, register);
-        if (user.data && register === "login") {
-          localStorage.activeUser = JSON.stringify(user.data);
-          setActiveUser(user.data);
+    async function handleLogin(email, password, register) {
+        const response = await confirmUser(email, password, register);
+        if (register === "login") {
+          localStorage.activeUser = JSON.stringify(response.data);
+          setActiveUser(response.data);
         }
-        return user;
+        return response;
     }
     async function handleLogout(e) {
         localStorage.removeItem("activeUser");
         setActiveUser(null);
       }
-    
+    function updateActiveUser(patch) {
+        const updatedUser = { ...activeUser, ...patch };
+        localStorage.activeUser = JSON.stringify(updatedUser);
+        setActiveUser(updatedUser);
+    }
+
       return (
         <AuthContext.Provider
-          value={{ activeUser, onLogin: handleLogin, onLogout: handleLogout }}
+          value={{ activeUser, onLogin: handleLogin, onLogout: handleLogout, updateActiveUser }}
         >
           {children}
         </AuthContext.Provider>

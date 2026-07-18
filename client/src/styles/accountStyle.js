@@ -9,7 +9,7 @@ export const classes = {
         fontSize: "20px",
     },
     formBox:{
-        border: "1px solid black",
+        border: "1px solid var(--color-divider)",
         marginBottom: "40px",
         padding: "30px",
         borderRadius: "20px",
@@ -24,12 +24,12 @@ export const classes = {
     },
     formButtonDelete:{
         margin: "10px 0 0 10px",
-        color:"red",
+        color:"#D32F2F",
     },
     formText:{
         fontSize: "12px",
         margin: "10px 0 10px 10px",
-        color: "#001b2e",
+        color: "var(--color-text-secondary)",
     },
     textareaBox:{
         borderRadius: "10px",

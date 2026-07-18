@@ -3,13 +3,14 @@ import { Box } from "@mui/system";
 import { Alert, Button, TextField, Typography } from "@mui/material";
 import {classes} from '../../styles/accountStyle'
 import authContext from "../../contexts/AuthContext";
+import { updateProfile } from "../../services/serverCalls";
 
 function AccountGeneral(props) {
 
 
-  const {activeUser:user} = useContext(authContext);
-  const [userName, setUserName] = useState(user?.userName);
-  const [userEmail, setUserEmail] = useState(user?.email);
+  const {activeUser: user, updateActiveUser} = useContext(authContext);
+  const [userName, setUserName] = useState(user?.userName || '');
+  const [userNameMessage, setUserNameMessage] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [registerAlert, setRegisterAlert] = useState('');
@@ -26,6 +27,17 @@ function AccountGeneral(props) {
 
   };
 
+  const onSubmitUserName = async () => {
+    const result = await updateProfile(userName);
+    if (result) {
+      updateActiveUser({ userName: result.userName });
+      setUserNameMessage("Saved");
+    } else {
+      setUserNameMessage("Failed to save");
+    }
+    setTimeout(() => setUserNameMessage(""), 2000);
+  };
+
   return (
     <><Box style={classes.formBox}>
       <Typography style={classes.boxHeadline}>Change account user name</Typography>
@@ -35,14 +47,8 @@ function AccountGeneral(props) {
         value={userName}
         style={classes.formInput}
         onChange={(e) => setUserName(e.target.value)} /><br />
-        <Typography style={classes.boxHeadline}>Change account email</Typography>
-        <TextField
-          id="outlined-email"
-          label="Email"
-          value={userEmail}
-          style={classes.formInput}
-          onChange={(e) => setUserEmail(e.target.value)} /><br />
-        <Button style={classes.formButton} onClick={onSubmit}>Save</Button>
+        <Button style={classes.formButton} onClick={onSubmitUserName}>Save</Button>
+        {userNameMessage && <Alert severity={userNameMessage === "Saved" ? "success" : "error"}>{userNameMessage}</Alert>}
       </Box><Box style={classes.formBox}>
         <Typography style={classes.boxHeadline}>Change account password</Typography>
         <Typography style={classes.formText}>Type new password and confirm the new password</Typography>
