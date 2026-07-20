@@ -42,6 +42,22 @@ public class FieldsController : OwnedResourceControllerBase
         }
     }
 
+    [HttpPut("{fieldId}/geometry")]
+    public async Task<IActionResult> UpdateFieldGeometry(string userId, string projectId, int fieldId, UpdateFieldGeometryRequest request)
+    {
+        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+
+        try
+        {
+            var field = await _fieldService.UpdateGeometryAsync(projectId, fieldId, request.GeoVertices);
+            return field is null ? NotFound() : Ok(field);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpDelete("{fieldId}")]
     public async Task<IActionResult> DeleteField(string userId, string projectId, int fieldId)
     {

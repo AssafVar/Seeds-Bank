@@ -73,23 +73,8 @@ public class FieldService : IFieldService
         }
         else if (parent is not null)
         {
-            if (request.GeoVertices is not { Count: >= 3 })
-            {
-                throw new ArgumentException("A sub-field needs a boundary with at least 3 points.");
-            }
-            if (parent.OriginLat is not { } originLat || parent.OriginLng is not { } originLng)
-            {
-                throw new ArgumentException("The large field has no map boundary to anchor to.");
-            }
-
             ValidateSpacing(request.PlantSpacing, request.RowSpacing);
-
-            var vertices = GeoMath.Project(request.GeoVertices, originLat, originLng);
-            var parentVertices = JsonSerializer.Deserialize<List<VertexDto>>(parent.VerticesJson) ?? new List<VertexDto>();
-            if (vertices.Any(v => !PolygonMath.IsInside(v.X, v.Y, parentVertices)))
-            {
-                throw new ArgumentException("Sub-field must stay within the large field's boundary.");
-            }
+            var vertices = ProjectAndValidateWithinParent(request.GeoVertices, parent);
 
             field = new Field
             {
@@ -135,6 +120,33 @@ public class FieldService : IFieldService
         return ToDto(field);
     }
 
+    public async Task<FieldDto?> UpdateGeometryAsync(string projectId, int fieldId, List<GeoVertexDto> geoVertices)
+    {
+        var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == fieldId && f.ProjectId == projectId);
+        if (field is null)
+        {
+            return null;
+        }
+
+        if (field.ParentFieldId is not { } parentId)
+        {
+            throw new ArgumentException("Only sub-fields can be repositioned this way.");
+        }
+
+        var parent = await _db.Fields.FirstOrDefaultAsync(f => f.Id == parentId && f.ProjectId == projectId);
+        if (parent is null)
+        {
+            throw new ArgumentException("Parent field not found.");
+        }
+
+        var vertices = ProjectAndValidateWithinParent(geoVertices, parent);
+        field.VerticesJson = JsonSerializer.Serialize(vertices);
+        field.GeoVerticesJson = JsonSerializer.Serialize(geoVertices);
+        await _db.SaveChangesAsync();
+
+        return ToDto(field);
+    }
+
     public async Task<bool> DeleteAsync(string projectId, int fieldId)
     {
         var field = await _db.Fields
@@ -156,6 +168,30 @@ public class FieldService : IFieldService
         {
             throw new ArgumentException("Plant spacing and row spacing must be positive.");
         }
+    }
+
+    // Shared by CreateAsync (new sub-field) and UpdateGeometryAsync (moving
+    // an existing one) - both need the same "project through the parent's
+    // origin, then reject anything that lands outside its boundary" check.
+    private static List<VertexDto> ProjectAndValidateWithinParent(List<GeoVertexDto>? geoVertices, Field parent)
+    {
+        if (geoVertices is not { Count: >= 3 })
+        {
+            throw new ArgumentException("A sub-field needs a boundary with at least 3 points.");
+        }
+        if (parent.OriginLat is not { } originLat || parent.OriginLng is not { } originLng)
+        {
+            throw new ArgumentException("The large field has no map boundary to anchor to.");
+        }
+
+        var vertices = GeoMath.Project(geoVertices, originLat, originLng);
+        var parentVertices = JsonSerializer.Deserialize<List<VertexDto>>(parent.VerticesJson) ?? new List<VertexDto>();
+        if (vertices.Any(v => !PolygonMath.IsInside(v.X, v.Y, parentVertices)))
+        {
+            throw new ArgumentException("Sub-field must stay within the large field's boundary.");
+        }
+
+        return vertices;
     }
 
     // A rectangle is stored as its own 4-corner polygon so every field -

@@ -17,10 +17,11 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { createField, deleteField, getFields } from "../../services/serverCalls";
+import { createField, deleteField, getFields, updateFieldGeometry } from "../../services/serverCalls";
 import vegetableVarieties from "../../libs/vegetableVarieties";
 import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 import FieldMapDrawing from "./FieldMapDrawing.jsx";
+import ManageSubFieldsMap from "./ManageSubFieldsMap.jsx";
 
 const emptyForm = { name: "", landWidth: "", landLength: "", plantSpacing: "", rowSpacing: "" };
 const PREVIEW_WIDTH = 280;
@@ -141,13 +142,13 @@ function FieldsSection({ userId, projectId }) {
   const [sowingStructure, setSowingStructure] = useState("grid");
   const [polygonVertices, setPolygonVertices] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [activeParentField, setActiveParentField] = useState(null);
-  const [mapVertices, setMapVertices] = useState(null);
 
   const [isAddingLargeField, setIsAddingLargeField] = useState(false);
   const [largeFieldName, setLargeFieldName] = useState("");
   const [largeFieldVertices, setLargeFieldVertices] = useState(null);
   const [largeFieldError, setLargeFieldError] = useState("");
+
+  const [managingParentField, setManagingParentField] = useState(null);
 
   const loadFields = async () => {
     const data = await getFields(userId, projectId);
@@ -180,19 +181,10 @@ function FieldsSection({ userId, projectId }) {
     setSowingStructure("grid");
     setShapeMode("rectangle");
     setPolygonVertices(null);
-    setMapVertices(null);
-    setActiveParentField(null);
     setErrorMessage("");
   };
 
   const openAddFieldDialog = () => {
-    setActiveParentField(null);
-    setIsDialogOpen(true);
-  };
-
-  const openSubFieldDialog = (parentField) => {
-    setActiveParentField(parentField);
-    setShapeMode("polygon");
     setIsDialogOpen(true);
   };
 
@@ -212,22 +204,7 @@ function FieldsSection({ userId, projectId }) {
     }
 
     let payload;
-    if (activeParentField) {
-      if (!mapVertices || mapVertices.length < 3) {
-        setErrorMessage("Draw and close a boundary with at least 3 points");
-        return;
-      }
-      payload = {
-        name,
-        variety: variety === "Custom" ? null : variety,
-        shapeType: "polygon",
-        parentFieldId: activeParentField.id,
-        geoVertices: mapVertices,
-        sowingStructure,
-        plantSpacing: spacingValues[0],
-        rowSpacing: spacingValues[1],
-      };
-    } else if (shapeMode === "rectangle") {
+    if (shapeMode === "rectangle") {
       const dimensionValues = [form.landWidth, form.landLength].map(Number);
       if (dimensionValues.some((v) => !(v > 0))) {
         setErrorMessage("Please fill in positive land width and length");
@@ -297,6 +274,23 @@ function FieldsSection({ userId, projectId }) {
       // Deleting a large field cascades to its sub-fields server-side.
       setFields(fields.filter((field) => field.id !== fieldId && field.parentFieldId !== fieldId));
     }
+    return success;
+  };
+
+  const handleCreateSubField = async (payload) => {
+    const created = await createField(userId, projectId, payload);
+    if (created) {
+      setFields((prev) => [created, ...prev]);
+    }
+    return created;
+  };
+
+  const handleUpdateSubFieldGeometry = async (fieldId, geoVertices) => {
+    const updated = await updateFieldGeometry(userId, projectId, fieldId, geoVertices);
+    if (updated) {
+      setFields((prev) => prev.map((f) => (f.id === fieldId ? updated : f)));
+    }
+    return updated;
   };
 
   const largeFields = fields.filter((f) => f.parentFieldId == null && f.plantSpacing == null);
@@ -315,42 +309,18 @@ function FieldsSection({ userId, projectId }) {
       onClose={closeDialog}
       PaperProps={{ sx: { display: "flex", flexDirection: "column" } }}
     >
-      <FullScreenDialogHeader
-        title={activeParentField ? `Add Sub-Field to ${activeParentField.name}` : "Add Field"}
-        onClose={closeDialog}
-      />
-      <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: activeParentField ? "row" : "column",
-          p: activeParentField ? 0 : 3,
-          overflow: "hidden",
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            flexShrink: 0,
-            ...(activeParentField
-              ? { width: 360, p: 3, overflowY: "auto", borderRight: "1px solid", borderColor: "divider" }
-              : { maxWidth: 720 }),
-          }}
-        >
-          {!activeParentField && (
-            <ToggleButtonGroup
-              exclusive
-              value={shapeMode}
-              onChange={(e, value) => value && setShapeMode(value)}
-              size="small"
-            >
-              <ToggleButton value="rectangle">Rectangle</ToggleButton>
-              <ToggleButton value="polygon">Custom shape</ToggleButton>
-            </ToggleButtonGroup>
-          )}
+      <FullScreenDialogHeader title="Add Field" onClose={closeDialog} />
+      <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", p: 3, overflow: "hidden" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 720, flexShrink: 0 }}>
+          <ToggleButtonGroup
+            exclusive
+            value={shapeMode}
+            onChange={(e, value) => value && setShapeMode(value)}
+            size="small"
+          >
+            <ToggleButton value="rectangle">Rectangle</ToggleButton>
+            <ToggleButton value="polygon">Custom shape</ToggleButton>
+          </ToggleButtonGroup>
           <TextField
             label="Field name"
             fullWidth
@@ -389,7 +359,7 @@ function FieldsSection({ userId, projectId }) {
             </ToggleButtonGroup>
           </Box>
 
-          {activeParentField ? null : shapeMode === "rectangle" ? (
+          {shapeMode === "rectangle" && (
             <>
               <TextField
                 label="Land width (m)" type="number" fullWidth
@@ -402,7 +372,7 @@ function FieldsSection({ userId, projectId }) {
                 onChange={(e) => setForm({ ...form, landLength: e.target.value })}
               />
             </>
-          ) : null}
+          )}
 
           <TextField
             label="Plant spacing (m)" type="number" fullWidth
@@ -415,9 +385,7 @@ function FieldsSection({ userId, projectId }) {
             onChange={(e) => setForm({ ...form, rowSpacing: e.target.value })}
           />
 
-          {!activeParentField && shapeMode === "polygon" && (
-            <FieldDrawingCanvas onFinish={setPolygonVertices} />
-          )}
+          {shapeMode === "polygon" && <FieldDrawingCanvas onFinish={setPolygonVertices} />}
 
           {errorMessage && (
             <Typography variant="body2" color="error">
@@ -432,12 +400,6 @@ function FieldsSection({ userId, projectId }) {
             </Button>
           </Box>
         </Box>
-
-        {activeParentField && (
-          <Box sx={{ flex: 1, minHeight: 0, display: "flex", p: 3 }}>
-            <FieldMapDrawing onFinish={setMapVertices} parentGeoVertices={activeParentField.geoVertices} />
-          </Box>
-        )}
       </Box>
     </Dialog>
   );
@@ -493,6 +455,28 @@ function FieldsSection({ userId, projectId }) {
     </Dialog>
   );
 
+  const manageSubFieldsDialog = managingParentField && (
+    <Dialog
+      fullScreen
+      open={Boolean(managingParentField)}
+      onClose={() => setManagingParentField(null)}
+      PaperProps={{ sx: { display: "flex", flexDirection: "column" } }}
+    >
+      <FullScreenDialogHeader
+        title={`Manage Sub-Fields of ${managingParentField.name}`}
+        onClose={() => setManagingParentField(null)}
+      />
+      <ManageSubFieldsMap
+        parentField={managingParentField}
+        subFields={subFieldsByParent[managingParentField.id] || []}
+        onCreate={handleCreateSubField}
+        onUpdateGeometry={handleUpdateSubFieldGeometry}
+        onDelete={handleDeleteField}
+        onClose={() => setManagingParentField(null)}
+      />
+    </Dialog>
+  );
+
   return (
     <Box sx={{ mt: 4 }}>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
@@ -519,8 +503,8 @@ function FieldsSection({ userId, projectId }) {
                 field={field}
                 onDelete={handleDeleteField}
                 actions={
-                  <Button size="small" sx={{ mt: 1 }} onClick={() => openSubFieldDialog(field)}>
-                    Add Sub-Field
+                  <Button size="small" sx={{ mt: 1 }} onClick={() => setManagingParentField(field)}>
+                    Manage Sub-Fields
                   </Button>
                 }
               />
@@ -547,6 +531,7 @@ function FieldsSection({ userId, projectId }) {
 
       {addFieldDialog}
       {addLargeFieldDialog}
+      {manageSubFieldsDialog}
     </Box>
   );
 }
