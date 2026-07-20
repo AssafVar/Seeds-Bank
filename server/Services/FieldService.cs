@@ -29,23 +29,105 @@ public class FieldService : IFieldService
 
     public async Task<FieldDto> CreateAsync(string projectId, FieldRequest request)
     {
-        var vertices = ResolveVertices(request);
-        var sowingStructure = request.SowingStructure == "staggered" ? "staggered" : "grid";
-
-        var field = new Field
+        Field? parent = null;
+        if (request.ParentFieldId is { } parentId)
         {
-            ProjectId = projectId,
-            Name = request.Name,
-            Variety = request.Variety,
-            ShapeType = request.ShapeType,
-            SowingStructure = sowingStructure,
-            VerticesJson = JsonSerializer.Serialize(vertices),
-            LandWidth = request.ShapeType == "rectangle" ? request.LandWidth : null,
-            LandLength = request.ShapeType == "rectangle" ? request.LandLength : null,
-            PlantSpacing = request.PlantSpacing,
-            RowSpacing = request.RowSpacing,
-            CreatedAt = DateTime.UtcNow,
-        };
+            parent = await _db.Fields.FirstOrDefaultAsync(f => f.Id == parentId && f.ProjectId == projectId);
+            if (parent is null)
+            {
+                throw new ArgumentException("Parent field not found.");
+            }
+            if (parent.ParentFieldId is not null)
+            {
+                throw new ArgumentException("Sub-fields cannot be nested further than one level.");
+            }
+        }
+
+        // A large field is a new, map-drawn, top-level boundary - it carries
+        // no planting data itself, only its future sub-fields do.
+        var isLargeField = parent is null && request.GeoVertices is { Count: >= 3 };
+
+        Field field;
+        if (isLargeField)
+        {
+            var (originLat, originLng) = GeoMath.Centroid(request.GeoVertices!);
+            var vertices = GeoMath.Project(request.GeoVertices!, originLat, originLng);
+
+            field = new Field
+            {
+                ProjectId = projectId,
+                Name = request.Name,
+                Variety = null,
+                ShapeType = "polygon",
+                SowingStructure = "grid",
+                VerticesJson = JsonSerializer.Serialize(vertices),
+                GeoVerticesJson = JsonSerializer.Serialize(request.GeoVertices),
+                OriginLat = originLat,
+                OriginLng = originLng,
+                LandWidth = null,
+                LandLength = null,
+                PlantSpacing = null,
+                RowSpacing = null,
+                CreatedAt = DateTime.UtcNow,
+            };
+        }
+        else if (parent is not null)
+        {
+            if (request.GeoVertices is not { Count: >= 3 })
+            {
+                throw new ArgumentException("A sub-field needs a boundary with at least 3 points.");
+            }
+            if (parent.OriginLat is not { } originLat || parent.OriginLng is not { } originLng)
+            {
+                throw new ArgumentException("The large field has no map boundary to anchor to.");
+            }
+
+            ValidateSpacing(request.PlantSpacing, request.RowSpacing);
+
+            var vertices = GeoMath.Project(request.GeoVertices, originLat, originLng);
+            var parentVertices = JsonSerializer.Deserialize<List<VertexDto>>(parent.VerticesJson) ?? new List<VertexDto>();
+            if (vertices.Any(v => !PolygonMath.IsInside(v.X, v.Y, parentVertices)))
+            {
+                throw new ArgumentException("Sub-field must stay within the large field's boundary.");
+            }
+
+            field = new Field
+            {
+                ProjectId = projectId,
+                ParentFieldId = parent.Id,
+                Name = request.Name,
+                Variety = request.Variety,
+                ShapeType = "polygon",
+                SowingStructure = request.SowingStructure == "staggered" ? "staggered" : "grid",
+                VerticesJson = JsonSerializer.Serialize(vertices),
+                GeoVerticesJson = JsonSerializer.Serialize(request.GeoVertices),
+                LandWidth = null,
+                LandLength = null,
+                PlantSpacing = request.PlantSpacing,
+                RowSpacing = request.RowSpacing,
+                CreatedAt = DateTime.UtcNow,
+            };
+        }
+        else
+        {
+            ValidateSpacing(request.PlantSpacing, request.RowSpacing);
+            var vertices = ResolveVertices(request);
+
+            field = new Field
+            {
+                ProjectId = projectId,
+                Name = request.Name,
+                Variety = request.Variety,
+                ShapeType = request.ShapeType,
+                SowingStructure = request.SowingStructure == "staggered" ? "staggered" : "grid",
+                VerticesJson = JsonSerializer.Serialize(vertices),
+                LandWidth = request.ShapeType == "rectangle" ? request.LandWidth : null,
+                LandLength = request.ShapeType == "rectangle" ? request.LandLength : null,
+                PlantSpacing = request.PlantSpacing,
+                RowSpacing = request.RowSpacing,
+                CreatedAt = DateTime.UtcNow,
+            };
+        }
 
         _db.Fields.Add(field);
         await _db.SaveChangesAsync();
@@ -62,9 +144,18 @@ public class FieldService : IFieldService
             return false;
         }
 
+        // Children cascade via the FK configured in AppDbContext.OnModelCreating.
         _db.Fields.Remove(field);
         await _db.SaveChangesAsync();
         return true;
+    }
+
+    private static void ValidateSpacing(double? plantSpacing, double? rowSpacing)
+    {
+        if (plantSpacing is not > 0 || rowSpacing is not > 0)
+        {
+            throw new ArgumentException("Plant spacing and row spacing must be positive.");
+        }
     }
 
     // A rectangle is stored as its own 4-corner polygon so every field -
@@ -101,20 +192,43 @@ public class FieldService : IFieldService
     private static FieldDto ToDto(Field field)
     {
         var vertices = JsonSerializer.Deserialize<List<VertexDto>>(field.VerticesJson) ?? new List<VertexDto>();
-        var positions = PolygonMath.ComputePlantPositions(
-            vertices, field.PlantSpacing, field.RowSpacing, field.SowingStructure);
+        var geoVertices = field.GeoVerticesJson is null
+            ? null
+            : JsonSerializer.Deserialize<List<GeoVertexDto>>(field.GeoVerticesJson);
 
+        // A large-field container has no spacing of its own, so there is no
+        // capacity/plant-position math to run - only its sub-fields sow
+        // anything.
+        List<VertexDto> positions = new();
         int? plantsPerRow = null;
         int? numberOfRows = null;
-        // Only meaningful for a straight grid on a rectangle - staggered
-        // rows alternate their plant count, so there's no single number to
-        // report and TotalCapacity (from the real computed positions) is
-        // the accurate figure instead.
-        if (field.ShapeType == "rectangle" && field.SowingStructure == "grid" &&
-            field.LandWidth is { } width && field.LandLength is { } length)
+        var isPreviewApproximate = false;
+        List<VertexDto>? previewPositions = null;
+
+        if (field.PlantSpacing is { } plantSpacing && field.RowSpacing is { } rowSpacing)
         {
-            plantsPerRow = (int)Math.Floor(width / field.PlantSpacing) + 1;
-            numberOfRows = (int)Math.Floor(length / field.RowSpacing) + 1;
+            positions = PolygonMath.ComputePlantPositions(vertices, plantSpacing, rowSpacing, field.SowingStructure);
+
+            // Only meaningful for a straight grid on a rectangle - staggered
+            // rows alternate their plant count, so there's no single number to
+            // report and TotalCapacity (from the real computed positions) is
+            // the accurate figure instead.
+            if (field.ShapeType == "rectangle" && field.SowingStructure == "grid" &&
+                field.LandWidth is { } width && field.LandLength is { } length)
+            {
+                plantsPerRow = (int)Math.Floor(width / plantSpacing) + 1;
+                numberOfRows = (int)Math.Floor(length / rowSpacing) + 1;
+            }
+
+            // Always ship a preview, even for very dense fields - a thinned,
+            // shape-accurate approximation beats no visual at all. TotalCapacity
+            // stays exact regardless of which set is used for drawing.
+            isPreviewApproximate = positions.Count > MaxPlantPositions;
+            previewPositions = isPreviewApproximate
+                ? PolygonMath.ComputeThinnedPositions(
+                    vertices, plantSpacing, rowSpacing, field.SowingStructure,
+                    positions.Count, MaxPlantPositions)
+                : positions;
         }
 
         return new FieldDto
@@ -133,7 +247,10 @@ public class FieldService : IFieldService
             PlantsPerRow = plantsPerRow,
             NumberOfRows = numberOfRows,
             TotalCapacity = positions.Count,
-            PlantPositions = positions.Count <= MaxPlantPositions ? positions : null,
+            PlantPositions = previewPositions,
+            IsPreviewApproximate = isPreviewApproximate,
+            ParentFieldId = field.ParentFieldId,
+            GeoVertices = geoVertices,
             CreatedAt = field.CreatedAt,
         };
     }

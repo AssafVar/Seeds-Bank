@@ -242,10 +242,22 @@ export const deleteNewsPost = async (id) => {
 };
 
 export const fetchCities = async (city) => {
-  const response = await api.get(`https://api.teleport.org/api/cities/?search=${city}`);
-  const citiesResults = response.data._embedded["city:search-results"];
-  const citiesList = converToCitiesList(citiesResults);
-  return citiesList; 
+  if (!city) {
+    return [];
+  }
+  try {
+    // The teleport.org city-search API this used to call has gone dark
+    // (its domain now just serves a placeholder page). Nominatim's own
+    // search endpoint - already used below in getCoords - covers the same
+    // "type a place, get suggestions" need.
+    const response = await api.get(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=jsonv2&addressdetails=1&limit=8`
+    );
+    return converToCitiesList(response.data);
+  } catch (err) {
+    console.log(err);
+    return [];
+  }
 }
 
 export const getCoords = async(location) => {

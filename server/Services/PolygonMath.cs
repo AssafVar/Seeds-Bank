@@ -96,6 +96,21 @@ public static class PolygonMath
         return positions;
     }
 
+    // For dense fields the real grid can run into the thousands of points -
+    // too many to ship to the client and draw as SVG dots. Rather than give
+    // up on the preview entirely, thin it out to roughly targetCount points
+    // by scaling up both spacings by the same factor, so the drawn pattern
+    // still reflects the field's real shape and layout (grid/staggered) at
+    // a lower, renderable density. TotalCapacity always comes from the real
+    // (untouched) ComputePlantPositions call, never from this thinned set.
+    public static List<VertexDto> ComputeThinnedPositions(
+        IReadOnlyList<VertexDto> vertices, double plantSpacing, double rowSpacing,
+        string sowingStructure, int actualCount, int targetCount)
+    {
+        var factor = Math.Sqrt((double)actualCount / targetCount);
+        return ComputePlantPositions(vertices, plantSpacing * factor, rowSpacing * factor, sowingStructure);
+    }
+
     private static bool IsOnSegment(double px, double py, VertexDto a, VertexDto b)
     {
         var cross = (b.X - a.X) * (py - a.Y) - (b.Y - a.Y) * (px - a.X);

@@ -10,12 +10,20 @@ public class FieldDto
     public List<VertexDto> Vertices { get; set; } = new();
     public double? LandWidth { get; set; }
     public double? LandLength { get; set; }
-    public double PlantSpacing { get; set; }
-    public double RowSpacing { get; set; }
+
+    // Null means this is a large-field boundary/container - it has no
+    // planting data of its own, only its sub-fields do.
+    public double? PlantSpacing { get; set; }
+    public double? RowSpacing { get; set; }
     public double Area { get; set; }
     public int? PlantsPerRow { get; set; }
     public int? NumberOfRows { get; set; }
     public int TotalCapacity { get; set; }
     public List<VertexDto>? PlantPositions { get; set; }
+    public bool IsPreviewApproximate { get; set; }
+
+    public int? ParentFieldId { get; set; }
+    public List<GeoVertexDto>? GeoVertices { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

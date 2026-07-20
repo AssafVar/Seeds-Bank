@@ -13,6 +13,16 @@ public class Field
     [Column("project_id")]
     public string ProjectId { get; set; } = null!;
 
+    // Self-reference: null for a standalone field or a top-level "large
+    // field" boundary; set for a sub-field carved out of a large field.
+    // Only one level deep - a sub-field's own ParentFieldId is never set on
+    // a field that already has one (enforced in FieldService, not here).
+    [Column("parent_field_id")]
+    public int? ParentFieldId { get; set; }
+
+    public Field? Parent { get; set; }
+    public ICollection<Field> Children { get; set; } = new List<Field>();
+
     [Column("name")]
     public string Name { get; set; } = null!;
 
@@ -44,11 +54,31 @@ public class Field
     [Column("land_length")]
     public double? LandLength { get; set; }
 
+    // Null on a large-field container (no planting data of its own - only
+    // its sub-fields get sown). Required (>0) for every other field, see
+    // FieldService validation.
     [Column("plant_spacing")]
-    public double PlantSpacing { get; set; }
+    public double? PlantSpacing { get; set; }
 
     [Column("row_spacing")]
-    public double RowSpacing { get; set; }
+    public double? RowSpacing { get; set; }
+
+    // Raw GPS boundary as drawn on the map, JSON-serialized List<GeoVertexDto>.
+    // Only populated for map-drawn fields (large fields and their sub-fields);
+    // null for the legacy local-canvas rectangle/polygon flow.
+    [Column("geo_vertices_json")]
+    public string? GeoVerticesJson { get; set; }
+
+    // Projection anchor shared by a large field and all of its sub-fields,
+    // so their local-meter VerticesJson (used by PolygonMath) live in the
+    // same coordinate space. Only set on a large field (ParentFieldId == null
+    // with a GeoVerticesJson); sub-fields project through the parent's origin
+    // instead of storing their own.
+    [Column("origin_lat")]
+    public double? OriginLat { get; set; }
+
+    [Column("origin_lng")]
+    public double? OriginLng { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
