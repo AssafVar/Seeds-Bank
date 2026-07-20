@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SeedsBank.Server.Data;
 
@@ -11,9 +12,11 @@ using SeedsBank.Server.Data;
 namespace SeedsBank.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260718213140_AddFieldVariety")]
+    partial class AddFieldVariety
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -65,11 +68,6 @@ namespace SeedsBank.Server.Migrations
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("shape_type");
-
-                    b.Property<string>("SowingStructure")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("sowing_structure");
 
                     b.Property<string>("Variety")
                         .HasColumnType("longtext")

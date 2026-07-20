@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -14,51 +15,60 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { createField, deleteField, getFields } from "../../services/serverCalls";
 import vegetableVarieties from "../../libs/vegetableVarieties";
+import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 
-const MAX_GRID_CELLS = 400;
 const emptyForm = { name: "", landWidth: "", landLength: "", plantSpacing: "", rowSpacing: "" };
+const PREVIEW_WIDTH = 280;
+const PREVIEW_HEIGHT = 180;
+const PREVIEW_PADDING = 10;
 
-function FieldGrid({ plantsPerRow, numberOfRows }) {
-  const totalCells = plantsPerRow * numberOfRows;
-  if (totalCells > MAX_GRID_CELLS) {
+function FieldGrid({ vertices, plantPositions, totalCapacity }) {
+  if (!plantPositions || !vertices?.length) {
     return (
       <Typography variant="body2" color="text.secondary">
-        Layout too large to preview — showing capacity summary only.
+        Layout too large to preview — {totalCapacity} plants total.
       </Typography>
     );
   }
+
+  const xs = vertices.map((v) => v.x);
+  const ys = vertices.map((v) => v.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const shapeWidth = Math.max(...xs) - minX || 1;
+  const shapeHeight = Math.max(...ys) - minY || 1;
+  const scale = Math.min(
+    (PREVIEW_WIDTH - PREVIEW_PADDING * 2) / shapeWidth,
+    (PREVIEW_HEIGHT - PREVIEW_PADDING * 2) / shapeHeight
+  );
+  const toX = (x) => (x - minX) * scale + PREVIEW_PADDING;
+  const toY = (y) => (y - minY) * scale + PREVIEW_PADDING;
+  const points = vertices.map((v) => `${toX(v.x)},${toY(v.y)}`).join(" ");
+
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${plantsPerRow}, 1fr)`,
-        gap: "3px",
-        maxWidth: 320,
-      }}
-    >
-      {Array.from({ length: totalCells }).map((_, i) => (
-        <Box
-          key={i}
-          sx={{
-            aspectRatio: "1 / 1",
-            borderRadius: "50%",
-            bgcolor: "success.main",
-          }}
-        />
+    <svg width={PREVIEW_WIDTH} height={PREVIEW_HEIGHT}>
+      <polygon points={points} fill="rgba(31,77,58,0.12)" stroke="#1F4D3A" strokeWidth={1.5} />
+      {plantPositions.map((p, i) => (
+        <circle key={i} cx={toX(p.x)} cy={toY(p.y)} r={2.5} fill="#1F4D3A" />
       ))}
-    </Box>
+    </svg>
   );
 }
 
 function FieldsSection({ userId, projectId }) {
   const [fields, setFields] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [shapeMode, setShapeMode] = useState("rectangle");
   const [form, setForm] = useState(emptyForm);
   const [variety, setVariety] = useState("Custom");
+  const [sowingStructure, setSowingStructure] = useState("grid");
+  const [polygonVertices, setPolygonVertices] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   const loadFields = async () => {
@@ -89,23 +99,54 @@ function FieldsSection({ userId, projectId }) {
     setIsDialogOpen(false);
     setForm(emptyForm);
     setVariety("Custom");
+    setSowingStructure("grid");
+    setShapeMode("rectangle");
+    setPolygonVertices(null);
     setErrorMessage("");
   };
 
   const handleCreateField = async () => {
-    const { name, landWidth, landLength, plantSpacing, rowSpacing } = form;
-    const values = [landWidth, landLength, plantSpacing, rowSpacing].map(Number);
-    if (!name || values.some((v) => !(v > 0))) {
-      setErrorMessage("Please fill in a name and positive values for every field");
+    const { name, plantSpacing, rowSpacing } = form;
+    const spacingValues = [plantSpacing, rowSpacing].map(Number);
+    if (!name || spacingValues.some((v) => !(v > 0))) {
+      setErrorMessage("Please fill in a name and positive spacing values");
       return;
     }
-    const created = await createField(userId, projectId, {
-      name,
-      landWidth: values[0],
-      landLength: values[1],
-      plantSpacing: values[2],
-      rowSpacing: values[3],
-    });
+
+    let payload;
+    if (shapeMode === "rectangle") {
+      const dimensionValues = [form.landWidth, form.landLength].map(Number);
+      if (dimensionValues.some((v) => !(v > 0))) {
+        setErrorMessage("Please fill in positive land width and length");
+        return;
+      }
+      payload = {
+        name,
+        variety: variety === "Custom" ? null : variety,
+        shapeType: "rectangle",
+        landWidth: dimensionValues[0],
+        landLength: dimensionValues[1],
+        sowingStructure,
+        plantSpacing: spacingValues[0],
+        rowSpacing: spacingValues[1],
+      };
+    } else {
+      if (!polygonVertices || polygonVertices.length < 3) {
+        setErrorMessage("Draw and close a shape with at least 3 points");
+        return;
+      }
+      payload = {
+        name,
+        variety: variety === "Custom" ? null : variety,
+        shapeType: "polygon",
+        vertices: polygonVertices,
+        sowingStructure,
+        plantSpacing: spacingValues[0],
+        rowSpacing: spacingValues[1],
+      };
+    }
+
+    const created = await createField(userId, projectId, payload);
     if (created) {
       setFields([created, ...fields]);
       closeDialog();
@@ -141,22 +182,41 @@ function FieldsSection({ userId, projectId }) {
               <Card variant="outlined">
                 <CardContent>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      {field.name}
-                    </Typography>
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {field.name}
+                      </Typography>
+                      <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mb: 0.5 }}>
+                        {field.variety && (
+                          <Chip label={field.variety} size="small" color="success" />
+                        )}
+                        {field.sowingStructure === "staggered" && (
+                          <Chip label="Staggered" size="small" variant="outlined" />
+                        )}
+                      </Box>
+                    </Box>
                     <IconButton size="small" onClick={() => handleDeleteField(field.id)}>
                       <DeleteIcon color="error" fontSize="small" />
                     </IconButton>
                   </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {field.landWidth}m × {field.landLength}m land, {field.plantSpacing}m ×{" "}
-                    {field.rowSpacing}m spacing
+                    {field.shapeType === "rectangle"
+                      ? `${field.landWidth}m × ${field.landLength}m land`
+                      : `${field.area.toFixed(1)}m² custom plot`}
+                    {" · "}
+                    {field.plantSpacing}m × {field.rowSpacing}m spacing
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    {field.numberOfRows} rows × {field.plantsPerRow} plants/row ={" "}
+                    {field.plantsPerRow && field.numberOfRows
+                      ? `${field.numberOfRows} rows × ${field.plantsPerRow} plants/row = `
+                      : ""}
                     <strong>{field.totalCapacity} plants</strong>
                   </Typography>
-                  <FieldGrid plantsPerRow={field.plantsPerRow} numberOfRows={field.numberOfRows} />
+                  <FieldGrid
+                    vertices={field.vertices}
+                    plantPositions={field.plantPositions}
+                    totalCapacity={field.totalCapacity}
+                  />
                 </CardContent>
               </Card>
             </Grid>
@@ -164,10 +224,19 @@ function FieldsSection({ userId, projectId }) {
         </Grid>
       )}
 
-      <Dialog open={isDialogOpen} onClose={closeDialog} fullWidth maxWidth="xs">
+      <Dialog open={isDialogOpen} onClose={closeDialog} fullWidth maxWidth={shapeMode === "polygon" ? "sm" : "xs"}>
         <DialogTitle>Add Field</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <ToggleButtonGroup
+              exclusive
+              value={shapeMode}
+              onChange={(e, value) => value && setShapeMode(value)}
+              size="small"
+            >
+              <ToggleButton value="rectangle">Rectangle</ToggleButton>
+              <ToggleButton value="polygon">Custom shape</ToggleButton>
+            </ToggleButtonGroup>
             <TextField
               label="Field name"
               fullWidth
@@ -190,16 +259,39 @@ function FieldsSection({ userId, projectId }) {
                 ))}
               </Select>
             </FormControl>
-            <TextField
-              label="Land width (m)" type="number" fullWidth
-              value={form.landWidth}
-              onChange={(e) => setForm({ ...form, landWidth: e.target.value })}
-            />
-            <TextField
-              label="Land length (m)" type="number" fullWidth
-              value={form.landLength}
-              onChange={(e) => setForm({ ...form, landLength: e.target.value })}
-            />
+
+            <Box>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                Sowing structure
+              </Typography>
+              <ToggleButtonGroup
+                exclusive
+                value={sowingStructure}
+                onChange={(e, value) => value && setSowingStructure(value)}
+                size="small"
+              >
+                <ToggleButton value="grid">Grid (aligned rows)</ToggleButton>
+                <ToggleButton value="staggered">Staggered (denser)</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {shapeMode === "rectangle" ? (
+              <>
+                <TextField
+                  label="Land width (m)" type="number" fullWidth
+                  value={form.landWidth}
+                  onChange={(e) => setForm({ ...form, landWidth: e.target.value })}
+                />
+                <TextField
+                  label="Land length (m)" type="number" fullWidth
+                  value={form.landLength}
+                  onChange={(e) => setForm({ ...form, landLength: e.target.value })}
+                />
+              </>
+            ) : (
+              <FieldDrawingCanvas onFinish={setPolygonVertices} />
+            )}
+
             <TextField
               label="Plant spacing (m)" type="number" fullWidth
               value={form.plantSpacing}

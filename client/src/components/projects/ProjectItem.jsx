@@ -5,6 +5,8 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Tab,
+  Tabs,
   TextField,
   Tooltip,
   Typography,
@@ -41,6 +43,7 @@ import DialogModal from "../dialog/DialogModal.jsx";
 import CrossPlantsModal from "../modals/CrossPlantsModal.jsx";
 import PlantCard from "./PlantCard.jsx";
 import FieldsSection from "./FieldsSection.jsx";
+import VarietiesSection from "./VarietiesSection.jsx";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GrassIcon from "@mui/icons-material/Grass";
 import VerifiedIcon from "@mui/icons-material/Verified";
@@ -77,6 +80,7 @@ function ProjectItem({ projectId, handleReturn }) {
   const [sortBy, setSortBy] = useState("");
   const [plantIdToDelete, setPlantIdToDelete] = useState({});
   const [isOpenCrossModal, setIsOpenCrossModal] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
 
   const { activeUser } = useContext(authContext);
   const inputRef = useRef(null);
@@ -187,16 +191,23 @@ function ProjectItem({ projectId, handleReturn }) {
           <Typography variant="h3" style={classes.pageHeadline}>
             project: {projectHeaders.project_name}
           </Typography>
+          <Button onClick={handleReturn} sx={{ mt: 1 }}>Return to the Project List</Button>
+          <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mt: 1, mb: 2 }}>
+            <Tab label="Plants" />
+            <Tab label="Fields" />
+            <Tab label="Varieties" />
+          </Tabs>
+          {activeTab === 0 && (
+          <>
           <Box
             sx={{
               display: "flex",
               flexDirection: { xs: "column", sm: "row" },
-              justifyContent: "space-between",
+              justifyContent: "flex-end",
               gap: 1,
               margin: { xs: "5px 10px", sm: "5px 40px" },
             }}
           >
-            <Button onClick={handleReturn}>Return to the Project List</Button>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
               {generations.length > 1 && (
                 <FormControl style={{ width: "100px" }}>
@@ -436,7 +447,14 @@ function ProjectItem({ projectId, handleReturn }) {
               Save Project
             </Button>
           </Box>
-          <FieldsSection userId={activeUser.userId} projectId={projectId} />
+          </>
+          )}
+          {activeTab === 1 && (
+            <FieldsSection userId={activeUser.userId} projectId={projectId} />
+          )}
+          {activeTab === 2 && (
+            <VarietiesSection userId={activeUser.userId} projectId={projectId} />
+          )}
         </Container>
       )}
       <>

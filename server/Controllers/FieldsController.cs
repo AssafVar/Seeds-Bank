@@ -31,8 +31,15 @@ public class FieldsController : OwnedResourceControllerBase
     {
         if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
 
-        var field = await _fieldService.CreateAsync(projectId, request);
-        return Ok(field);
+        try
+        {
+            var field = await _fieldService.CreateAsync(projectId, request);
+            return Ok(field);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpDelete("{fieldId}")]

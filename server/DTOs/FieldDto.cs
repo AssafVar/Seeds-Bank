@@ -4,12 +4,18 @@ public class FieldDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
-    public double LandWidth { get; set; }
-    public double LandLength { get; set; }
+    public string? Variety { get; set; }
+    public string ShapeType { get; set; } = null!;
+    public string SowingStructure { get; set; } = null!;
+    public List<VertexDto> Vertices { get; set; } = new();
+    public double? LandWidth { get; set; }
+    public double? LandLength { get; set; }
     public double PlantSpacing { get; set; }
     public double RowSpacing { get; set; }
-    public int PlantsPerRow { get; set; }
-    public int NumberOfRows { get; set; }
+    public double Area { get; set; }
+    public int? PlantsPerRow { get; set; }
+    public int? NumberOfRows { get; set; }
     public int TotalCapacity { get; set; }
+    public List<VertexDto>? PlantPositions { get; set; }
     public DateTime CreatedAt { get; set; }
 }
