@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
-import { MapContainer, TileLayer, Polygon, Marker } from "react-leaflet";
+import { MapContainer, Polygon, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import SearchCities from "../search/SearchCities.jsx";
 import { getCoords } from "../../services/serverCalls";
@@ -10,12 +10,12 @@ import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
   SEARCH_ZOOM,
-  distanceMeters,
-  formatDistance,
   vertexIcon,
-  labelIcon,
+  pointAtDistanceAlong,
   MapView,
   ClickCapture,
+  MapBaseLayers,
+  SegmentLengthLabel,
 } from "./mapDrawingShared.jsx";
 
 const MIN_MAP_HEIGHT = 240;
@@ -28,9 +28,25 @@ function FieldMapDrawing({ onFinish, parentGeoVertices }) {
   const [vertices, setVertices] = useState([]);
   const [isClosed, setIsClosed] = useState(false);
   const [center, setCenter] = useState(parentGeoVertices?.length ? null : DEFAULT_CENTER);
+  const suppressClickRef = useRef(false);
 
   const handleClick = (point) => {
+    if (suppressClickRef.current) {
+      // This click just opened/used a segment-length popup, not a new corner.
+      return;
+    }
     setVertices((prev) => [...prev, point]);
+  };
+
+  // Typing an exact edge length moves `b` along the a->b direction to match -
+  // same idea as dragging a corner, just precise instead of eyeballed.
+  const handleSegmentLengthChange = (targetIndex, anchor, meters) => {
+    const newPoint = pointAtDistanceAlong(anchor, vertices[targetIndex], meters);
+    const updated = vertices.map((v, i) => (i === targetIndex ? newPoint : v));
+    setVertices(updated);
+    if (isClosed) {
+      onFinish(updated);
+    }
   };
 
   const handleUndo = () => setVertices((prev) => prev.slice(0, -1));
@@ -110,10 +126,7 @@ function FieldMapDrawing({ onFinish, parentGeoVertices }) {
           zoom={DEFAULT_ZOOM}
           style={{ height: "100%", width: "100%" }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <MapBaseLayers />
           <MapView center={center} zoom={SEARCH_ZOOM} fitTo={parentGeoVertices} />
           <ClickCapture disabled={isClosed} onClick={handleClick} />
           {parentGeoVertices?.length >= 3 && (
@@ -129,15 +142,14 @@ function FieldMapDrawing({ onFinish, parentGeoVertices }) {
             />
           )}
           {segments.map(([a, b], i) => {
-            const midpoint = { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
-            const text = formatDistance(distanceMeters(a, b));
+            const targetIndex = isClosed && i === segments.length - 1 ? 0 : i + 1;
             return (
-              <Marker
+              <SegmentLengthLabel
                 key={`segment-${i}`}
-                position={[midpoint.lat, midpoint.lng]}
-                icon={labelIcon(text)}
-                interactive={false}
-                keyboard={false}
+                a={a}
+                b={b}
+                suppressClickRef={suppressClickRef}
+                onApply={(meters) => handleSegmentLengthChange(targetIndex, a, meters)}
               />
             );
           })}

@@ -17,22 +17,24 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { MapContainer, TileLayer, Polygon, Marker, useMap } from "react-leaflet";
+import { MapContainer, Polygon, Marker, CircleMarker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import vegetableVarieties from "../../libs/vegetableVarieties";
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
-  distanceMeters,
-  formatDistance,
   vertexIcon,
-  labelIcon,
+  localToLatLng,
+  pointAtDistanceAlong,
   MapView,
   ClickCapture,
+  MapBaseLayers,
+  SegmentLengthLabel,
 } from "./mapDrawingShared.jsx";
 
 const MIN_MAP_HEIGHT = 240;
 const emptyNewField = { name: "", variety: "Custom", sowingStructure: "grid", plantSpacing: "", rowSpacing: "" };
+const AUTOSAVE_DEBOUNCE_MS = 600;
 
 // A saved sub-field, rendered as a whole-shape-draggable polygon. Leaflet's
 // vector layers (unlike Marker) have no built-in dragging, so this wires the
@@ -41,16 +43,28 @@ const emptyNewField = { name: "", variety: "Custom", sowingStructure: "grid", pl
 // the pointer's delta, mouseup re-enables panning and reports the move up -
 // snapping back to the original position if the server rejects it (e.g. it
 // now falls outside the parent boundary).
-function DraggableSubFieldPolygon({ field, isSelected, onSelect, onMoved }) {
+function DraggableSubFieldPolygon({ field, isSelected, onSelect, onMoved, suppressClickRef }) {
   const map = useMap();
   const [liveVertices, setLiveVertices] = useState(field.geoVertices);
+  // A pure shape-body drag is just a translation - it can't change the
+  // plant count or layout, so instead of waiting on a server round trip the
+  // already-computed dots just slide by the same delta as the boundary,
+  // live. Reshaping a single corner does change the fill, so that case
+  // leaves this at zero and waits for the recalculated set from the server.
+  const [plantOffset, setPlantOffset] = useState({ dLat: 0, dLng: 0 });
   const dragRef = useRef(null);
 
   useEffect(() => {
     setLiveVertices(field.geoVertices);
+    setPlantOffset({ dLat: 0, dLng: 0 });
   }, [field.geoVertices]);
 
   const handleMouseDown = (e) => {
+    // A plain click (mousedown with no movement) still bubbles up to the
+    // map as a native "click" afterward, which the draw-boundary
+    // ClickCapture would otherwise mistake for a new vertex. Arm the flag
+    // now and clear it just after that click has had a chance to fire.
+    suppressClickRef.current = true;
     onSelect(field.id);
     map.dragging.disable();
     const original = field.geoVertices;
@@ -61,6 +75,7 @@ function DraggableSubFieldPolygon({ field, isSelected, onSelect, onMoved }) {
       const dLat = moveEvt.latlng.lat - dragRef.current.start.lat;
       const dLng = moveEvt.latlng.lng - dragRef.current.start.lng;
       setLiveVertices(dragRef.current.original.map((v) => ({ lat: v.lat + dLat, lng: v.lng + dLng })));
+      setPlantOffset({ dLat, dLng });
     };
 
     const handleMouseUp = (upEvt) => {
@@ -69,6 +84,9 @@ function DraggableSubFieldPolygon({ field, isSelected, onSelect, onMoved }) {
       map.dragging.enable();
       const dragInfo = dragRef.current;
       dragRef.current = null;
+      setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 0);
       if (!dragInfo) return;
 
       const dLat = upEvt.latlng.lat - dragInfo.start.lat;
@@ -77,27 +95,115 @@ function DraggableSubFieldPolygon({ field, isSelected, onSelect, onMoved }) {
 
       const moved = dragInfo.original.map((v) => ({ lat: v.lat + dLat, lng: v.lng + dLng }));
       setLiveVertices(moved);
-      onMoved(field.id, moved, () => setLiveVertices(dragInfo.original));
+      // plantOffset is left as-is (not reset here) so the dots stay put at
+      // their translated spot until the server's recalculated field.vertices
+      // arrives and the effect above zeroes the offset back out; resetting
+      // it now would snap them back to the pre-drag position for a beat.
+      onMoved(field.id, moved, () => {
+        setLiveVertices(dragInfo.original);
+        setPlantOffset({ dLat: 0, dLng: 0 });
+      });
     };
 
     map.on("mousemove", handleMouseMove);
     map.on("mouseup", handleMouseUp);
   };
 
+  // Reshaping one corner - Leaflet Markers drag themselves (unlike Path
+  // layers), so this just tracks the single vertex being moved rather than
+  // reusing the whole-shape mousemove/mouseup wiring above.
+  const handleVertexDragStart = () => {
+    suppressClickRef.current = true;
+  };
+
+  const handleVertexDrag = (index, latlng) => {
+    setLiveVertices((prev) => prev.map((v, i) => (i === index ? { lat: latlng.lat, lng: latlng.lng } : v)));
+  };
+
+  const handleVertexDragEnd = (index, latlng) => {
+    const moved = field.geoVertices.map((v, i) => (i === index ? { lat: latlng.lat, lng: latlng.lng } : v));
+    setLiveVertices(moved);
+    onMoved(field.id, moved, () => setLiveVertices(field.geoVertices));
+    setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
+  };
+
+  // Typing an exact edge length moves the far vertex along that edge's
+  // direction to match, same idea as dragging a corner but precise.
+  const handleSegmentLengthChange = (targetIndex, anchor, meters) => {
+    const newPoint = pointAtDistanceAlong(anchor, field.geoVertices[targetIndex], meters);
+    const moved = field.geoVertices.map((v, i) => (i === targetIndex ? newPoint : v));
+    setLiveVertices(moved);
+    onMoved(field.id, moved, () => setLiveVertices(field.geoVertices));
+  };
+
   return (
-    <Polygon
-      positions={liveVertices.map((v) => [v.lat, v.lng])}
-      pathOptions={{
-        color: isSelected ? "#D6543A" : "#1F4D3A",
-        weight: isSelected ? 3 : 2,
-        fillOpacity: 0.25,
-      }}
-      eventHandlers={{ mousedown: handleMouseDown }}
-    />
+    <>
+      <Polygon
+        positions={liveVertices.map((v) => [v.lat, v.lng])}
+        pathOptions={{
+          color: isSelected ? "#D6543A" : "#1F4D3A",
+          weight: isSelected ? 3 : 2,
+          fillOpacity: 0.25,
+        }}
+        eventHandlers={{ mousedown: handleMouseDown }}
+      />
+      {isSelected &&
+        liveVertices.map((v, i) => (
+          <Marker
+            key={i}
+            position={[v.lat, v.lng]}
+            icon={vertexIcon}
+            draggable
+            eventHandlers={{
+              dragstart: handleVertexDragStart,
+              drag: (e) => handleVertexDrag(i, e.target.getLatLng()),
+              dragend: (e) => handleVertexDragEnd(i, e.target.getLatLng()),
+            }}
+          />
+        ))}
+      {isSelected &&
+        liveVertices.map((a, i) => {
+          const targetIndex = (i + 1) % liveVertices.length;
+          return (
+            <SegmentLengthLabel
+              key={`edge-${i}`}
+              a={a}
+              b={liveVertices[targetIndex]}
+              suppressClickRef={suppressClickRef}
+              onApply={(meters) => handleSegmentLengthChange(targetIndex, a, meters)}
+            />
+          );
+        })}
+      <SubFieldPlants field={field} offset={plantOffset} />
+    </>
   );
 }
 
-function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry, onDelete, onClose }) {
+function SubFieldPlants({ field, offset }) {
+  if (!field.plantPositions?.length) {
+    return null;
+  }
+  const toLatLng = localToLatLng(field.vertices, field.geoVertices);
+  const dLat = offset?.dLat || 0;
+  const dLng = offset?.dLng || 0;
+  return field.plantPositions.map((p, i) => {
+    const latLng = toLatLng(p);
+    if (!latLng) return null;
+    return (
+      <CircleMarker
+        key={i}
+        center={[latLng.lat + dLat, latLng.lng + dLng]}
+        radius={3}
+        pathOptions={{ color: "#1F4D3A", fillColor: "#1F4D3A", fillOpacity: 0.9, weight: 1 }}
+        interactive={false}
+      />
+    );
+  });
+}
+
+function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry, onUpdateProperties, onDelete, onClose }) {
   const [selectedId, setSelectedId] = useState(null);
   const [clipboard, setClipboard] = useState(null);
 
@@ -106,16 +212,113 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   const [newField, setNewField] = useState(emptyNewField);
   const [error, setError] = useState("");
 
+  const saveTimeoutRef = useRef(null);
+  const pendingSaveRef = useRef(null);
+  const suppressClickRef = useRef(false);
+
+  const commitSave = async (fieldId, values) => {
+    const spacingValues = [values.plantSpacing, values.rowSpacing].map(Number);
+    if (!values.name || spacingValues.some((v) => !(v > 0))) {
+      return;
+    }
+    const updated = await onUpdateProperties(fieldId, {
+      name: values.name,
+      variety: values.variety === "Custom" ? null : values.variety,
+      sowingStructure: values.sowingStructure,
+      plantSpacing: spacingValues[0],
+      rowSpacing: spacingValues[1],
+    });
+    setError(updated ? "" : "Failed to save changes");
+  };
+
+  const flushPendingSave = () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    if (pendingSaveRef.current) {
+      const { fieldId, values } = pendingSaveRef.current;
+      pendingSaveRef.current = null;
+      commitSave(fieldId, values);
+    }
+  };
+
+  const discardPendingSave = (fieldId) => {
+    if (pendingSaveRef.current?.fieldId === fieldId) {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      pendingSaveRef.current = null;
+    }
+  };
+
+  // Flush a save left pending by an unmount (e.g. closing the dialog)
+  // mid-debounce, so the last edit isn't silently dropped.
+  useEffect(() => flushPendingSave, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const scheduleSave = (fieldId, values, immediate) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    if (immediate) {
+      pendingSaveRef.current = null;
+      commitSave(fieldId, values);
+      return;
+    }
+    pendingSaveRef.current = { fieldId, values };
+    saveTimeoutRef.current = setTimeout(() => {
+      saveTimeoutRef.current = null;
+      pendingSaveRef.current = null;
+      commitSave(fieldId, values);
+    }, AUTOSAVE_DEBOUNCE_MS);
+  };
+
+  // Updates the form, and - while editing an existing sub-field - autosaves
+  // the change (debounced for free-typed text, immediate for discrete
+  // picks like variety/sowing structure) so switching to another sub-field
+  // never loses an edit.
+  const updateFieldValue = (patch, immediate) => {
+    const updated = { ...newField, ...patch };
+    setNewField(updated);
+    if (selectedId) {
+      scheduleSave(selectedId, updated, immediate);
+    }
+  };
+
   const handleVarietyChange = (name) => {
     const match = vegetableVarieties.find((v) => v.name === name);
-    setNewField((prev) => ({
-      ...prev,
-      variety: name,
-      ...(match ? { plantSpacing: String(match.plantSpacing), rowSpacing: String(match.rowSpacing) } : {}),
-    }));
+    updateFieldValue(
+      {
+        variety: name,
+        ...(match ? { plantSpacing: String(match.plantSpacing), rowSpacing: String(match.rowSpacing) } : {}),
+      },
+      true
+    );
+  };
+
+  const selectField = (fieldId) => {
+    flushPendingSave();
+    setSelectedId(fieldId);
+    const field = subFields.find((f) => f.id === fieldId);
+    if (field) {
+      setNewField({
+        name: field.name,
+        variety: field.variety || "Custom",
+        sowingStructure: field.sowingStructure || "grid",
+        plantSpacing: field.plantSpacing != null ? String(field.plantSpacing) : "",
+        rowSpacing: field.rowSpacing != null ? String(field.rowSpacing) : "",
+      });
+    }
   };
 
   const handleDrawClick = (point) => {
+    if (suppressClickRef.current) {
+      // This click is the tail end of selecting/dragging an existing
+      // sub-field, not an intent to add a new boundary point.
+      return;
+    }
     setDrawVertices((prev) => [...prev, point]);
   };
 
@@ -124,6 +327,11 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   const handleDrawVertexDrag = (index, latlng) => {
     const point = { lat: latlng.lat, lng: latlng.lng };
     setDrawVertices((prev) => prev.map((v, i) => (i === index ? point : v)));
+  };
+
+  const handleDrawSegmentLengthChange = (targetIndex, anchor, meters) => {
+    const newPoint = pointAtDistanceAlong(anchor, drawVertices[targetIndex], meters);
+    setDrawVertices((prev) => prev.map((v, i) => (i === targetIndex ? newPoint : v)));
   };
 
   const handleDrawClear = () => {
@@ -174,9 +382,11 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   };
 
   const handleDeleteField = async (field) => {
+    discardPendingSave(field.id);
     const success = await onDelete(field.id);
     if (success && field.id === selectedId) {
       setSelectedId(null);
+      setNewField(emptyNewField);
       // Clipboard is intentionally left alone even if its source field was
       // just deleted - the copied shape/spacing is still useful to paste.
     }
@@ -190,6 +400,13 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
     } else {
       setError("");
     }
+  };
+
+  const handleDoneEditing = () => {
+    flushPendingSave();
+    setSelectedId(null);
+    setNewField(emptyNewField);
+    setError("");
   };
 
   const handleCreateNew = async () => {
@@ -222,6 +439,12 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
       setError("Failed to create sub-field");
     }
   };
+
+  // Pulled fresh from `subFields` (not `newField`) each render, so it
+  // reflects the server's recalculated capacity for the current shape and
+  // spacing - including right after a corner/shape drag - not just what's
+  // pending in the form.
+  const selectedField = subFields.find((f) => f.id === selectedId);
 
   const drawSegments = useMemo(() => {
     const list = [];
@@ -275,8 +498,11 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
                     </Box>
                   }
                 >
-                  <ListItemButton selected={f.id === selectedId} onClick={() => setSelectedId(f.id)} sx={{ pr: 9 }}>
-                    <ListItemText primary={f.name} secondary={f.variety || "Custom"} />
+                  <ListItemButton selected={f.id === selectedId} onClick={() => selectField(f.id)} sx={{ pr: 9 }}>
+                    <ListItemText
+                      primary={f.name}
+                      secondary={`${f.variety || "Custom"} · ${f.totalCapacity} plants`}
+                    />
                   </ListItemButton>
                 </ListItem>
               ))}
@@ -292,12 +518,25 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
 
         <Divider />
 
-        <Typography variant="subtitle2">Add a new sub-field</Typography>
+        <Typography variant="subtitle2">
+          {selectedId ? "Edit selected sub-field" : "Add a new sub-field"}
+          {selectedId && (
+            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+              (saves automatically)
+            </Typography>
+          )}
+        </Typography>
+        {selectedField && (
+          <Typography variant="body2" color="text.secondary">
+            Fits <strong>{selectedField.totalCapacity} plants</strong> at this shape and spacing
+            {selectedField.isPreviewApproximate ? " (preview thinned for display)" : ""}.
+          </Typography>
+        )}
         <TextField
           label="Field name"
           fullWidth
           value={newField.name}
-          onChange={(e) => setNewField({ ...newField, name: e.target.value })}
+          onChange={(e) => updateFieldValue({ name: e.target.value })}
         />
         <FormControl fullWidth>
           <InputLabel id="new-subfield-variety-label">Vegetable variety</InputLabel>
@@ -322,7 +561,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
           <ToggleButtonGroup
             exclusive
             value={newField.sowingStructure}
-            onChange={(e, value) => value && setNewField({ ...newField, sowingStructure: value })}
+            onChange={(e, value) => value && updateFieldValue({ sowingStructure: value }, true)}
             size="small"
           >
             <ToggleButton value="grid">Grid (aligned rows)</ToggleButton>
@@ -332,29 +571,31 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
         <TextField
           label="Plant spacing (m)" type="number" fullWidth
           value={newField.plantSpacing}
-          onChange={(e) => setNewField({ ...newField, plantSpacing: e.target.value })}
+          onChange={(e) => updateFieldValue({ plantSpacing: e.target.value })}
         />
         <TextField
           label="Row spacing (m)" type="number" fullWidth
           value={newField.rowSpacing}
-          onChange={(e) => setNewField({ ...newField, rowSpacing: e.target.value })}
+          onChange={(e) => updateFieldValue({ rowSpacing: e.target.value })}
         />
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-          <Button size="small" onClick={handleDrawUndo} disabled={drawVertices.length === 0 || isDrawClosed}>
-            Undo point
-          </Button>
-          <Button size="small" onClick={handleDrawClear}>
-            Clear
-          </Button>
-          <Button size="small" variant="contained" onClick={handleDrawClose} disabled={drawVertices.length < 3 || isDrawClosed}>
-            Close Shape
-          </Button>
-          {isDrawClosed && (
-            <Button size="small" onClick={handleDrawEditAgain}>
-              Edit again
+        {!selectedId && (
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+            <Button size="small" onClick={handleDrawUndo} disabled={drawVertices.length === 0 || isDrawClosed}>
+              Undo point
             </Button>
-          )}
-        </Box>
+            <Button size="small" onClick={handleDrawClear}>
+              Clear
+            </Button>
+            <Button size="small" variant="contained" onClick={handleDrawClose} disabled={drawVertices.length < 3 || isDrawClosed}>
+              Close Shape
+            </Button>
+            {isDrawClosed && (
+              <Button size="small" onClick={handleDrawEditAgain}>
+                Edit again
+              </Button>
+            )}
+          </Box>
+        )}
 
         {error && (
           <Typography variant="body2" color="error">
@@ -364,9 +605,15 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
 
         <Box sx={{ display: "flex", gap: 1 }}>
           <Button onClick={onClose}>Close</Button>
-          <Button variant="contained" onClick={handleCreateNew}>
-            Add Sub-Field
-          </Button>
+          {selectedId ? (
+            <Button variant="contained" onClick={handleDoneEditing}>
+              Done
+            </Button>
+          ) : (
+            <Button variant="contained" onClick={handleCreateNew}>
+              Add Sub-Field
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -377,10 +624,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
             zoom={DEFAULT_ZOOM}
             style={{ height: "100%", width: "100%" }}
           >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <MapBaseLayers />
             <MapView fitTo={parentField.geoVertices} />
             <ClickCapture disabled={isDrawClosed} onClick={handleDrawClick} />
 
@@ -394,8 +638,9 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
                 key={f.id}
                 field={f}
                 isSelected={f.id === selectedId}
-                onSelect={setSelectedId}
+                onSelect={selectField}
                 onMoved={handleMoved}
+                suppressClickRef={suppressClickRef}
               />
             ))}
 
@@ -406,14 +651,14 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
               />
             )}
             {drawSegments.map(([a, b], i) => {
-              const midpoint = { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
+              const targetIndex = isDrawClosed && i === drawSegments.length - 1 ? 0 : i + 1;
               return (
-                <Marker
+                <SegmentLengthLabel
                   key={`draw-segment-${i}`}
-                  position={[midpoint.lat, midpoint.lng]}
-                  icon={labelIcon(formatDistance(distanceMeters(a, b)))}
-                  interactive={false}
-                  keyboard={false}
+                  a={a}
+                  b={b}
+                  suppressClickRef={suppressClickRef}
+                  onApply={(meters) => handleDrawSegmentLengthChange(targetIndex, a, meters)}
                 />
               );
             })}

@@ -147,6 +147,34 @@ public class FieldService : IFieldService
         return ToDto(field);
     }
 
+    public async Task<FieldDto?> UpdatePropertiesAsync(string projectId, int fieldId, UpdateFieldPropertiesRequest request)
+    {
+        var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == fieldId && f.ProjectId == projectId);
+        if (field is null)
+        {
+            return null;
+        }
+
+        // A large-field container carries no planting data of its own -
+        // only its sub-fields do (see CreateAsync) - so it has nothing here
+        // to update.
+        if (field.ParentFieldId is null && field.PlantSpacing is null)
+        {
+            throw new ArgumentException("Large field containers have no planting properties to update.");
+        }
+
+        ValidateSpacing(request.PlantSpacing, request.RowSpacing);
+
+        field.Name = request.Name;
+        field.Variety = request.Variety;
+        field.SowingStructure = request.SowingStructure == "staggered" ? "staggered" : "grid";
+        field.PlantSpacing = request.PlantSpacing;
+        field.RowSpacing = request.RowSpacing;
+        await _db.SaveChangesAsync();
+
+        return ToDto(field);
+    }
+
     public async Task<bool> DeleteAsync(string projectId, int fieldId)
     {
         var field = await _db.Fields

@@ -9,6 +9,7 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import { getLinePurityMap } from "../../libs/projects.js";
+import ModalCloseButton from "../common/ModalCloseButton.jsx";
 
 const plantLabel = (plant, isStable) =>
   `${plant.line} — gen ${plant.generation}${isStable ? " ✓ stable" : ""}`;
@@ -35,7 +36,13 @@ export default function CrossPlantsModal({ isOpen, projectDetails, onConfirm, on
   };
 
   return (
-    <Dialog open={isOpen} onClose={handleClose} aria-labelledby="cross-plants-title">
+    <Dialog
+      open={isOpen}
+      onClose={handleClose}
+      aria-labelledby="cross-plants-title"
+      PaperProps={{ sx: { position: "relative", overflow: "visible" } }}
+    >
+      <ModalCloseButton onClick={handleClose} />
       <DialogTitle id="cross-plants-title">Cross two lines</DialogTitle>
       <DialogContent>
         <FormControl fullWidth style={{ marginTop: 8 }}>

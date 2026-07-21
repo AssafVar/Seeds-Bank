@@ -6,6 +6,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { deletePlant } from '../../services/serverCalls';
+import ModalCloseButton from '../common/ModalCloseButton.jsx';
 
 export default function DialogModal({isOpen, handleDialogModal, message, plantIdToDelete, user_id, fetchProject}) {
 
@@ -35,7 +36,9 @@ export default function DialogModal({isOpen, handleDialogModal, message, plantId
         onClose={handleDialogModal}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
+        PaperProps={{ sx: { position: "relative", overflow: "visible" } }}
       >
+        <ModalCloseButton onClick={handleDialogModal} />
         <DialogTitle id="alert-dialog-title" variant='h4' color={deleteMessageColor}>
           {!deleteMessage&&message.title}
         </DialogTitle>
