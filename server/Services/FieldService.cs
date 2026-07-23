@@ -10,6 +10,14 @@ public class FieldService : IFieldService
 {
     private const int MaxPlantPositions = 400;
 
+    // Grower-set lifecycle stage - anything else (including null) falls
+    // back to "planning" rather than being rejected outright, since this
+    // isn't safety-critical data worth a hard 400 over.
+    private static readonly HashSet<string> ValidStatuses = new()
+    {
+        "planning", "sown", "growing", "harvested",
+    };
+
     private readonly AppDbContext _db;
 
     public FieldService(AppDbContext db)
@@ -142,6 +150,40 @@ public class FieldService : IFieldService
         var vertices = ProjectAndValidateWithinParent(geoVertices, parent);
         field.VerticesJson = JsonSerializer.Serialize(vertices);
         field.GeoVerticesJson = JsonSerializer.Serialize(geoVertices);
+        await _db.SaveChangesAsync();
+
+        return ToDto(field);
+    }
+
+    public async Task<FieldDto?> UpdatePropertiesAsync(string projectId, int fieldId, UpdateFieldPropertiesRequest request)
+    {
+        var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == fieldId && f.ProjectId == projectId);
+        if (field is null)
+        {
+            return null;
+        }
+
+        // A large-field container carries no planting data of its own -
+        // only its sub-fields do (see CreateAsync) - so it has nothing here
+        // to update.
+        if (field.ParentFieldId is null && field.PlantSpacing is null)
+        {
+            throw new ArgumentException("Large field containers have no planting properties to update.");
+        }
+
+        ValidateSpacing(request.PlantSpacing, request.RowSpacing);
+
+        field.Name = request.Name;
+        field.Variety = request.Variety;
+        field.SowingStructure = request.SowingStructure == "staggered" ? "staggered" : "grid";
+        field.PlantSpacing = request.PlantSpacing;
+        field.RowSpacing = request.RowSpacing;
+        field.Status = request.Status is { } status && ValidStatuses.Contains(status) ? status : "planning";
+        field.SowingDate = request.SowingDate;
+        field.HarvestDate = request.HarvestDate;
+        field.YieldAmount = request.YieldAmount;
+        field.YieldUnit = request.YieldUnit;
+        field.Notes = request.Notes;
         await _db.SaveChangesAsync();
 
         return ToDto(field);
@@ -288,6 +330,12 @@ public class FieldService : IFieldService
             ParentFieldId = field.ParentFieldId,
             GeoVertices = geoVertices,
             CreatedAt = field.CreatedAt,
+            Status = field.Status ?? "planning",
+            SowingDate = field.SowingDate,
+            HarvestDate = field.HarvestDate,
+            YieldAmount = field.YieldAmount,
+            YieldUnit = field.YieldUnit,
+            Notes = field.Notes,
         };
     }
 }

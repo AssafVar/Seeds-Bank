@@ -24,6 +24,7 @@ import {
   updateSiteContent,
   uploadGalleryImage,
 } from "../../services/serverCalls";
+import Spinner, { InlineSpinner } from "../../components/common/Spinner.jsx";
 
 const emptyContent = {
   description: "",
@@ -45,6 +46,13 @@ function AdminPage() {
   const [newsBody, setNewsBody] = useState("");
   const [editingPostId, setEditingPostId] = useState(null);
   const [newsMessage, setNewsMessage] = useState("");
+
+  const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [isSavingContent, setIsSavingContent] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [deletingImageId, setDeletingImageId] = useState(null);
+  const [isSavingNewsPost, setIsSavingNewsPost] = useState(false);
+  const [deletingNewsPostId, setDeletingNewsPostId] = useState(null);
 
   const loadContent = async () => {
     const data = await getSiteContent();
@@ -68,8 +76,7 @@ function AdminPage() {
   };
 
   useEffect(() => {
-    loadContent();
-    loadNews();
+    Promise.all([loadContent(), loadNews()]).then(() => setIsLoadingPage(false));
   }, []);
 
   const handleFieldChange = (field) => (e) => {
@@ -77,14 +84,18 @@ function AdminPage() {
   };
 
   const handleSave = async () => {
+    setIsSavingContent(true);
     const success = await updateSiteContent(content);
+    setIsSavingContent(false);
     setSaveMessage(success ? "Saved" : "Failed to save");
     setTimeout(() => setSaveMessage(""), 2000);
   };
 
   const handleUpload = async () => {
     if (!selectedFile) return;
+    setIsUploading(true);
     const uploaded = await uploadGalleryImage(selectedFile, caption);
+    setIsUploading(false);
     if (uploaded) {
       setImages([uploaded, ...images]);
       setSelectedFile(null);
@@ -97,7 +108,9 @@ function AdminPage() {
   };
 
   const handleDeleteImage = async (imageId) => {
+    setDeletingImageId(imageId);
     const success = await deleteGalleryImage(imageId);
+    setDeletingImageId(null);
     if (success) {
       setImages(images.filter((image) => image.id !== imageId));
     }
@@ -117,6 +130,7 @@ function AdminPage() {
 
   const handleSaveNewsPost = async () => {
     if (!newsTitle || !newsBody) return;
+    setIsSavingNewsPost(true);
     if (editingPostId) {
       const success = await updateNewsPost(editingPostId, newsTitle, newsBody);
       setNewsMessage(success ? "Saved" : "Failed to save");
@@ -132,11 +146,14 @@ function AdminPage() {
         resetNewsForm();
       }
     }
+    setIsSavingNewsPost(false);
     setTimeout(() => setNewsMessage(""), 2000);
   };
 
   const handleDeleteNewsPost = async (id) => {
+    setDeletingNewsPostId(id);
     const success = await deleteNewsPost(id);
+    setDeletingNewsPostId(null);
     if (success) {
       setNewsPosts(newsPosts.filter((post) => post.id !== id));
       if (editingPostId === id) {
@@ -144,6 +161,15 @@ function AdminPage() {
       }
     }
   };
+
+  if (isLoadingPage) {
+    return (
+      <Container>
+        <PageHeadline title="Admin" />
+        <Spinner />
+      </Container>
+    );
+  }
 
   return (
     <Container>
@@ -185,8 +211,8 @@ function AdminPage() {
                   onChange={handleFieldChange("videoUrl")}
                 />
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Button variant="contained" onClick={handleSave}>
-                    Save
+                  <Button variant="contained" onClick={handleSave} disabled={isSavingContent}>
+                    {isSavingContent ? <InlineSpinner size={20} /> : "Save"}
                   </Button>
                   {saveMessage && <Typography variant="body2">{saveMessage}</Typography>}
                 </Box>
@@ -213,8 +239,8 @@ function AdminPage() {
                   onChange={(e) => setCaption(e.target.value)}
                 />
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Button variant="contained" onClick={handleUpload} disabled={!selectedFile}>
-                    Upload
+                  <Button variant="contained" onClick={handleUpload} disabled={!selectedFile || isUploading}>
+                    {isUploading ? <InlineSpinner size={20} /> : "Upload"}
                   </Button>
                   {uploadMessage && <Typography variant="body2">{uploadMessage}</Typography>}
                 </Box>
@@ -231,6 +257,7 @@ function AdminPage() {
                       <IconButton
                         size="small"
                         onClick={() => handleDeleteImage(image.id)}
+                        disabled={deletingImageId === image.id}
                         sx={{
                           position: "absolute",
                           top: 0,
@@ -238,7 +265,11 @@ function AdminPage() {
                           bgcolor: "background.paper",
                         }}
                       >
-                        <DeleteIcon color="error" fontSize="small" />
+                        {deletingImageId === image.id ? (
+                          <InlineSpinner size={16} />
+                        ) : (
+                          <DeleteIcon color="error" fontSize="small" />
+                        )}
                       </IconButton>
                     </Box>
                   </Grid>
@@ -276,9 +307,15 @@ function AdminPage() {
                   <Button
                     variant="contained"
                     onClick={handleSaveNewsPost}
-                    disabled={!newsTitle || !newsBody}
+                    disabled={!newsTitle || !newsBody || isSavingNewsPost}
                   >
-                    {editingPostId ? "Save" : "Publish"}
+                    {isSavingNewsPost ? (
+                      <InlineSpinner size={20} />
+                    ) : editingPostId ? (
+                      "Save"
+                    ) : (
+                      "Publish"
+                    )}
                   </Button>
                   {editingPostId && <Button onClick={resetNewsForm}>Cancel</Button>}
                   {newsMessage && <Typography variant="body2">{newsMessage}</Typography>}
@@ -305,8 +342,16 @@ function AdminPage() {
                       <IconButton size="small" onClick={() => handleEditPost(post)}>
                         <EditIcon fontSize="small" />
                       </IconButton>
-                      <IconButton size="small" onClick={() => handleDeleteNewsPost(post.id)}>
-                        <DeleteIcon color="error" fontSize="small" />
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteNewsPost(post.id)}
+                        disabled={deletingNewsPostId === post.id}
+                      >
+                        {deletingNewsPostId === post.id ? (
+                          <InlineSpinner size={16} />
+                        ) : (
+                          <DeleteIcon color="error" fontSize="small" />
+                        )}
                       </IconButton>
                     </Box>
                   </Box>

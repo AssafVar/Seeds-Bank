@@ -15,13 +15,21 @@ import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
-import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { createField, deleteField, getFields, updateFieldGeometry } from "../../services/serverCalls";
+import {
+  createField,
+  deleteField,
+  getFields,
+  updateFieldGeometry,
+  updateFieldProperties,
+} from "../../services/serverCalls";
 import vegetableVarieties from "../../libs/vegetableVarieties";
+import { STATUS_CHIP_COLOR, statusLabel } from "../../libs/fieldStatus.js";
 import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 import FieldMapDrawing from "./FieldMapDrawing.jsx";
 import ManageSubFieldsMap from "./ManageSubFieldsMap.jsx";
+import ModalCloseButton from "../common/ModalCloseButton.jsx";
+import Spinner, { InlineSpinner } from "../common/Spinner.jsx";
 
 const emptyForm = { name: "", landWidth: "", landLength: "", plantSpacing: "", rowSpacing: "" };
 const PREVIEW_WIDTH = 280;
@@ -68,26 +76,44 @@ function FullScreenDialogHeader({ title, onClose }) {
   return (
     <Box
       sx={{
+        position: "relative",
         display: "flex",
         alignItems: "center",
-        gap: 1,
         px: 3,
         py: 2,
         borderBottom: "1px solid",
         borderColor: "divider",
       }}
     >
-      <IconButton onClick={onClose} edge="start">
-        <CloseIcon />
-      </IconButton>
-      <Typography variant="h6">{title}</Typography>
+      <ModalCloseButton onClick={onClose} floating={false} />
+      <Typography variant="h6" sx={{ pl: 5 }}>
+        {title}
+      </Typography>
     </Box>
   );
 }
 
-function FieldCard({ field, onDelete, actions }) {
+function FieldCard({ field, onDelete, actions, onClick, selected }) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteClick = async (e) => {
+    e.stopPropagation();
+    setIsDeleting(true);
+    const success = await onDelete(field.id);
+    if (!success) {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <Card variant="outlined">
+    <Card
+      variant="outlined"
+      onClick={onClick}
+      sx={{
+        ...(onClick && { cursor: "pointer" }),
+        ...(selected && { borderColor: "primary.main", boxShadow: 2 }),
+      }}
+    >
       <CardContent>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <Box>
@@ -95,6 +121,14 @@ function FieldCard({ field, onDelete, actions }) {
               {field.name}
             </Typography>
             <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mb: 0.5 }}>
+              {field.plantSpacing != null && (
+                <Chip
+                  label={statusLabel(field.status)}
+                  size="small"
+                  color={STATUS_CHIP_COLOR[field.status] || "default"}
+                  variant={field.status && field.status !== "planning" ? "filled" : "outlined"}
+                />
+              )}
               {field.variety && <Chip label={field.variety} size="small" color="success" />}
               {field.sowingStructure === "staggered" && (
                 <Chip label="Staggered" size="small" variant="outlined" />
@@ -102,8 +136,8 @@ function FieldCard({ field, onDelete, actions }) {
               {field.plantSpacing == null && <Chip label="Large field" size="small" />}
             </Box>
           </Box>
-          <IconButton size="small" onClick={() => onDelete(field.id)}>
-            <DeleteIcon color="error" fontSize="small" />
+          <IconButton size="small" onClick={handleDeleteClick} disabled={isDeleting}>
+            {isDeleting ? <InlineSpinner size={16} /> : <DeleteIcon color="error" fontSize="small" />}
           </IconButton>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -135,6 +169,7 @@ function FieldCard({ field, onDelete, actions }) {
 
 function FieldsSection({ userId, projectId }) {
   const [fields, setFields] = useState([]);
+  const [isLoadingFields, setIsLoadingFields] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [shapeMode, setShapeMode] = useState("rectangle");
   const [form, setForm] = useState(emptyForm);
@@ -149,12 +184,22 @@ function FieldsSection({ userId, projectId }) {
   const [largeFieldError, setLargeFieldError] = useState("");
 
   const [managingParentField, setManagingParentField] = useState(null);
+  const [selectedFieldId, setSelectedFieldId] = useState(null);
+
+  const [isCreatingField, setIsCreatingField] = useState(false);
+  const [isCreatingLargeField, setIsCreatingLargeField] = useState(false);
+
+  const toggleFieldSelection = (fieldId) => {
+    setSelectedFieldId((prev) => (prev === fieldId ? null : fieldId));
+  };
 
   const loadFields = async () => {
+    setIsLoadingFields(true);
     const data = await getFields(userId, projectId);
     if (data) {
       setFields(data);
     }
+    setIsLoadingFields(false);
   };
 
   useEffect(() => {
@@ -236,7 +281,9 @@ function FieldsSection({ userId, projectId }) {
       };
     }
 
+    setIsCreatingField(true);
     const created = await createField(userId, projectId, payload);
+    setIsCreatingField(false);
     if (created) {
       setFields([created, ...fields]);
       closeDialog();
@@ -255,11 +302,13 @@ function FieldsSection({ userId, projectId }) {
       return;
     }
 
+    setIsCreatingLargeField(true);
     const created = await createField(userId, projectId, {
       name: largeFieldName,
       shapeType: "polygon",
       geoVertices: largeFieldVertices,
     });
+    setIsCreatingLargeField(false);
     if (created) {
       setFields([created, ...fields]);
       closeLargeFieldDialog();
@@ -287,6 +336,14 @@ function FieldsSection({ userId, projectId }) {
 
   const handleUpdateSubFieldGeometry = async (fieldId, geoVertices) => {
     const updated = await updateFieldGeometry(userId, projectId, fieldId, geoVertices);
+    if (updated) {
+      setFields((prev) => prev.map((f) => (f.id === fieldId ? updated : f)));
+    }
+    return updated;
+  };
+
+  const handleUpdateSubFieldProperties = async (fieldId, properties) => {
+    const updated = await updateFieldProperties(userId, projectId, fieldId, properties);
     if (updated) {
       setFields((prev) => prev.map((f) => (f.id === fieldId ? updated : f)));
     }
@@ -395,8 +452,8 @@ function FieldsSection({ userId, projectId }) {
 
           <Box sx={{ display: "flex", gap: 1 }}>
             <Button onClick={closeDialog}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreateField}>
-              Create
+            <Button variant="contained" onClick={handleCreateField} disabled={isCreatingField}>
+              {isCreatingField ? <InlineSpinner size={20} /> : "Create"}
             </Button>
           </Box>
         </Box>
@@ -443,8 +500,8 @@ function FieldsSection({ userId, projectId }) {
           )}
           <Box sx={{ display: "flex", gap: 1 }}>
             <Button onClick={closeLargeFieldDialog}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreateLargeField}>
-              Create
+            <Button variant="contained" onClick={handleCreateLargeField} disabled={isCreatingLargeField}>
+              {isCreatingLargeField ? <InlineSpinner size={20} /> : "Create"}
             </Button>
           </Box>
         </Box>
@@ -471,6 +528,7 @@ function FieldsSection({ userId, projectId }) {
         subFields={subFieldsByParent[managingParentField.id] || []}
         onCreate={handleCreateSubField}
         onUpdateGeometry={handleUpdateSubFieldGeometry}
+        onUpdateProperties={handleUpdateSubFieldProperties}
         onDelete={handleDeleteField}
         onClose={() => setManagingParentField(null)}
       />
@@ -491,7 +549,9 @@ function FieldsSection({ userId, projectId }) {
         </Box>
       </Box>
 
-      {fields.length === 0 ? (
+      {isLoadingFields ? (
+        <Spinner />
+      ) : fields.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           No fields yet. Add one to plan a planting layout.
         </Typography>
@@ -502,8 +562,16 @@ function FieldsSection({ userId, projectId }) {
               <FieldCard
                 field={field}
                 onDelete={handleDeleteField}
+                onClick={() => setManagingParentField(field)}
                 actions={
-                  <Button size="small" sx={{ mt: 1 }} onClick={() => setManagingParentField(field)}>
+                  <Button
+                    size="small"
+                    sx={{ mt: 1 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setManagingParentField(field);
+                    }}
+                  >
                     Manage Sub-Fields
                   </Button>
                 }
@@ -513,7 +581,12 @@ function FieldsSection({ userId, projectId }) {
                   <Grid container spacing={2}>
                     {subFieldsByParent[field.id].map((sub) => (
                       <Grid item xs={12} sm={6} md={4} key={sub.id}>
-                        <FieldCard field={sub} onDelete={handleDeleteField} />
+                        <FieldCard
+                          field={sub}
+                          onDelete={handleDeleteField}
+                          onClick={() => toggleFieldSelection(sub.id)}
+                          selected={sub.id === selectedFieldId}
+                        />
                       </Grid>
                     ))}
                   </Grid>
@@ -523,7 +596,12 @@ function FieldsSection({ userId, projectId }) {
           ))}
           {standaloneFields.map((field) => (
             <Grid item xs={12} sm={6} md={4} key={field.id}>
-              <FieldCard field={field} onDelete={handleDeleteField} />
+              <FieldCard
+                field={field}
+                onDelete={handleDeleteField}
+                onClick={() => toggleFieldSelection(field.id)}
+                selected={field.id === selectedFieldId}
+              />
             </Grid>
           ))}
         </Grid>

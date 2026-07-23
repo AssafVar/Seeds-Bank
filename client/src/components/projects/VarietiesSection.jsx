@@ -5,6 +5,7 @@ import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
 import { getFields } from "../../services/serverCalls";
+import Spinner from "../common/Spinner.jsx";
 
 function groupByVariety(fields) {
   const groups = {};
@@ -28,7 +29,7 @@ function VarietiesSection({ userId, projectId }) {
   }, [userId, projectId]);
 
   if (fields === null) {
-    return null;
+    return <Spinner />;
   }
 
   const varieties = groupByVariety(fields);

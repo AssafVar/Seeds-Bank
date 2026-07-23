@@ -28,7 +28,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import authContext from "../../contexts/AuthContext.js";
-import LinearProgress from "@mui/material/LinearProgress";
+import Spinner from "../common/Spinner.jsx";
 import InfoModal from "../modals/InfoModal.jsx";
 import {
   addNewLine,
@@ -178,13 +178,7 @@ function ProjectItem({ projectId, handleReturn }) {
     <>
       {!projectHeaders ? (
         <Container>
-          <Box sx={{ width: "100%" }}>
-            <br />
-            <Typography variant="h4" style={{ margin: "20px" }}>
-              Loading...
-            </Typography>
-            <LinearProgress />
-          </Box>
+          <Spinner size={48} minHeight={200} />
         </Container>
       ) : (
         <Container>

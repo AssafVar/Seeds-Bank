@@ -157,6 +157,15 @@ export const updateFieldGeometry = async (userId, projectId, fieldId, geoVertice
   }
 };
 
+export const updateFieldProperties = async (userId, projectId, fieldId, properties) => {
+  try {
+    const response = await api.put(`/projects/${userId}/${projectId}/fields/${fieldId}/properties`, properties);
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 export const deleteField = async (userId, projectId, fieldId) => {
   try {
     const response = await api.delete(`/projects/${userId}/${projectId}/fields/${fieldId}`);

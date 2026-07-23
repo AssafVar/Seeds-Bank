@@ -2,16 +2,20 @@ import { Autocomplete, TextField } from "@mui/material";
 import React, { useCallback, useEffect, useState } from "react";
 import SearchIcon from '@mui/icons-material/Search';
 import { fetchCities } from "../../services/serverCalls";
+import { InlineSpinner } from "../common/Spinner.jsx";
 
 function SearchCities({handleLocation}) {
 
     const [options, setOptions] = useState([]);
     const [isMounted, setIsMounted] = useState(false);
     const [city, setCity] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const getCities = useCallback(async() => {
+        setIsLoading(true);
         const cities = await fetchCities(city);
         setOptions(cities);
+        setIsLoading(false);
     }, [city]);
 
     const handleCityChange = (event, value) => {
@@ -31,6 +35,7 @@ function SearchCities({handleLocation}) {
     <Autocomplete
       style={{ display:"inline"}}
       options={options}
+      loading={isLoading}
       getOptionLabel={(option) => option}
       onChange={handleCityChange}
       renderInput={(params) => (
@@ -53,6 +58,12 @@ function SearchCities({handleLocation}) {
               <>
                 <SearchIcon />
                 {params.InputProps.startAdornment}
+              </>
+            ),
+            endAdornment: (
+              <>
+                {isLoading && <InlineSpinner size={16} />}
+                {params.InputProps.endAdornment}
               </>
             ),
           }}

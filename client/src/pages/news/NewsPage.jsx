@@ -6,6 +6,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import PageHeadline from "../../components/headline/PageHeadline";
 import { getNews } from "../../services/serverCalls";
+import Spinner from "../../components/common/Spinner.jsx";
 
 function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString(undefined, {
@@ -16,16 +17,18 @@ function formatDate(dateString) {
 }
 
 function NewsPage() {
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState(null);
 
   useEffect(() => {
-    getNews().then((data) => data && setPosts(data));
+    getNews().then((data) => setPosts(data || []));
   }, []);
 
   return (
     <Container>
       <PageHeadline title="News" />
-      {posts.length > 0 ? (
+      {posts === null ? (
+        <Spinner />
+      ) : posts.length > 0 ? (
         <Stack spacing={2} sx={{ mt: 2 }}>
           {posts.map((post) => (
             <Card variant="outlined" key={post.id}>

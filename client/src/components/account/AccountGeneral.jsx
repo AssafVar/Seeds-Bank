@@ -4,6 +4,7 @@ import { Alert, Button, TextField, Typography } from "@mui/material";
 import {classes} from '../../styles/accountStyle'
 import authContext from "../../contexts/AuthContext";
 import { updateProfile } from "../../services/serverCalls";
+import { InlineSpinner } from "../common/Spinner.jsx";
 
 function AccountGeneral(props) {
 
@@ -14,6 +15,7 @@ function AccountGeneral(props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [registerAlert, setRegisterAlert] = useState('');
+  const [isSavingUserName, setIsSavingUserName] = useState(false);
   const onSubmitPassword = (target) => {
     if (password===confirmPassword){
       onSubmit(target);
@@ -28,7 +30,9 @@ function AccountGeneral(props) {
   };
 
   const onSubmitUserName = async () => {
+    setIsSavingUserName(true);
     const result = await updateProfile(userName);
+    setIsSavingUserName(false);
     if (result) {
       updateActiveUser({ userName: result.userName });
       setUserNameMessage("Saved");
@@ -47,7 +51,9 @@ function AccountGeneral(props) {
         value={userName}
         style={classes.formInput}
         onChange={(e) => setUserName(e.target.value)} /><br />
-        <Button style={classes.formButton} onClick={onSubmitUserName}>Save</Button>
+        <Button style={classes.formButton} onClick={onSubmitUserName} disabled={isSavingUserName}>
+          {isSavingUserName ? <InlineSpinner size={20} /> : "Save"}
+        </Button>
         {userNameMessage && <Alert severity={userNameMessage === "Saved" ? "success" : "error"}>{userNameMessage}</Alert>}
       </Box><Box style={classes.formBox}>
         <Typography style={classes.boxHeadline}>Change account password</Typography>

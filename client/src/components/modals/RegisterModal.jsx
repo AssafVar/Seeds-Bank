@@ -2,11 +2,10 @@ import React from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
-import IconButton from "@mui/material/IconButton";
-import CloseIcon from "@mui/icons-material/Close";
 import LoginIcon from "@mui/icons-material/Login";
 import LocalFloristIcon from "@mui/icons-material/LocalFlorist";
 import RegisterForm from "../forms/RegisterForm";
+import ModalCloseButton from "../common/ModalCloseButton.jsx";
 
 function RegisterModal({ isOpenModal, handleLogin, isSignup, setIsSignup }) {
   const Icon = isSignup ? LocalFloristIcon : LoginIcon;
@@ -19,21 +18,7 @@ function RegisterModal({ isOpenModal, handleLogin, isSignup, setIsSignup }) {
       maxWidth="xs"
       PaperProps={{ sx: { position: "relative", overflow: "visible" } }}
     >
-      <IconButton
-        onClick={handleLogin}
-        aria-label="Close"
-        size="small"
-        sx={{
-          position: "absolute",
-          top: -14,
-          left: -14,
-          bgcolor: "background.paper",
-          boxShadow: 3,
-          "&:hover": { bgcolor: "background.paper", opacity: 0.9 },
-        }}
-      >
-        <CloseIcon fontSize="small" />
-      </IconButton>
+      <ModalCloseButton onClick={handleLogin} />
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <Icon color="primary" />
         {isSignup ? "Create your account" : "Welcome back"}

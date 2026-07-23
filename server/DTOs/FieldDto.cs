@@ -26,4 +26,12 @@ public class FieldDto
     public List<GeoVertexDto>? GeoVertices { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    // Defaults to "planning" (see FieldService.ToDto) when unset.
+    public string Status { get; set; } = "planning";
+    public DateTime? SowingDate { get; set; }
+    public DateTime? HarvestDate { get; set; }
+    public double? YieldAmount { get; set; }
+    public string? YieldUnit { get; set; }
+    public string? Notes { get; set; }
 }
