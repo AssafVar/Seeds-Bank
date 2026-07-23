@@ -879,6 +879,9 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
             status={selectedField?.status}
             sowingDate={selectedField?.sowingDate}
             harvestDate={selectedField?.harvestDate}
+            variety={selectedField?.variety}
+            areaM2={selectedField?.area}
+            totalCapacity={selectedField?.totalCapacity}
           />
         </Box>
       )}
