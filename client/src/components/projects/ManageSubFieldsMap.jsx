@@ -36,6 +36,7 @@ import {
   SegmentLengthLabel,
 } from "./mapDrawingShared.jsx";
 import { InlineSpinner } from "../common/Spinner.jsx";
+import FieldTimeline from "./FieldTimeline.jsx";
 
 const MIN_MAP_HEIGHT = 240;
 const emptyNewField = {
@@ -871,6 +872,16 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
           </MapContainer>
         </Box>
       </Box>
+
+      {isDataFocused && (
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", borderLeft: "1px solid", borderColor: "divider" }}>
+          <FieldTimeline
+            status={selectedField?.status}
+            sowingDate={selectedField?.sowingDate}
+            harvestDate={selectedField?.harvestDate}
+          />
+        </Box>
+      )}
     </Box>
   );
 }
