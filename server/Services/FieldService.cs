@@ -10,6 +10,14 @@ public class FieldService : IFieldService
 {
     private const int MaxPlantPositions = 400;
 
+    // Grower-set lifecycle stage - anything else (including null) falls
+    // back to "planning" rather than being rejected outright, since this
+    // isn't safety-critical data worth a hard 400 over.
+    private static readonly HashSet<string> ValidStatuses = new()
+    {
+        "planning", "sown", "growing", "harvested",
+    };
+
     private readonly AppDbContext _db;
 
     public FieldService(AppDbContext db)
@@ -170,6 +178,12 @@ public class FieldService : IFieldService
         field.SowingStructure = request.SowingStructure == "staggered" ? "staggered" : "grid";
         field.PlantSpacing = request.PlantSpacing;
         field.RowSpacing = request.RowSpacing;
+        field.Status = request.Status is { } status && ValidStatuses.Contains(status) ? status : "planning";
+        field.SowingDate = request.SowingDate;
+        field.HarvestDate = request.HarvestDate;
+        field.YieldAmount = request.YieldAmount;
+        field.YieldUnit = request.YieldUnit;
+        field.Notes = request.Notes;
         await _db.SaveChangesAsync();
 
         return ToDto(field);
@@ -316,6 +330,12 @@ public class FieldService : IFieldService
             ParentFieldId = field.ParentFieldId,
             GeoVertices = geoVertices,
             CreatedAt = field.CreatedAt,
+            Status = field.Status ?? "planning",
+            SowingDate = field.SowingDate,
+            HarvestDate = field.HarvestDate,
+            YieldAmount = field.YieldAmount,
+            YieldUnit = field.YieldUnit,
+            Notes = field.Notes,
         };
     }
 }

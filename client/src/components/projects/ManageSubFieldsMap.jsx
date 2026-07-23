@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
@@ -11,6 +12,8 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
@@ -20,6 +23,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { MapContainer, Polygon, Marker, CircleMarker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import vegetableVarieties from "../../libs/vegetableVarieties";
+import { STATUS_OPTIONS, STATUS_CHIP_COLOR, statusLabel } from "../../libs/fieldStatus.js";
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
@@ -34,8 +38,23 @@ import {
 import { InlineSpinner } from "../common/Spinner.jsx";
 
 const MIN_MAP_HEIGHT = 240;
-const emptyNewField = { name: "", variety: "Custom", sowingStructure: "grid", plantSpacing: "", rowSpacing: "" };
+const emptyNewField = {
+  name: "",
+  variety: "Custom",
+  sowingStructure: "grid",
+  plantSpacing: "",
+  rowSpacing: "",
+  status: "planning",
+  sowingDate: "",
+  harvestDate: "",
+  yieldAmount: "",
+  yieldUnit: "",
+  notes: "",
+};
 const AUTOSAVE_DEBOUNCE_MS = 600;
+
+// ISO datetime from the server -> the yyyy-mm-dd a native date input wants.
+const toDateInputValue = (isoString) => (isoString ? isoString.slice(0, 10) : "");
 
 // A saved sub-field, rendered as a whole-shape-draggable polygon. Leaflet's
 // vector layers (unlike Marker) have no built-in dragging, so this wires the
@@ -212,6 +231,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   const [isDrawClosed, setIsDrawClosed] = useState(false);
   const [newField, setNewField] = useState(emptyNewField);
   const [error, setError] = useState("");
+  const [activeEditTab, setActiveEditTab] = useState(0);
 
   const [isSavingSelected, setIsSavingSelected] = useState(false);
   const [isPasting, setIsPasting] = useState(false);
@@ -234,6 +254,12 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
       sowingStructure: values.sowingStructure,
       plantSpacing: spacingValues[0],
       rowSpacing: spacingValues[1],
+      status: values.status || "planning",
+      sowingDate: values.sowingDate || null,
+      harvestDate: values.harvestDate || null,
+      yieldAmount: values.yieldAmount ? Number(values.yieldAmount) : null,
+      yieldUnit: values.yieldUnit || null,
+      notes: values.notes || null,
     });
     setIsSavingSelected(false);
     setError(updated ? "" : "Failed to save changes");
@@ -311,13 +337,24 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
     setSelectedId(fieldId);
     const field = subFields.find((f) => f.id === fieldId);
     if (field) {
+      const status = field.status || "planning";
       setNewField({
         name: field.name,
         variety: field.variety || "Custom",
         sowingStructure: field.sowingStructure || "grid",
         plantSpacing: field.plantSpacing != null ? String(field.plantSpacing) : "",
         rowSpacing: field.rowSpacing != null ? String(field.rowSpacing) : "",
+        status,
+        sowingDate: toDateInputValue(field.sowingDate),
+        harvestDate: toDateInputValue(field.harvestDate),
+        yieldAmount: field.yieldAmount != null ? String(field.yieldAmount) : "",
+        yieldUnit: field.yieldUnit || "",
+        notes: field.notes || "",
       });
+      // A field still being planned opens on its shape - once it's actually
+      // sown, the shape rarely needs touching again and the agricultural
+      // data is what you came here for.
+      setActiveEditTab(status === "planning" ? 0 : 1);
     }
   };
 
@@ -530,7 +567,17 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
                 >
                   <ListItemButton selected={f.id === selectedId} onClick={() => selectField(f.id)} sx={{ pr: 9 }}>
                     <ListItemText
-                      primary={f.name}
+                      primary={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                          {f.name}
+                          <Chip
+                            label={statusLabel(f.status)}
+                            size="small"
+                            color={STATUS_CHIP_COLOR[f.status] || "default"}
+                            variant={f.status && f.status !== "planning" ? "filled" : "outlined"}
+                          />
+                        </Box>
+                      }
                       secondary={`${f.variety || "Custom"} · ${f.totalCapacity} plants`}
                     />
                   </ListItemButton>
@@ -568,58 +615,133 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
             </Typography>
           )}
         </Typography>
-        {selectedField && (
-          <Typography variant="body2" color="text.secondary">
-            Fits <strong>{selectedField.totalCapacity} plants</strong> at this shape and spacing
-            {selectedField.isPreviewApproximate ? " (preview thinned for display)" : ""}.
-          </Typography>
+
+        {selectedId && (
+          <Tabs
+            value={activeEditTab}
+            onChange={(e, value) => setActiveEditTab(value)}
+            variant="fullWidth"
+            sx={{ minHeight: 36, "& .MuiTab-root": { minHeight: 36 } }}
+          >
+            <Tab label="Shape & Basics" />
+            <Tab label="Field Data" />
+          </Tabs>
         )}
-        <TextField
-          label="Field name"
-          fullWidth
-          value={newField.name}
-          onChange={(e) => updateFieldValue({ name: e.target.value })}
-        />
-        <FormControl fullWidth>
-          <InputLabel id="new-subfield-variety-label">Vegetable variety</InputLabel>
-          <Select
-            labelId="new-subfield-variety-label"
-            label="Vegetable variety"
-            value={newField.variety}
-            onChange={(e) => handleVarietyChange(e.target.value)}
-          >
-            <MenuItem value="Custom">Custom</MenuItem>
-            {vegetableVarieties.map((v) => (
-              <MenuItem key={v.name} value={v.name}>
-                {v.name} ({v.plantSpacing}m × {v.rowSpacing}m)
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <Box>
-          <Typography variant="body2" sx={{ mb: 0.5 }}>
-            Sowing structure
-          </Typography>
-          <ToggleButtonGroup
-            exclusive
-            value={newField.sowingStructure}
-            onChange={(e, value) => value && updateFieldValue({ sowingStructure: value }, true)}
-            size="small"
-          >
-            <ToggleButton value="grid">Grid (aligned rows)</ToggleButton>
-            <ToggleButton value="staggered">Staggered (denser)</ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-        <TextField
-          label="Plant spacing (m)" type="number" fullWidth
-          value={newField.plantSpacing}
-          onChange={(e) => updateFieldValue({ plantSpacing: e.target.value })}
-        />
-        <TextField
-          label="Row spacing (m)" type="number" fullWidth
-          value={newField.rowSpacing}
-          onChange={(e) => updateFieldValue({ rowSpacing: e.target.value })}
-        />
+
+        {(!selectedId || activeEditTab === 0) && (
+          <>
+            {selectedField && (
+              <Typography variant="body2" color="text.secondary">
+                Fits <strong>{selectedField.totalCapacity} plants</strong> at this shape and spacing
+                {selectedField.isPreviewApproximate ? " (preview thinned for display)" : ""}.
+              </Typography>
+            )}
+            <TextField
+              label="Field name"
+              fullWidth
+              value={newField.name}
+              onChange={(e) => updateFieldValue({ name: e.target.value })}
+            />
+            <FormControl fullWidth>
+              <InputLabel id="new-subfield-variety-label">Vegetable variety</InputLabel>
+              <Select
+                labelId="new-subfield-variety-label"
+                label="Vegetable variety"
+                value={newField.variety}
+                onChange={(e) => handleVarietyChange(e.target.value)}
+              >
+                <MenuItem value="Custom">Custom</MenuItem>
+                {vegetableVarieties.map((v) => (
+                  <MenuItem key={v.name} value={v.name}>
+                    {v.name} ({v.plantSpacing}m × {v.rowSpacing}m)
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Box>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                Sowing structure
+              </Typography>
+              <ToggleButtonGroup
+                exclusive
+                value={newField.sowingStructure}
+                onChange={(e, value) => value && updateFieldValue({ sowingStructure: value }, true)}
+                size="small"
+              >
+                <ToggleButton value="grid">Grid (aligned rows)</ToggleButton>
+                <ToggleButton value="staggered">Staggered (denser)</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+            <TextField
+              label="Plant spacing (m)" type="number" fullWidth
+              value={newField.plantSpacing}
+              onChange={(e) => updateFieldValue({ plantSpacing: e.target.value })}
+            />
+            <TextField
+              label="Row spacing (m)" type="number" fullWidth
+              value={newField.rowSpacing}
+              onChange={(e) => updateFieldValue({ rowSpacing: e.target.value })}
+            />
+          </>
+        )}
+
+        {selectedId && activeEditTab === 1 && (
+          <>
+            <FormControl fullWidth>
+              <InputLabel id="subfield-status-label">Status</InputLabel>
+              <Select
+                labelId="subfield-status-label"
+                label="Status"
+                value={newField.status}
+                onChange={(e) => updateFieldValue({ status: e.target.value }, true)}
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <MenuItem key={s.value} value={s.value}>
+                    {s.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Sowing date"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={newField.sowingDate}
+              onChange={(e) => updateFieldValue({ sowingDate: e.target.value }, true)}
+            />
+            <TextField
+              label="Harvest date"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={newField.harvestDate}
+              onChange={(e) => updateFieldValue({ harvestDate: e.target.value }, true)}
+            />
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <TextField
+                label="Yield amount" type="number" fullWidth
+                value={newField.yieldAmount}
+                onChange={(e) => updateFieldValue({ yieldAmount: e.target.value })}
+              />
+              <TextField
+                label="Unit" placeholder="kg" fullWidth
+                value={newField.yieldUnit}
+                onChange={(e) => updateFieldValue({ yieldUnit: e.target.value })}
+              />
+            </Box>
+            <TextField
+              label="Notes"
+              placeholder="Irrigation, fertilizing, pest issues, anything else worth logging..."
+              multiline
+              minRows={3}
+              fullWidth
+              value={newField.notes}
+              onChange={(e) => updateFieldValue({ notes: e.target.value })}
+            />
+          </>
+        )}
+
         {!selectedId && (
           <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
             <Button size="small" onClick={handleDrawUndo} disabled={drawVertices.length === 0 || isDrawClosed}>

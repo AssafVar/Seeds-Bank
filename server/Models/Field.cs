@@ -82,4 +82,27 @@ public class Field
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
+
+    // Lifecycle stage set explicitly by the grower - "planning" / "sown" /
+    // "growing" / "harvested" - never inferred from the dates below.
+    // Null (unset) is treated as "planning" (see FieldService.ToDto).
+    [Column("status")]
+    public string? Status { get; set; }
+
+    [Column("sowing_date")]
+    public DateTime? SowingDate { get; set; }
+
+    [Column("harvest_date")]
+    public DateTime? HarvestDate { get; set; }
+
+    [Column("yield_amount")]
+    public double? YieldAmount { get; set; }
+
+    // Free text (e.g. "kg", "crates") rather than an enum - yield units
+    // vary too much by crop/grower to usefully constrain.
+    [Column("yield_unit")]
+    public string? YieldUnit { get; set; }
+
+    [Column("notes")]
+    public string? Notes { get; set; }
 }

@@ -14,4 +14,13 @@ public class UpdateFieldPropertiesRequest
 
     public double? PlantSpacing { get; set; }
     public double? RowSpacing { get; set; }
+
+    // "planning" / "sown" / "growing" / "harvested" - validated in
+    // FieldService, falls back to "planning" for anything else.
+    public string? Status { get; set; }
+    public DateTime? SowingDate { get; set; }
+    public DateTime? HarvestDate { get; set; }
+    public double? YieldAmount { get; set; }
+    public string? YieldUnit { get; set; }
+    public string? Notes { get; set; }
 }

@@ -24,6 +24,7 @@ import {
   updateFieldProperties,
 } from "../../services/serverCalls";
 import vegetableVarieties from "../../libs/vegetableVarieties";
+import { STATUS_CHIP_COLOR, statusLabel } from "../../libs/fieldStatus.js";
 import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 import FieldMapDrawing from "./FieldMapDrawing.jsx";
 import ManageSubFieldsMap from "./ManageSubFieldsMap.jsx";
@@ -120,6 +121,14 @@ function FieldCard({ field, onDelete, actions, onClick, selected }) {
               {field.name}
             </Typography>
             <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mb: 0.5 }}>
+              {field.plantSpacing != null && (
+                <Chip
+                  label={statusLabel(field.status)}
+                  size="small"
+                  color={STATUS_CHIP_COLOR[field.status] || "default"}
+                  variant={field.status && field.status !== "planning" ? "filled" : "outlined"}
+                />
+              )}
               {field.variety && <Chip label={field.variety} size="small" color="success" />}
               {field.sowingStructure === "staggered" && (
                 <Chip label="Staggered" size="small" variant="outlined" />
