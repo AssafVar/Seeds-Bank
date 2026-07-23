@@ -6,10 +6,12 @@ import { getCoords, getTempDataAPI } from "../../services/serverCalls";
 import LineChartTemp from "../lineChart/LineChartTemp";
 import Carousel from "react-material-ui-carousel";
 import SearchCities from "../search/SearchCities";
+import { InlineSpinner } from "../common/Spinner.jsx";
 
 function LocationInfo(props) {
   const [chartData, setChartData] = useState([]);
   const [location, setLocation] = useState({});
+  const [isLoadingClimate, setIsLoadingClimate] = useState(false);
 
   const getTempData = async (lat, log) => {
     const result = await getTempDataAPI(lat, log);
@@ -29,8 +31,10 @@ function LocationInfo(props) {
   };
 
   const getLocationCoords = async() =>{
+    setIsLoadingClimate(true);
     const {lat, lon} = await getCoords(location);
-    getTempData(lat, lon);
+    await getTempData(lat, lon);
+    setIsLoadingClimate(false);
   };
 
   const deleteChart = (key) => {
@@ -52,9 +56,9 @@ function LocationInfo(props) {
           }
           variant="contained"
           style={{ height: "55px", borderRadius: "20px"}}
-          disabled={!!!location?.city}
+          disabled={!!!location?.city || isLoadingClimate}
         >
-          Get Location Info
+          {isLoadingClimate ? <InlineSpinner size={20} /> : "Get Location Info"}
         </Button>
       </div>
       {chartData.length > 0 && (

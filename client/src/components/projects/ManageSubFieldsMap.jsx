@@ -31,6 +31,7 @@ import {
   MapBaseLayers,
   SegmentLengthLabel,
 } from "./mapDrawingShared.jsx";
+import { InlineSpinner } from "../common/Spinner.jsx";
 
 const MIN_MAP_HEIGHT = 240;
 const emptyNewField = { name: "", variety: "Custom", sowingStructure: "grid", plantSpacing: "", rowSpacing: "" };
@@ -212,6 +213,11 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   const [newField, setNewField] = useState(emptyNewField);
   const [error, setError] = useState("");
 
+  const [isSavingSelected, setIsSavingSelected] = useState(false);
+  const [isPasting, setIsPasting] = useState(false);
+  const [isCreatingSubField, setIsCreatingSubField] = useState(false);
+  const [deletingFieldId, setDeletingFieldId] = useState(null);
+
   const saveTimeoutRef = useRef(null);
   const pendingSaveRef = useRef(null);
   const suppressClickRef = useRef(false);
@@ -221,6 +227,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
     if (!values.name || spacingValues.some((v) => !(v > 0))) {
       return;
     }
+    setIsSavingSelected(true);
     const updated = await onUpdateProperties(fieldId, {
       name: values.name,
       variety: values.variety === "Custom" ? null : values.variety,
@@ -228,6 +235,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
       plantSpacing: spacingValues[0],
       rowSpacing: spacingValues[1],
     });
+    setIsSavingSelected(false);
     setError(updated ? "" : "Failed to save changes");
   };
 
@@ -363,6 +371,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
     const width = Math.max(...lngs) - Math.min(...lngs) || 0.0005;
     const offsetVertices = clipboard.geoVertices.map((v) => ({ lat: v.lat, lng: v.lng + width * 0.6 }));
 
+    setIsPasting(true);
     const created = await onCreate({
       name: `${clipboard.name} copy`,
       variety: clipboard.variety,
@@ -373,6 +382,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
       plantSpacing: clipboard.plantSpacing,
       rowSpacing: clipboard.rowSpacing,
     });
+    setIsPasting(false);
     if (created) {
       setSelectedId(created.id);
       setError("");
@@ -383,7 +393,9 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
 
   const handleDeleteField = async (field) => {
     discardPendingSave(field.id);
+    setDeletingFieldId(field.id);
     const success = await onDelete(field.id);
+    setDeletingFieldId(null);
     if (success && field.id === selectedId) {
       setSelectedId(null);
       setNewField(emptyNewField);
@@ -393,7 +405,9 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   };
 
   const handleMoved = async (fieldId, geoVertices, resetOnFailure) => {
+    setIsSavingSelected(true);
     const updated = await onUpdateGeometry(fieldId, geoVertices);
+    setIsSavingSelected(false);
     if (!updated) {
       resetOnFailure();
       setError("That position is outside the large field's boundary.");
@@ -420,6 +434,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
       return;
     }
 
+    setIsCreatingSubField(true);
     const created = await onCreate({
       name: newField.name,
       variety: newField.variety === "Custom" ? null : newField.variety,
@@ -430,6 +445,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
       plantSpacing: spacingValues[0],
       rowSpacing: spacingValues[1],
     });
+    setIsCreatingSubField(false);
     if (created) {
       setDrawVertices([]);
       setIsDrawClosed(false);
@@ -492,8 +508,17 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
                       <IconButton size="small" title="Copy" onClick={() => handleCopy(f)}>
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
-                      <IconButton size="small" title="Delete" onClick={() => handleDeleteField(f)}>
-                        <DeleteIcon fontSize="small" color="error" />
+                      <IconButton
+                        size="small"
+                        title="Delete"
+                        onClick={() => handleDeleteField(f)}
+                        disabled={deletingFieldId === f.id}
+                      >
+                        {deletingFieldId === f.id ? (
+                          <InlineSpinner size={16} />
+                        ) : (
+                          <DeleteIcon fontSize="small" color="error" />
+                        )}
                       </IconButton>
                     </Box>
                   }
@@ -511,8 +536,8 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
         )}
 
         {clipboard && (
-          <Button size="small" variant="outlined" onClick={handlePaste}>
-            Paste copy of "{clipboard.name}"
+          <Button size="small" variant="outlined" onClick={handlePaste} disabled={isPasting}>
+            {isPasting ? <InlineSpinner size={18} /> : `Paste copy of "${clipboard.name}"`}
           </Button>
         )}
 
@@ -522,7 +547,14 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
           {selectedId ? "Edit selected sub-field" : "Add a new sub-field"}
           {selectedId && (
             <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-              (saves automatically)
+              {isSavingSelected ? (
+                <>
+                  <InlineSpinner size={10} sx={{ mr: 0.5 }} />
+                  Saving...
+                </>
+              ) : (
+                "(saves automatically)"
+              )}
             </Typography>
           )}
         </Typography>
@@ -610,8 +642,8 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
               Done
             </Button>
           ) : (
-            <Button variant="contained" onClick={handleCreateNew}>
-              Add Sub-Field
+            <Button variant="contained" onClick={handleCreateNew} disabled={isCreatingSubField}>
+              {isCreatingSubField ? <InlineSpinner size={20} /> : "Add Sub-Field"}
             </Button>
           )}
         </Box>

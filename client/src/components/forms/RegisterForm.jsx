@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import { useNavigate } from 'react-router';
 import { extractErrorMessage } from '../../services/serverCalls';
+import { InlineSpinner } from '../common/Spinner.jsx';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
@@ -16,6 +17,7 @@ function RegisterForm({isSignup, setIsSignup, handleLogin}) {
     const [registerMessage, setRegisterMessage] = useState('');
 
     const [registerType, setRegisterType] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const {onLogin} = useAuth();
     const navigate = useNavigate();
@@ -48,6 +50,7 @@ function RegisterForm({isSignup, setIsSignup, handleLogin}) {
             showError(validationError);
             return;
         }
+        setIsSubmitting(true);
         try {
             await onLogin(email, password, registerType);
             if (registerType === "login") {
@@ -68,6 +71,8 @@ function RegisterForm({isSignup, setIsSignup, handleLogin}) {
             }
         } catch (err) {
             showError(extractErrorMessage(err));
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -98,8 +103,8 @@ function RegisterForm({isSignup, setIsSignup, handleLogin}) {
                     value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                 />
             )}
-            <Button type="submit" variant="contained" size="large" fullWidth>
-                {isSignup ? "Create Account" : "Log In"}
+            <Button type="submit" variant="contained" size="large" fullWidth disabled={isSubmitting}>
+                {isSubmitting ? <InlineSpinner size={24} /> : (isSignup ? "Create Account" : "Log In")}
             </Button>
             {registerError && <Alert severity="error">{registerError}</Alert>}
             {registerMessage && <Alert severity="success">{registerMessage}</Alert>}

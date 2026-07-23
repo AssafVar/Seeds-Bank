@@ -4,15 +4,19 @@ import React, { useContext, useState } from "react";
 import authContext from "../../contexts/AuthContext.js";
 import { createNewProject } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
+import { InlineSpinner } from "../common/Spinner.jsx";
 
 function NewprojectForm({handleModal}) {
 
   const [projectName, setProjectName] = useState("");
   const [plantType, setPlantType] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const {activeUser} = useContext(authContext);
 
   const handleNewProject = async() => {
+    setIsCreating(true);
     await createNewProject(activeUser.userId, projectName, plantType);
+    setIsCreating(false);
     handleModal();
   };
 
@@ -44,8 +48,9 @@ function NewprojectForm({handleModal}) {
           <Button
             style={classes.newProjectModalApplyButton}
             onClick={handleNewProject}
+            disabled={isCreating}
           >
-            Create
+            {isCreating ? <InlineSpinner size={20} /> : "Create"}
           </Button>
         </Grid>
       </Grid>

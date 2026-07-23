@@ -7,14 +7,18 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { deletePlant } from '../../services/serverCalls';
 import ModalCloseButton from '../common/ModalCloseButton.jsx';
+import { InlineSpinner } from '../common/Spinner.jsx';
 
 export default function DialogModal({isOpen, handleDialogModal, message, plantIdToDelete, user_id, fetchProject}) {
 
   const [deleteMessageColor, setDeleteMessageColor] = useState('black');
   const [deleteMessage, setDeleteMessage] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete  = async() => {
+    setIsDeleting(true);
     const response = await deletePlant(user_id, plantIdToDelete);
+    setIsDeleting(false);
     if (response.status === 200){
       setDeleteMessage("Deleting complete: Item successfully deleted from database");
       setDeleteMessageColor("green")
@@ -48,9 +52,9 @@ export default function DialogModal({isOpen, handleDialogModal, message, plantId
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          {!deleteMessage && <><Button onClick={handleDialogModal}>Disagree</Button>
-          <Button onClick={handleDelete} autoFocus>
-            Agree
+          {!deleteMessage && <><Button onClick={handleDialogModal} disabled={isDeleting}>Disagree</Button>
+          <Button onClick={handleDelete} autoFocus disabled={isDeleting}>
+            {isDeleting ? <InlineSpinner size={20} /> : "Agree"}
           </Button></>}
         </DialogActions>
       </Dialog>

@@ -8,6 +8,7 @@ import PageHeadline from "../headline/PageHeadline.jsx";
 import ProjectModal from "../modals/ProjectModal.jsx";
 import ProjectCard from "./ProjectCard.jsx";
 import ProjectItem from "./ProjectItem.jsx";
+import Spinner from "../common/Spinner.jsx";
 
 function ProjectList(props) {
   
@@ -16,10 +17,13 @@ function ProjectList(props) {
   const [projectId, setProjectId] = useState(null);
   const [isProjectModal, setIsProjectModal] = useState(false);
   const [projectsList, setProjectsList] = useState([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
 
   const fetchProjectsList = useCallback(async() => {
+    setIsLoadingProjects(true);
     const response = await getUserProjectsList(activeUser.userId);
     setProjectsList(response.data);
+    setIsLoadingProjects(false);
   }, [activeUser]);
 
   const handleChangeProject = (projectId) => {
@@ -50,19 +54,23 @@ function ProjectList(props) {
               Create New Project
             </Button>
           </Box>
-          <Grid container spacing={8} style={classes.mainGrid}>
-            {projectsList.map((project) => (
-              <Grid
-                item
-                md={3.5}
-                xs={12}
-                key={project.project_id}
-                style={classes.projectListItem}
-              >
-                <ProjectCard project={project}  handleChangeProject={handleChangeProject}/>
-              </Grid>
-            ))}
-          </Grid>
+          {isLoadingProjects ? (
+            <Spinner />
+          ) : (
+            <Grid container spacing={8} style={classes.mainGrid}>
+              {projectsList.map((project) => (
+                <Grid
+                  item
+                  md={3.5}
+                  xs={12}
+                  key={project.project_id}
+                  style={classes.projectListItem}
+                >
+                  <ProjectCard project={project}  handleChangeProject={handleChangeProject}/>
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </>
       ) : (
         <>

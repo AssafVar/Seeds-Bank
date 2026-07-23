@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import Fade from '@mui/material/Fade';
 import Typography from '@mui/material/Typography';
+import { InlineSpinner } from '../common/Spinner.jsx';
 
 const style = {
     position: 'absolute',
@@ -36,9 +37,12 @@ export default function InfoModal({isInfoModal, handleCloseInfoModal, message, m
       >
         <Fade in={isInfoModal}>
           <Box sx={style}>
-            <Typography id="transition-modal-title" variant="h6" component="h2" style={modalColor}>
-              {message?.title}
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              {message?.title === "Pending" && <InlineSpinner size={22} />}
+              <Typography id="transition-modal-title" variant="h6" component="h2" style={modalColor}>
+                {message?.title}
+              </Typography>
+            </Box>
             <Typography id="transition-modal-description" sx={{ mt: 2 }} style={modalColor}>
                 {message?.description}
             </Typography>

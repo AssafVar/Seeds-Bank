@@ -28,6 +28,7 @@ import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 import FieldMapDrawing from "./FieldMapDrawing.jsx";
 import ManageSubFieldsMap from "./ManageSubFieldsMap.jsx";
 import ModalCloseButton from "../common/ModalCloseButton.jsx";
+import Spinner, { InlineSpinner } from "../common/Spinner.jsx";
 
 const emptyForm = { name: "", landWidth: "", landLength: "", plantSpacing: "", rowSpacing: "" };
 const PREVIEW_WIDTH = 280;
@@ -92,6 +93,17 @@ function FullScreenDialogHeader({ title, onClose }) {
 }
 
 function FieldCard({ field, onDelete, actions, onClick, selected }) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteClick = async (e) => {
+    e.stopPropagation();
+    setIsDeleting(true);
+    const success = await onDelete(field.id);
+    if (!success) {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Card
       variant="outlined"
@@ -115,14 +127,8 @@ function FieldCard({ field, onDelete, actions, onClick, selected }) {
               {field.plantSpacing == null && <Chip label="Large field" size="small" />}
             </Box>
           </Box>
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(field.id);
-            }}
-          >
-            <DeleteIcon color="error" fontSize="small" />
+          <IconButton size="small" onClick={handleDeleteClick} disabled={isDeleting}>
+            {isDeleting ? <InlineSpinner size={16} /> : <DeleteIcon color="error" fontSize="small" />}
           </IconButton>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -154,6 +160,7 @@ function FieldCard({ field, onDelete, actions, onClick, selected }) {
 
 function FieldsSection({ userId, projectId }) {
   const [fields, setFields] = useState([]);
+  const [isLoadingFields, setIsLoadingFields] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [shapeMode, setShapeMode] = useState("rectangle");
   const [form, setForm] = useState(emptyForm);
@@ -170,15 +177,20 @@ function FieldsSection({ userId, projectId }) {
   const [managingParentField, setManagingParentField] = useState(null);
   const [selectedFieldId, setSelectedFieldId] = useState(null);
 
+  const [isCreatingField, setIsCreatingField] = useState(false);
+  const [isCreatingLargeField, setIsCreatingLargeField] = useState(false);
+
   const toggleFieldSelection = (fieldId) => {
     setSelectedFieldId((prev) => (prev === fieldId ? null : fieldId));
   };
 
   const loadFields = async () => {
+    setIsLoadingFields(true);
     const data = await getFields(userId, projectId);
     if (data) {
       setFields(data);
     }
+    setIsLoadingFields(false);
   };
 
   useEffect(() => {
@@ -260,7 +272,9 @@ function FieldsSection({ userId, projectId }) {
       };
     }
 
+    setIsCreatingField(true);
     const created = await createField(userId, projectId, payload);
+    setIsCreatingField(false);
     if (created) {
       setFields([created, ...fields]);
       closeDialog();
@@ -279,11 +293,13 @@ function FieldsSection({ userId, projectId }) {
       return;
     }
 
+    setIsCreatingLargeField(true);
     const created = await createField(userId, projectId, {
       name: largeFieldName,
       shapeType: "polygon",
       geoVertices: largeFieldVertices,
     });
+    setIsCreatingLargeField(false);
     if (created) {
       setFields([created, ...fields]);
       closeLargeFieldDialog();
@@ -427,8 +443,8 @@ function FieldsSection({ userId, projectId }) {
 
           <Box sx={{ display: "flex", gap: 1 }}>
             <Button onClick={closeDialog}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreateField}>
-              Create
+            <Button variant="contained" onClick={handleCreateField} disabled={isCreatingField}>
+              {isCreatingField ? <InlineSpinner size={20} /> : "Create"}
             </Button>
           </Box>
         </Box>
@@ -475,8 +491,8 @@ function FieldsSection({ userId, projectId }) {
           )}
           <Box sx={{ display: "flex", gap: 1 }}>
             <Button onClick={closeLargeFieldDialog}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreateLargeField}>
-              Create
+            <Button variant="contained" onClick={handleCreateLargeField} disabled={isCreatingLargeField}>
+              {isCreatingLargeField ? <InlineSpinner size={20} /> : "Create"}
             </Button>
           </Box>
         </Box>
@@ -524,7 +540,9 @@ function FieldsSection({ userId, projectId }) {
         </Box>
       </Box>
 
-      {fields.length === 0 ? (
+      {isLoadingFields ? (
+        <Spinner />
+      ) : fields.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           No fields yet. Add one to plan a planting layout.
         </Typography>

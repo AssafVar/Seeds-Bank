@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
+import { InlineSpinner } from "../common/Spinner.jsx";
 import { MapContainer, Polygon, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import SearchCities from "../search/SearchCities.jsx";
@@ -28,6 +29,7 @@ function FieldMapDrawing({ onFinish, parentGeoVertices }) {
   const [vertices, setVertices] = useState([]);
   const [isClosed, setIsClosed] = useState(false);
   const [center, setCenter] = useState(parentGeoVertices?.length ? null : DEFAULT_CENTER);
+  const [isLocating, setIsLocating] = useState(false);
   const suppressClickRef = useRef(false);
 
   const handleClick = (point) => {
@@ -85,7 +87,9 @@ function FieldMapDrawing({ onFinish, parentGeoVertices }) {
   };
 
   const handleLocationPicked = async (location) => {
+    setIsLocating(true);
     const coords = await getCoords(location);
+    setIsLocating(false);
     if (coords) {
       setCenter({ lat: Number(coords.lat), lng: Number(coords.lon) });
     }
@@ -116,8 +120,9 @@ function FieldMapDrawing({ onFinish, parentGeoVertices }) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0, flex: 1 }}>
       {!parentGeoVertices?.length && (
-        <Box sx={{ mb: 1, flexShrink: 0 }}>
+        <Box sx={{ mb: 1, flexShrink: 0, display: "flex", alignItems: "center", gap: 1 }}>
           <SearchCities handleLocation={handleLocationPicked} />
+          {isLocating && <InlineSpinner size={20} />}
         </Box>
       )}
       <Box sx={{ border: "1px solid", borderColor: "divider", flex: 1, minHeight: MIN_MAP_HEIGHT }}>
