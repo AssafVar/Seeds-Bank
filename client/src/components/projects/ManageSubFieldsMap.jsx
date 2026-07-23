@@ -367,17 +367,22 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
 
   const handlePaste = async () => {
     if (!clipboard) return;
-    const lngs = clipboard.geoVertices.map((v) => v.lng);
-    const width = Math.max(...lngs) - Math.min(...lngs) || 0.0005;
-    const offsetVertices = clipboard.geoVertices.map((v) => ({ lat: v.lat, lng: v.lng + width * 0.6 }));
 
+    // Pasted directly on top of the source shape rather than at a computed
+    // offset - an offset guess (e.g. shifted by a fraction of its own width)
+    // frequently landed outside the parent boundary since sub-fields
+    // typically already tile most of it, which silently failed the create
+    // with no obvious visual cause. Stacking it exactly on the original is
+    // always a valid position (it's identical to one that already passed
+    // the boundary check), and the new copy is immediately draggable - same
+    // as any other sub-field - so the user just drags it off to one side.
     setIsPasting(true);
     const created = await onCreate({
       name: `${clipboard.name} copy`,
       variety: clipboard.variety,
       shapeType: "polygon",
       parentFieldId: parentField.id,
-      geoVertices: offsetVertices,
+      geoVertices: clipboard.geoVertices,
       sowingStructure: clipboard.sowingStructure,
       plantSpacing: clipboard.plantSpacing,
       rowSpacing: clipboard.rowSpacing,
@@ -536,9 +541,14 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
         )}
 
         {clipboard && (
-          <Button size="small" variant="outlined" onClick={handlePaste} disabled={isPasting}>
-            {isPasting ? <InlineSpinner size={18} /> : `Paste copy of "${clipboard.name}"`}
-          </Button>
+          <Box>
+            <Button size="small" variant="outlined" onClick={handlePaste} disabled={isPasting} fullWidth>
+              {isPasting ? <InlineSpinner size={18} /> : `Paste copy of "${clipboard.name}"`}
+            </Button>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+              The copy lands on top of the original - drag it on the map to reposition it.
+            </Typography>
+          </Box>
         )}
 
         <Divider />
