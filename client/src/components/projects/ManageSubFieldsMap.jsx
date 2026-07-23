@@ -201,6 +201,21 @@ function DraggableSubFieldPolygon({ field, isSelected, onSelect, onMoved, suppre
   );
 }
 
+// Leaflet sizes its panes from the container's dimensions at mount/last
+// invalidateSize() call and doesn't notice a plain CSS/flex-basis resize
+// (there's no window "resize" event to react to), so shrinking the map
+// panel when switching to the Field Data tab would otherwise leave the
+// tiles clipped to the old, larger size until the browser window itself
+// was resized. Nudging it once the CSS transition finishes fixes that.
+function MapResizeHandler({ trigger }) {
+  const map = useMap();
+  useEffect(() => {
+    const timeout = setTimeout(() => map.invalidateSize(), 220);
+    return () => clearTimeout(timeout);
+  }, [map, trigger]);
+  return null;
+}
+
 function SubFieldPlants({ field, offset }) {
   if (!field.plantPositions?.length) {
     return null;
@@ -515,11 +530,18 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
     return list;
   }, [drawVertices, isDrawClosed]);
 
+  // Once a field is past planning, its shape rarely needs the map's full
+  // attention any more - the map stays reachable (Shape & Basics is one
+  // click away) but shrinks to a small locator/drag target while the
+  // agricultural data panel takes the room instead.
+  const isDataFocused = Boolean(selectedId) && activeEditTab === 1;
+
   return (
     <Box sx={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden" }}>
       <Box
         sx={{
-          width: 360,
+          width: isDataFocused ? 520 : 360,
+          transition: "width 0.2s ease",
           flexShrink: 0,
           p: 3,
           overflowY: "auto",
@@ -781,7 +803,14 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
         </Box>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+      <Box
+        sx={{
+          flex: isDataFocused ? "0 0 320px" : 1,
+          minHeight: 0,
+          display: "flex",
+          transition: "flex-basis 0.2s ease",
+        }}
+      >
         <Box sx={{ border: "1px solid", borderColor: "divider", flex: 1, minHeight: MIN_MAP_HEIGHT }}>
           <MapContainer
             center={[DEFAULT_CENTER.lat, DEFAULT_CENTER.lng]}
@@ -790,6 +819,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
           >
             <MapBaseLayers />
             <MapView fitTo={parentField.geoVertices} />
+            <MapResizeHandler trigger={isDataFocused} />
             <ClickCapture disabled={isDrawClosed} onClick={handleDrawClick} />
 
             <Polygon
