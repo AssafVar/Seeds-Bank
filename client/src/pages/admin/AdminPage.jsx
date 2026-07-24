@@ -4,6 +4,10 @@ import {
   Button,
   Card,
   CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   IconButton,
   List,
@@ -20,6 +24,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Container } from "@mui/system";
+import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import PageHeadline from "../../components/headline/PageHeadline";
@@ -87,16 +92,19 @@ function AdminPage() {
   const [newsBody, setNewsBody] = useState("");
   const [editingPostId, setEditingPostId] = useState(null);
   const [newsMessage, setNewsMessage] = useState("");
+  const [newsDialogOpen, setNewsDialogOpen] = useState(false);
 
   const [varieties, setVarieties] = useState([]);
   const [varietyForm, setVarietyForm] = useState(emptyVarietyForm);
   const [editingVarietyId, setEditingVarietyId] = useState(null);
   const [varietyMessage, setVarietyMessage] = useState("");
+  const [varietyDialogOpen, setVarietyDialogOpen] = useState(false);
 
   const [workers, setWorkers] = useState([]);
   const [workerForm, setWorkerForm] = useState(emptyWorkerForm);
   const [editingWorkerId, setEditingWorkerId] = useState(null);
   const [workerMessage, setWorkerMessage] = useState("");
+  const [workerDialogOpen, setWorkerDialogOpen] = useState(false);
 
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [isSavingContent, setIsSavingContent] = useState(false);
@@ -189,12 +197,19 @@ function AdminPage() {
     setEditingPostId(null);
     setNewsTitle("");
     setNewsBody("");
+    setNewsDialogOpen(false);
+  };
+
+  const handleAddPost = () => {
+    resetNewsForm();
+    setNewsDialogOpen(true);
   };
 
   const handleEditPost = (post) => {
     setEditingPostId(post.id);
     setNewsTitle(post.title);
     setNewsBody(post.body);
+    setNewsDialogOpen(true);
   };
 
   const handleSaveNewsPost = async () => {
@@ -234,6 +249,12 @@ function AdminPage() {
   const resetVarietyForm = () => {
     setEditingVarietyId(null);
     setVarietyForm(emptyVarietyForm);
+    setVarietyDialogOpen(false);
+  };
+
+  const handleAddVariety = () => {
+    resetVarietyForm();
+    setVarietyDialogOpen(true);
   };
 
   const handleEditVariety = (v) => {
@@ -247,6 +268,7 @@ function AdminPage() {
       seedBufferPercent: String(Math.round(v.seedBufferPercent * 100)),
       seedUnit: v.seedUnit || "seeds",
     });
+    setVarietyDialogOpen(true);
   };
 
   const handleSaveVariety = async () => {
@@ -308,6 +330,12 @@ function AdminPage() {
   const resetWorkerForm = () => {
     setEditingWorkerId(null);
     setWorkerForm(emptyWorkerForm);
+    setWorkerDialogOpen(false);
+  };
+
+  const handleAddWorker = () => {
+    resetWorkerForm();
+    setWorkerDialogOpen(true);
   };
 
   const handleEditWorker = (w) => {
@@ -317,6 +345,7 @@ function AdminPage() {
       role: w.role || "",
       hourlyRate: String(w.hourlyRate),
     });
+    setWorkerDialogOpen(true);
   };
 
   const handleSaveWorker = async () => {
@@ -511,39 +540,11 @@ function AdminPage() {
           {activeSection === "news" && (
             <Card variant="outlined">
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  News posts
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
-                  <TextField
-                    label="Title"
-                    value={newsTitle}
-                    onChange={(e) => setNewsTitle(e.target.value)}
-                  />
-                  <TextField
-                    label="Body"
-                    multiline
-                    minRows={3}
-                    value={newsBody}
-                    onChange={(e) => setNewsBody(e.target.value)}
-                  />
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Button
-                      variant="contained"
-                      onClick={handleSaveNewsPost}
-                      disabled={!newsTitle || !newsBody || isSavingNewsPost}
-                    >
-                      {isSavingNewsPost ? (
-                        <InlineSpinner size={20} />
-                      ) : editingPostId ? (
-                        "Save"
-                      ) : (
-                        "Publish"
-                      )}
-                    </Button>
-                    {editingPostId && <Button onClick={resetNewsForm}>Cancel</Button>}
-                    {newsMessage && <Typography variant="body2">{newsMessage}</Typography>}
-                  </Box>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+                  <Typography variant="h6">News posts</Typography>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddPost}>
+                    New post
+                  </Button>
                 </Box>
                 {newsPosts.length === 0 ? (
                   <Typography variant="body2" sx={{ p: 2 }}>
@@ -594,6 +595,41 @@ function AdminPage() {
                     </Table>
                   </TableContainer>
                 )}
+
+                <Dialog open={newsDialogOpen} onClose={resetNewsForm} fullWidth maxWidth="sm">
+                  <DialogTitle>{editingPostId ? "Edit post" : "New post"}</DialogTitle>
+                  <DialogContent>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+                      <TextField
+                        label="Title"
+                        value={newsTitle}
+                        onChange={(e) => setNewsTitle(e.target.value)}
+                      />
+                      <TextField
+                        label="Body"
+                        multiline
+                        minRows={3}
+                        value={newsBody}
+                        onChange={(e) => setNewsBody(e.target.value)}
+                      />
+                    </Box>
+                  </DialogContent>
+                  <DialogActions sx={{ px: 3, pb: 2 }}>
+                    {newsMessage && (
+                      <Typography variant="body2" sx={{ mr: "auto" }}>
+                        {newsMessage}
+                      </Typography>
+                    )}
+                    <Button onClick={resetNewsForm}>Cancel</Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveNewsPost}
+                      disabled={!newsTitle || !newsBody || isSavingNewsPost}
+                    >
+                      {isSavingNewsPost ? <InlineSpinner size={20} /> : editingPostId ? "Save" : "Publish"}
+                    </Button>
+                  </DialogActions>
+                </Dialog>
               </CardContent>
             </Card>
           )}
@@ -601,82 +637,16 @@ function AdminPage() {
           {activeSection === "varieties" && (
             <Card variant="outlined">
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Vegetable varieties
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Powers the variety dropdown and materials estimate everywhere in the app.
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
-                  <TextField
-                    label="Name"
-                    value={varietyForm.name}
-                    onChange={(e) => setVarietyForm({ ...varietyForm, name: e.target.value })}
-                  />
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Plant spacing (m)"
-                      type="number"
-                      fullWidth
-                      value={varietyForm.plantSpacing}
-                      onChange={(e) => setVarietyForm({ ...varietyForm, plantSpacing: e.target.value })}
-                    />
-                    <TextField
-                      label="Row spacing (m)"
-                      type="number"
-                      fullWidth
-                      value={varietyForm.rowSpacing}
-                      onChange={(e) => setVarietyForm({ ...varietyForm, rowSpacing: e.target.value })}
-                    />
+                <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", mb: 2 }}>
+                  <Box>
+                    <Typography variant="h6">Vegetable varieties</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Powers the variety dropdown and materials estimate everywhere in the app.
+                    </Typography>
                   </Box>
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Water (mm/season)"
-                      type="number"
-                      fullWidth
-                      value={varietyForm.waterMmPerSeason}
-                      onChange={(e) => setVarietyForm({ ...varietyForm, waterMmPerSeason: e.target.value })}
-                    />
-                    <TextField
-                      label="Fertilizer (kg/100m²)"
-                      type="number"
-                      fullWidth
-                      value={varietyForm.fertilizerKgPer100m2}
-                      onChange={(e) => setVarietyForm({ ...varietyForm, fertilizerKgPer100m2: e.target.value })}
-                    />
-                  </Box>
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Seed buffer (%)"
-                      type="number"
-                      fullWidth
-                      value={varietyForm.seedBufferPercent}
-                      onChange={(e) => setVarietyForm({ ...varietyForm, seedBufferPercent: e.target.value })}
-                    />
-                    <TextField
-                      label="Seed unit"
-                      fullWidth
-                      value={varietyForm.seedUnit}
-                      onChange={(e) => setVarietyForm({ ...varietyForm, seedUnit: e.target.value })}
-                    />
-                  </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Button
-                      variant="contained"
-                      onClick={handleSaveVariety}
-                      disabled={!varietyForm.name || isSavingVariety}
-                    >
-                      {isSavingVariety ? (
-                        <InlineSpinner size={20} />
-                      ) : editingVarietyId ? (
-                        "Save"
-                      ) : (
-                        "Add"
-                      )}
-                    </Button>
-                    {editingVarietyId && <Button onClick={resetVarietyForm}>Cancel</Button>}
-                    {varietyMessage && <Typography variant="body2">{varietyMessage}</Typography>}
-                  </Box>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddVariety} sx={{ flexShrink: 0 }}>
+                    New variety
+                  </Button>
                 </Box>
                 {varieties.length === 0 ? (
                   <Typography variant="body2" sx={{ p: 2 }}>
@@ -729,6 +699,81 @@ function AdminPage() {
                     </Table>
                   </TableContainer>
                 )}
+
+                <Dialog open={varietyDialogOpen} onClose={resetVarietyForm} fullWidth maxWidth="sm">
+                  <DialogTitle>{editingVarietyId ? "Edit variety" : "New variety"}</DialogTitle>
+                  <DialogContent>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+                      <TextField
+                        label="Name"
+                        value={varietyForm.name}
+                        onChange={(e) => setVarietyForm({ ...varietyForm, name: e.target.value })}
+                      />
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <TextField
+                          label="Plant spacing (m)"
+                          type="number"
+                          fullWidth
+                          value={varietyForm.plantSpacing}
+                          onChange={(e) => setVarietyForm({ ...varietyForm, plantSpacing: e.target.value })}
+                        />
+                        <TextField
+                          label="Row spacing (m)"
+                          type="number"
+                          fullWidth
+                          value={varietyForm.rowSpacing}
+                          onChange={(e) => setVarietyForm({ ...varietyForm, rowSpacing: e.target.value })}
+                        />
+                      </Box>
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <TextField
+                          label="Water (mm/season)"
+                          type="number"
+                          fullWidth
+                          value={varietyForm.waterMmPerSeason}
+                          onChange={(e) => setVarietyForm({ ...varietyForm, waterMmPerSeason: e.target.value })}
+                        />
+                        <TextField
+                          label="Fertilizer (kg/100m²)"
+                          type="number"
+                          fullWidth
+                          value={varietyForm.fertilizerKgPer100m2}
+                          onChange={(e) => setVarietyForm({ ...varietyForm, fertilizerKgPer100m2: e.target.value })}
+                        />
+                      </Box>
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <TextField
+                          label="Seed buffer (%)"
+                          type="number"
+                          fullWidth
+                          value={varietyForm.seedBufferPercent}
+                          onChange={(e) => setVarietyForm({ ...varietyForm, seedBufferPercent: e.target.value })}
+                        />
+                        <TextField
+                          label="Seed unit"
+                          fullWidth
+                          value={varietyForm.seedUnit}
+                          onChange={(e) => setVarietyForm({ ...varietyForm, seedUnit: e.target.value })}
+                        />
+                      </Box>
+                    </Box>
+                  </DialogContent>
+                  <DialogActions sx={{ px: 3, pb: 2 }}>
+                    {varietyMessage && (
+                      <Typography variant="body2" sx={{ mr: "auto" }}>
+                        {varietyMessage}
+                      </Typography>
+                    )}
+                    <Button onClick={resetVarietyForm}>Cancel</Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveVariety}
+                      disabled={!varietyForm.name || isSavingVariety}
+                    >
+                      {isSavingVariety ? <InlineSpinner size={20} /> : editingVarietyId ? "Save" : "Add"}
+                    </Button>
+                  </DialogActions>
+                </Dialog>
               </CardContent>
             </Card>
           )}
@@ -736,50 +781,16 @@ function AdminPage() {
           {activeSection === "workers" && (
             <Card variant="outlined">
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Workers
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Shared roster used for logging hours/cost against a field's Labor tab.
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
-                  <TextField
-                    label="Name"
-                    value={workerForm.name}
-                    onChange={(e) => setWorkerForm({ ...workerForm, name: e.target.value })}
-                  />
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Role (optional)"
-                      fullWidth
-                      value={workerForm.role}
-                      onChange={(e) => setWorkerForm({ ...workerForm, role: e.target.value })}
-                    />
-                    <TextField
-                      label="Hourly rate"
-                      type="number"
-                      fullWidth
-                      value={workerForm.hourlyRate}
-                      onChange={(e) => setWorkerForm({ ...workerForm, hourlyRate: e.target.value })}
-                    />
+                <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", mb: 2 }}>
+                  <Box>
+                    <Typography variant="h6">Workers</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Shared roster used for logging hours/cost against a field's Labor tab.
+                    </Typography>
                   </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Button
-                      variant="contained"
-                      onClick={handleSaveWorker}
-                      disabled={!workerForm.name || isSavingWorker}
-                    >
-                      {isSavingWorker ? (
-                        <InlineSpinner size={20} />
-                      ) : editingWorkerId ? (
-                        "Save"
-                      ) : (
-                        "Add"
-                      )}
-                    </Button>
-                    {editingWorkerId && <Button onClick={resetWorkerForm}>Cancel</Button>}
-                    {workerMessage && <Typography variant="body2">{workerMessage}</Typography>}
-                  </Box>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddWorker} sx={{ flexShrink: 0 }}>
+                    New worker
+                  </Button>
                 </Box>
                 {workers.length === 0 ? (
                   <Typography variant="body2" sx={{ p: 2 }}>
@@ -824,6 +835,49 @@ function AdminPage() {
                     </Table>
                   </TableContainer>
                 )}
+
+                <Dialog open={workerDialogOpen} onClose={resetWorkerForm} fullWidth maxWidth="sm">
+                  <DialogTitle>{editingWorkerId ? "Edit worker" : "New worker"}</DialogTitle>
+                  <DialogContent>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+                      <TextField
+                        label="Name"
+                        value={workerForm.name}
+                        onChange={(e) => setWorkerForm({ ...workerForm, name: e.target.value })}
+                      />
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <TextField
+                          label="Role (optional)"
+                          fullWidth
+                          value={workerForm.role}
+                          onChange={(e) => setWorkerForm({ ...workerForm, role: e.target.value })}
+                        />
+                        <TextField
+                          label="Hourly rate"
+                          type="number"
+                          fullWidth
+                          value={workerForm.hourlyRate}
+                          onChange={(e) => setWorkerForm({ ...workerForm, hourlyRate: e.target.value })}
+                        />
+                      </Box>
+                    </Box>
+                  </DialogContent>
+                  <DialogActions sx={{ px: 3, pb: 2 }}>
+                    {workerMessage && (
+                      <Typography variant="body2" sx={{ mr: "auto" }}>
+                        {workerMessage}
+                      </Typography>
+                    )}
+                    <Button onClick={resetWorkerForm}>Cancel</Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveWorker}
+                      disabled={!workerForm.name || isSavingWorker}
+                    >
+                      {isSavingWorker ? <InlineSpinner size={20} /> : editingWorkerId ? "Save" : "Add"}
+                    </Button>
+                  </DialogActions>
+                </Dialog>
               </CardContent>
             </Card>
           )}
