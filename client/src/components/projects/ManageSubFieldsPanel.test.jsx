@@ -234,6 +234,64 @@ describe("ManageSubFieldsPanel", () => {
     );
   });
 
+  it("reshapes the outer boundary when a corner is dragged while editing it", async () => {
+    const onUpdateGeometry = jest.fn().mockResolvedValue({ ...dragParentField });
+    const { container } = render(
+      <ManageSubFieldsPanel {...baseProps({ parentField: dragParentField, onUpdateGeometry })} />
+    );
+
+    userEvent.click(screen.getByRole("button", { name: "Edit outer boundary shape" }));
+    expect(screen.getByRole("button", { name: "Done editing boundary" })).toBeInTheDocument();
+
+    const boundaryVertexHandles = container.querySelectorAll("svg circle");
+    expect(boundaryVertexHandles).toHaveLength(4);
+
+    fireEvent.mouseDown(boundaryVertexHandles[0], { clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(window, { clientX: 116, clientY: 100 });
+    fireEvent.mouseUp(window, { clientX: 116, clientY: 100 });
+
+    await waitFor(() =>
+      expect(onUpdateGeometry).toHaveBeenCalledWith(10, {
+        vertices: [
+          { x: 2, y: 0 },
+          { x: 46, y: 0 },
+          { x: 46, y: 20 },
+          { x: 0, y: 20 },
+        ],
+      })
+    );
+  });
+
+  it("reverts a boundary resize when the server rejects it as cutting off a sub-field", async () => {
+    const onUpdateGeometry = jest.fn().mockResolvedValue(null);
+    const { container } = render(
+      <ManageSubFieldsPanel {...baseProps({ parentField: dragParentField, onUpdateGeometry })} />
+    );
+
+    userEvent.click(screen.getByRole("button", { name: "Edit outer boundary shape" }));
+    const boundaryVertexHandles = container.querySelectorAll("svg circle");
+    const originalCx = boundaryVertexHandles[0].getAttribute("cx");
+
+    fireEvent.mouseDown(boundaryVertexHandles[0], { clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(window, { clientX: 116, clientY: 100 });
+    fireEvent.mouseUp(window, { clientX: 116, clientY: 100 });
+
+    await waitFor(() =>
+      expect(screen.getByText("Resizing would leave an existing sub-field outside this boundary.")).toBeInTheDocument()
+    );
+    expect(container.querySelectorAll("svg circle")[0].getAttribute("cx")).toBe(originalCx);
+  });
+
+  it("exits boundary-editing mode when a sub-field is selected instead", () => {
+    render(<ManageSubFieldsPanel {...baseProps({ subFields: [subField] })} />);
+
+    userEvent.click(screen.getByRole("button", { name: "Edit outer boundary shape" }));
+    expect(screen.getByRole("button", { name: "Done editing boundary" })).toBeInTheDocument();
+
+    userEvent.click(screen.getByText("Tomato row"));
+    expect(screen.getByRole("button", { name: "Edit outer boundary shape" })).toBeInTheDocument();
+  });
+
   it("calls onClose when Close is clicked", () => {
     const onClose = jest.fn();
     render(<ManageSubFieldsPanel {...baseProps({ onClose })} />);

@@ -253,6 +253,102 @@ public class FieldServiceTests
     }
 
     [Fact]
+    public async Task UpdateGeometryAsync_reshapes_a_small_field_container_with_no_sub_fields()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new FieldService(db);
+        var smallField = await service.CreateAsync("p1", new FieldRequest { Name = "Backyard block", ShapeType = "polygon", Vertices = SmallFieldBoundary() });
+
+        var reshaped = await service.UpdateGeometryAsync("p1", smallField.Id, new UpdateFieldGeometryRequest
+        {
+            Vertices = new List<VertexDto>
+            {
+                new() { X = 0, Y = 0 },
+                new() { X = 20, Y = 0 },
+                new() { X = 20, Y = 20 },
+                new() { X = 0, Y = 20 },
+            },
+        });
+
+        Assert.NotNull(reshaped);
+        Assert.Equal(400, reshaped!.Area);
+    }
+
+    [Fact]
+    public async Task UpdateGeometryAsync_reshapes_a_small_field_container_that_still_fits_its_sub_field()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new FieldService(db);
+        var smallField = await service.CreateAsync("p1", new FieldRequest { Name = "Backyard block", ShapeType = "polygon", Vertices = SmallFieldBoundary() });
+        await service.CreateAsync("p1", new FieldRequest
+        {
+            Name = "Sub plot A",
+            ShapeType = "polygon",
+            ParentFieldId = smallField.Id,
+            Vertices = SubFieldBoundaryInsideSmallField(),
+            PlantSpacing = 0.5,
+            RowSpacing = 0.5,
+        });
+
+        // Growing the boundary keeps the existing sub-field (x/y 2..4) well inside it.
+        var reshaped = await service.UpdateGeometryAsync("p1", smallField.Id, new UpdateFieldGeometryRequest
+        {
+            Vertices = new List<VertexDto>
+            {
+                new() { X = 0, Y = 0 },
+                new() { X = 20, Y = 0 },
+                new() { X = 20, Y = 20 },
+                new() { X = 0, Y = 20 },
+            },
+        });
+
+        Assert.NotNull(reshaped);
+    }
+
+    [Fact]
+    public async Task UpdateGeometryAsync_rejects_shrinking_a_small_field_container_past_an_existing_sub_field()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new FieldService(db);
+        var smallField = await service.CreateAsync("p1", new FieldRequest { Name = "Backyard block", ShapeType = "polygon", Vertices = SmallFieldBoundary() });
+        await service.CreateAsync("p1", new FieldRequest
+        {
+            Name = "Sub plot A",
+            ShapeType = "polygon",
+            ParentFieldId = smallField.Id,
+            Vertices = SubFieldBoundaryInsideSmallField(),
+            PlantSpacing = 0.5,
+            RowSpacing = 0.5,
+        });
+
+        // Shrunk to x/y 0..3, which cuts off the sub-field's x/y 2..4 corner.
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateGeometryAsync("p1", smallField.Id, new UpdateFieldGeometryRequest
+        {
+            Vertices = new List<VertexDto>
+            {
+                new() { X = 0, Y = 0 },
+                new() { X = 3, Y = 0 },
+                new() { X = 3, Y = 3 },
+                new() { X = 0, Y = 3 },
+            },
+        }));
+    }
+
+    [Fact]
+    public async Task UpdateGeometryAsync_throws_for_a_standalone_field_with_its_own_planting_data()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new FieldService(db);
+        var field = await service.CreateAsync("p1", MakeRectangleRequest());
+
+        // A legacy standalone field (map-less, no parent, but its own
+        // PlantSpacing) predates the container model and isn't one - it
+        // must not be treated as a reshapable Small Field container.
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateGeometryAsync("p1", field.Id, new UpdateFieldGeometryRequest { Vertices = SmallFieldBoundary() }));
+    }
+
+    [Fact]
     public async Task UpdatePropertiesAsync_updates_a_standalone_field()
     {
         using var db = TestDbContextFactory.Create();

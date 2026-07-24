@@ -254,6 +254,10 @@ function FieldsSection({ userId, projectId }) {
     const updated = await updateFieldGeometry(userId, projectId, fieldId, geoVertices);
     if (updated) {
       setFields((prev) => prev.map((f) => (f.id === fieldId ? updated : f)));
+      // This same handler also reshapes a Small Field's own outer boundary
+      // (not just its sub-fields) - keep the dialog's parentField prop in
+      // sync so its scale/box reflects the newly saved shape immediately.
+      setManagingParentField((prev) => (prev && prev.id === fieldId ? updated : prev));
     }
     return updated;
   };
