@@ -11,10 +11,12 @@ namespace SeedsBank.Server.Controllers;
 public class FieldsController : OwnedResourceControllerBase
 {
     private readonly IFieldService _fieldService;
+    private readonly IFieldWorkLogService _fieldWorkLogService;
 
-    public FieldsController(IFieldService fieldService)
+    public FieldsController(IFieldService fieldService, IFieldWorkLogService fieldWorkLogService)
     {
         _fieldService = fieldService;
+        _fieldWorkLogService = fieldWorkLogService;
     }
 
     [HttpGet]
@@ -80,6 +82,40 @@ public class FieldsController : OwnedResourceControllerBase
         if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
 
         var deleted = await _fieldService.DeleteAsync(projectId, fieldId);
+        return deleted ? Ok() : NotFound();
+    }
+
+    [HttpGet("{fieldId}/work-logs")]
+    public async Task<IActionResult> GetWorkLogs(string userId, string projectId, int fieldId)
+    {
+        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+
+        var logs = await _fieldWorkLogService.GetByFieldAsync(projectId, fieldId);
+        return Ok(logs);
+    }
+
+    [HttpPost("{fieldId}/work-logs")]
+    public async Task<IActionResult> CreateWorkLog(string userId, string projectId, int fieldId, FieldWorkLogRequest request)
+    {
+        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+
+        try
+        {
+            var log = await _fieldWorkLogService.CreateAsync(projectId, fieldId, request);
+            return log is null ? NotFound() : Ok(log);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{fieldId}/work-logs/{logId}")]
+    public async Task<IActionResult> DeleteWorkLog(string userId, string projectId, int fieldId, int logId)
+    {
+        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+
+        var deleted = await _fieldWorkLogService.DeleteAsync(projectId, fieldId, logId);
         return deleted ? Ok() : NotFound();
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SeedsBank.Server.Data;
 
@@ -11,9 +12,11 @@ using SeedsBank.Server.Data;
 namespace SeedsBank.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723201121_AddVegetableVarieties")]
+    partial class AddVegetableVarieties
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -125,48 +128,6 @@ namespace SeedsBank.Server.Migrations
                     b.HasIndex("ParentFieldId");
 
                     b.ToTable("fields");
-                });
-
-            modelBuilder.Entity("SeedsBank.Server.Models.FieldWorkLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("FieldId")
-                        .HasColumnType("int")
-                        .HasColumnName("field_id");
-
-                    b.Property<double>("HourlyRateAtEntry")
-                        .HasColumnType("double")
-                        .HasColumnName("hourly_rate_at_entry");
-
-                    b.Property<double>("HoursWorked")
-                        .HasColumnType("double")
-                        .HasColumnName("hours_worked");
-
-                    b.Property<DateTime>("WorkDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("work_date");
-
-                    b.Property<int>("WorkerId")
-                        .HasColumnType("int")
-                        .HasColumnName("worker_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FieldId");
-
-                    b.HasIndex("WorkerId");
-
-                    b.ToTable("field_work_logs");
                 });
 
             modelBuilder.Entity("SeedsBank.Server.Models.GalleryImage", b =>
@@ -429,37 +390,6 @@ namespace SeedsBank.Server.Migrations
                     b.ToTable("vegetable_varieties");
                 });
 
-            modelBuilder.Entity("SeedsBank.Server.Models.Worker", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_at");
-
-                    b.Property<double>("HourlyRate")
-                        .HasColumnType("double")
-                        .HasColumnName("hourly_rate");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("name");
-
-                    b.Property<string>("Role")
-                        .HasColumnType("longtext")
-                        .HasColumnName("role");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("workers");
-                });
-
             modelBuilder.Entity("SeedsBank.Server.Models.Field", b =>
                 {
                     b.HasOne("SeedsBank.Server.Models.Field", "Parent")
@@ -468,25 +398,6 @@ namespace SeedsBank.Server.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("SeedsBank.Server.Models.FieldWorkLog", b =>
-                {
-                    b.HasOne("SeedsBank.Server.Models.Field", "Field")
-                        .WithMany()
-                        .HasForeignKey("FieldId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SeedsBank.Server.Models.Worker", "Worker")
-                        .WithMany()
-                        .HasForeignKey("WorkerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Field");
-
-                    b.Navigation("Worker");
                 });
 
             modelBuilder.Entity("SeedsBank.Server.Models.Field", b =>
