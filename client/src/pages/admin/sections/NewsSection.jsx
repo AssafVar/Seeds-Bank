@@ -121,6 +121,7 @@ function NewsSection() {
           columns={columns}
           rows={posts}
           getRowId={(post) => post.id}
+          getRowLabel={(post) => post.title}
           selectedId={editingId}
           onEdit={handleEdit}
           onDelete={handleDelete}

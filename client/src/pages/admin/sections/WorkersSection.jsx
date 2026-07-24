@@ -131,6 +131,7 @@ function WorkersSection() {
           columns={columns}
           rows={workers}
           getRowId={(w) => w.id}
+          getRowLabel={(w) => w.name}
           selectedId={editingId}
           onEdit={handleEdit}
           onDelete={handleDelete}

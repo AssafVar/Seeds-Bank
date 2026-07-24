@@ -8,6 +8,7 @@ import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ConfirmDialog from "../../../components/admin/ConfirmDialog.jsx";
 import Spinner, { InlineSpinner } from "../../../components/common/Spinner.jsx";
 import {
   SERVER_BASE_URL,
@@ -24,6 +25,7 @@ function GallerySection() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
   const [deletingImageId, setDeletingImageId] = useState(null);
+  const [confirmImageId, setConfirmImageId] = useState(null);
 
   useEffect(() => {
     getSiteContent().then((data) => {
@@ -98,7 +100,7 @@ function GallerySection() {
                 />
                 <IconButton
                   size="small"
-                  onClick={() => handleDeleteImage(image.id)}
+                  onClick={() => setConfirmImageId(image.id)}
                   disabled={deletingImageId === image.id}
                   sx={{ position: "absolute", top: 0, right: 0, bgcolor: "background.paper" }}
                 >
@@ -117,6 +119,17 @@ function GallerySection() {
             </Typography>
           )}
         </Grid>
+
+        <ConfirmDialog
+          open={confirmImageId != null}
+          title="Delete this photo?"
+          message="This can't be undone."
+          onCancel={() => setConfirmImageId(null)}
+          onConfirm={() => {
+            handleDeleteImage(confirmImageId);
+            setConfirmImageId(null);
+          }}
+        />
       </CardContent>
     </Card>
   );

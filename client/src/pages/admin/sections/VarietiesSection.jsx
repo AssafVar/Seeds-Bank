@@ -161,6 +161,7 @@ function VarietiesSection() {
           columns={columns}
           rows={varieties}
           getRowId={(v) => v.id}
+          getRowLabel={(v) => v.name}
           selectedId={editingId}
           onEdit={handleEdit}
           onDelete={handleDelete}
