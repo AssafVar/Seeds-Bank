@@ -1,54 +1,109 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
-const SCALE = 22; // pixels per meter
-const CANVAS_WIDTH = 320;
-const CANVAS_HEIGHT = 220;
-const GRID_STEP_M = 1;
+const CANVAS_WIDTH = 400;
+const CANVAS_HEIGHT = 280;
+const REFERENCE_PADDING = 16;
+
+// A single fixed scale can't serve both a small garden bed (needs precision)
+// and a field spanning tens/hundreds of meters (needs the room), so the user
+// sets how many meters wide the view should be - only used in freestanding
+// mode; referenceVertices mode always auto-fits to the parent's own size.
+const DEFAULT_VIEW_WIDTH_M = 80;
+const MIN_VIEW_WIDTH_M = 5;
+const MAX_VIEW_WIDTH_M = 2000;
+
+// Picks the smallest "nice" grid spacing whose on-screen size is still
+// legible (>=20px), so a wide view doesn't draw hundreds of illegible 1m
+// lines and a narrow one isn't stuck with a single giant square.
+const NICE_GRID_STEPS_M = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
+const MIN_GRID_STEP_PX = 20;
+function pickGridStep(scale) {
+  return NICE_GRID_STEPS_M.find((step) => step * scale >= MIN_GRID_STEP_PX) ?? NICE_GRID_STEPS_M[NICE_GRID_STEPS_M.length - 1];
+}
 
 const distance = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
 
-function GridLines() {
+function GridLines({ scale, gridStep }) {
   const lines = [];
-  for (let x = 0; x <= CANVAS_WIDTH / SCALE; x += GRID_STEP_M) {
+  for (let x = 0; x <= CANVAS_WIDTH / scale; x += gridStep) {
     lines.push(
-      <line key={`v${x}`} x1={x * SCALE} y1={0} x2={x * SCALE} y2={CANVAS_HEIGHT} stroke="#E3D9C4" strokeWidth={1} />
+      <line key={`v${x}`} x1={x * scale} y1={0} x2={x * scale} y2={CANVAS_HEIGHT} stroke="#E3D9C4" strokeWidth={1} />
     );
   }
-  for (let y = 0; y <= CANVAS_HEIGHT / SCALE; y += GRID_STEP_M) {
+  for (let y = 0; y <= CANVAS_HEIGHT / scale; y += gridStep) {
     lines.push(
-      <line key={`h${y}`} x1={0} y1={y * SCALE} x2={CANVAS_WIDTH} y2={y * SCALE} stroke="#E3D9C4" strokeWidth={1} />
+      <line key={`h${y}`} x1={0} y1={y * scale} x2={CANVAS_WIDTH} y2={y * scale} stroke="#E3D9C4" strokeWidth={1} />
     );
   }
   return <>{lines}</>;
 }
 
-function FieldDrawingCanvas({ onFinish }) {
+// A "small field"'s sub-field needs to be drawn in the SAME local coordinate
+// space as its parent's own stored vertices (there's no shared GPS origin to
+// project through, unlike a map-anchored large field's sub-fields) - so when
+// referenceVertices is given, the view fits to that boundary and every click
+// is converted back through that same fit, rather than through the plain
+// SCALE-per-meter grid used for a freestanding shape.
+function fitToReference(referenceVertices) {
+  if (!referenceVertices?.length) {
+    return null;
+  }
+  const xs = referenceVertices.map((v) => v.x);
+  const ys = referenceVertices.map((v) => v.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const shapeWidth = Math.max(...xs) - minX || 1;
+  const shapeHeight = Math.max(...ys) - minY || 1;
+  const scale = Math.min(
+    (CANVAS_WIDTH - REFERENCE_PADDING * 2) / shapeWidth,
+    (CANVAS_HEIGHT - REFERENCE_PADDING * 2) / shapeHeight
+  );
+  return { minX, minY, scale };
+}
+
+function FieldDrawingCanvas({ onFinish, referenceVertices }) {
   const [vertices, setVertices] = useState([]);
   const [mousePos, setMousePos] = useState(null);
   const [isClosed, setIsClosed] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editValue, setEditValue] = useState("");
+  const [viewWidthInput, setViewWidthInput] = useState(String(DEFAULT_VIEW_WIDTH_M));
 
-  const toMeters = (e) => {
+  const fit = useMemo(() => fitToReference(referenceVertices), [referenceVertices]);
+  const parsedViewWidth = Number(viewWidthInput);
+  const viewWidthMeters =
+    parsedViewWidth > 0 ? Math.min(MAX_VIEW_WIDTH_M, Math.max(MIN_VIEW_WIDTH_M, parsedViewWidth)) : DEFAULT_VIEW_WIDTH_M;
+  const scale = fit?.scale ?? CANVAS_WIDTH / viewWidthMeters;
+  const gridStep = pickGridStep(scale);
+  const viewHeightMeters = CANVAS_HEIGHT / scale;
+
+  const toPixel = (v) =>
+    fit
+      ? { x: (v.x - fit.minX) * fit.scale + REFERENCE_PADDING, y: (v.y - fit.minY) * fit.scale + REFERENCE_PADDING }
+      : { x: v.x * scale, y: v.y * scale };
+
+  const toLocal = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    return {
-      x: (e.clientX - rect.left) / SCALE,
-      y: (e.clientY - rect.top) / SCALE,
-    };
+    const pixelX = e.clientX - rect.left;
+    const pixelY = e.clientY - rect.top;
+    if (fit) {
+      return { x: (pixelX - REFERENCE_PADDING) / fit.scale + fit.minX, y: (pixelY - REFERENCE_PADDING) / fit.scale + fit.minY };
+    }
+    return { x: pixelX / scale, y: pixelY / scale };
   };
 
   const handleClick = (e) => {
     if (isClosed) return;
-    setVertices([...vertices, toMeters(e)]);
+    setVertices([...vertices, toLocal(e)]);
   };
 
   const handleMouseMove = (e) => {
     if (isClosed) return;
-    setMousePos(toMeters(e));
+    setMousePos(toLocal(e));
   };
 
   const handleUndo = () => {
@@ -107,7 +162,8 @@ function FieldDrawingCanvas({ onFinish }) {
     segments.push([vertices[vertices.length - 1], vertices[0], vertices.length - 1]);
   }
 
-  const points = vertices.map((v) => `${v.x * SCALE},${v.y * SCALE}`).join(" ");
+  const points = vertices.map((v) => `${toPixel(v).x},${toPixel(v).y}`).join(" ");
+  const referencePoints = fit ? referenceVertices.map((v) => `${toPixel(v).x},${toPixel(v).y}`).join(" ") : null;
 
   let helperText = "Click on the grid to place the first corner.";
   if (isClosed) {
@@ -122,6 +178,21 @@ function FieldDrawingCanvas({ onFinish }) {
 
   return (
     <Box>
+      {!fit && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+          <TextField
+            label="View width (meters)"
+            type="number"
+            size="small"
+            value={viewWidthInput}
+            onChange={(e) => setViewWidthInput(e.target.value)}
+            sx={{ width: 160 }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            Shows ~{Math.round(viewWidthMeters)}m × {Math.round(viewHeightMeters)}m
+          </Typography>
+        </Box>
+      )}
       <Box sx={{ position: "relative", border: "1px solid", borderColor: "divider", width: CANVAS_WIDTH }}>
         <svg
           width={CANVAS_WIDTH}
@@ -130,7 +201,11 @@ function FieldDrawingCanvas({ onFinish }) {
           onMouseMove={handleMouseMove}
           style={{ display: "block", cursor: isClosed ? "default" : "crosshair" }}
         >
-          <GridLines />
+          {fit ? (
+            <polygon points={referencePoints} fill="none" stroke="#1F4D3A" strokeDasharray="6 4" strokeWidth={1.5} />
+          ) : (
+            <GridLines scale={scale} gridStep={gridStep} />
+          )}
           {isClosed ? (
             <polygon points={points} fill="rgba(31,77,58,0.15)" stroke="#1F4D3A" strokeWidth={2} />
           ) : (
@@ -138,21 +213,24 @@ function FieldDrawingCanvas({ onFinish }) {
           )}
           {!isClosed && vertices.length > 0 && mousePos && (
             <line
-              x1={vertices[vertices.length - 1].x * SCALE}
-              y1={vertices[vertices.length - 1].y * SCALE}
-              x2={mousePos.x * SCALE}
-              y2={mousePos.y * SCALE}
+              x1={toPixel(vertices[vertices.length - 1]).x}
+              y1={toPixel(vertices[vertices.length - 1]).y}
+              x2={toPixel(mousePos).x}
+              y2={toPixel(mousePos).y}
               stroke="#D6543A"
               strokeDasharray="4 4"
               strokeWidth={1.5}
             />
           )}
-          {vertices.map((v, i) => (
-            <circle key={i} cx={v.x * SCALE} cy={v.y * SCALE} r={4} fill="#1F4D3A" />
-          ))}
+          {vertices.map((v, i) => {
+            const p = toPixel(v);
+            return <circle key={i} cx={p.x} cy={p.y} r={4} fill="#1F4D3A" />;
+          })}
           {segments.map(([a, b, index]) => {
-            const midX = ((a.x + b.x) / 2) * SCALE;
-            const midY = ((a.y + b.y) / 2) * SCALE;
+            const pa = toPixel(a);
+            const pb = toPixel(b);
+            const midX = (pa.x + pb.x) / 2;
+            const midY = (pa.y + pb.y) / 2;
             return (
               <text
                 key={index}
@@ -173,8 +251,8 @@ function FieldDrawingCanvas({ onFinish }) {
           })}
           {!isClosed && vertices.length > 0 && mousePos && (
             <text
-              x={mousePos.x * SCALE}
-              y={mousePos.y * SCALE - 10}
+              x={toPixel(mousePos).x}
+              y={toPixel(mousePos).y - 10}
               fontSize={12}
               fill="#D6543A"
             >
