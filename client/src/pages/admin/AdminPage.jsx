@@ -9,6 +9,13 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
@@ -538,47 +545,55 @@ function AdminPage() {
                     {newsMessage && <Typography variant="body2">{newsMessage}</Typography>}
                   </Box>
                 </Box>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {newsPosts.map((post) => (
-                    <Box
-                      key={post.id}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        border: "1px solid",
-                        borderColor: "divider",
-                        borderRadius: 1,
-                        p: 1,
-                      }}
-                    >
-                      <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
-                        {post.title}
-                      </Typography>
-                      <Box>
-                        <IconButton size="small" onClick={() => handleEditPost(post)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteNewsPost(post.id)}
-                          disabled={deletingNewsPostId === post.id}
-                        >
-                          {deletingNewsPostId === post.id ? (
-                            <InlineSpinner size={16} />
-                          ) : (
-                            <DeleteIcon color="error" fontSize="small" />
-                          )}
-                        </IconButton>
-                      </Box>
-                    </Box>
-                  ))}
-                  {newsPosts.length === 0 && (
-                    <Typography variant="body2" sx={{ p: 2 }}>
-                      No posts yet.
-                    </Typography>
-                  )}
-                </Box>
+                {newsPosts.length === 0 ? (
+                  <Typography variant="body2" sx={{ p: 2 }}>
+                    No posts yet.
+                  </Typography>
+                ) : (
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Title</TableCell>
+                          <TableCell>Body</TableCell>
+                          <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {newsPosts.map((post) => (
+                          <TableRow key={post.id} selected={editingPostId === post.id}>
+                            <TableCell sx={{ maxWidth: 160 }}>
+                              <Typography variant="body2" noWrap>
+                                {post.title}
+                              </Typography>
+                            </TableCell>
+                            <TableCell sx={{ maxWidth: 280 }}>
+                              <Typography variant="body2" noWrap>
+                                {post.body}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <IconButton size="small" onClick={() => handleEditPost(post)}>
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteNewsPost(post.id)}
+                                disabled={deletingNewsPostId === post.id}
+                              >
+                                {deletingNewsPostId === post.id ? (
+                                  <InlineSpinner size={16} />
+                                ) : (
+                                  <DeleteIcon color="error" fontSize="small" />
+                                )}
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
               </CardContent>
             </Card>
           )}
@@ -663,52 +678,57 @@ function AdminPage() {
                     {varietyMessage && <Typography variant="body2">{varietyMessage}</Typography>}
                   </Box>
                 </Box>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {varieties.map((v) => (
-                    <Box
-                      key={v.id}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        border: "1px solid",
-                        borderColor: "divider",
-                        borderRadius: 1,
-                        p: 1,
-                      }}
-                    >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" noWrap>
-                          {v.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
-                          {v.plantSpacing}m × {v.rowSpacing}m · {v.waterMmPerSeason}mm · {v.fertilizerKgPer100m2}kg/100m²
-                        </Typography>
-                      </Box>
-                      <Box sx={{ flexShrink: 0 }}>
-                        <IconButton size="small" onClick={() => handleEditVariety(v)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteVariety(v.id)}
-                          disabled={deletingVarietyId === v.id}
-                        >
-                          {deletingVarietyId === v.id ? (
-                            <InlineSpinner size={16} />
-                          ) : (
-                            <DeleteIcon color="error" fontSize="small" />
-                          )}
-                        </IconButton>
-                      </Box>
-                    </Box>
-                  ))}
-                  {varieties.length === 0 && (
-                    <Typography variant="body2" sx={{ p: 2 }}>
-                      No varieties yet.
-                    </Typography>
-                  )}
-                </Box>
+                {varieties.length === 0 ? (
+                  <Typography variant="body2" sx={{ p: 2 }}>
+                    No varieties yet.
+                  </Typography>
+                ) : (
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Name</TableCell>
+                          <TableCell align="right">Plant spacing</TableCell>
+                          <TableCell align="right">Row spacing</TableCell>
+                          <TableCell align="right">Water</TableCell>
+                          <TableCell align="right">Fertilizer</TableCell>
+                          <TableCell align="right">Seed buffer</TableCell>
+                          <TableCell>Seed unit</TableCell>
+                          <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {varieties.map((v) => (
+                          <TableRow key={v.id} selected={editingVarietyId === v.id}>
+                            <TableCell>{v.name}</TableCell>
+                            <TableCell align="right">{v.plantSpacing}m</TableCell>
+                            <TableCell align="right">{v.rowSpacing}m</TableCell>
+                            <TableCell align="right">{v.waterMmPerSeason}mm</TableCell>
+                            <TableCell align="right">{v.fertilizerKgPer100m2}kg/100m²</TableCell>
+                            <TableCell align="right">{Math.round(v.seedBufferPercent * 100)}%</TableCell>
+                            <TableCell>{v.seedUnit}</TableCell>
+                            <TableCell align="right">
+                              <IconButton size="small" onClick={() => handleEditVariety(v)}>
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteVariety(v.id)}
+                                disabled={deletingVarietyId === v.id}
+                              >
+                                {deletingVarietyId === v.id ? (
+                                  <InlineSpinner size={16} />
+                                ) : (
+                                  <DeleteIcon color="error" fontSize="small" />
+                                )}
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
               </CardContent>
             </Card>
           )}
@@ -761,53 +781,49 @@ function AdminPage() {
                     {workerMessage && <Typography variant="body2">{workerMessage}</Typography>}
                   </Box>
                 </Box>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  {workers.map((w) => (
-                    <Box
-                      key={w.id}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        border: "1px solid",
-                        borderColor: "divider",
-                        borderRadius: 1,
-                        p: 1,
-                      }}
-                    >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" noWrap>
-                          {w.name}
-                          {w.role ? ` · ${w.role}` : ""}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
-                          ${w.hourlyRate}/h
-                        </Typography>
-                      </Box>
-                      <Box sx={{ flexShrink: 0 }}>
-                        <IconButton size="small" onClick={() => handleEditWorker(w)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteWorker(w.id)}
-                          disabled={deletingWorkerId === w.id}
-                        >
-                          {deletingWorkerId === w.id ? (
-                            <InlineSpinner size={16} />
-                          ) : (
-                            <DeleteIcon color="error" fontSize="small" />
-                          )}
-                        </IconButton>
-                      </Box>
-                    </Box>
-                  ))}
-                  {workers.length === 0 && (
-                    <Typography variant="body2" sx={{ p: 2 }}>
-                      No workers yet.
-                    </Typography>
-                  )}
-                </Box>
+                {workers.length === 0 ? (
+                  <Typography variant="body2" sx={{ p: 2 }}>
+                    No workers yet.
+                  </Typography>
+                ) : (
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Name</TableCell>
+                          <TableCell>Role</TableCell>
+                          <TableCell align="right">Hourly rate</TableCell>
+                          <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {workers.map((w) => (
+                          <TableRow key={w.id} selected={editingWorkerId === w.id}>
+                            <TableCell>{w.name}</TableCell>
+                            <TableCell>{w.role || "—"}</TableCell>
+                            <TableCell align="right">${w.hourlyRate}/h</TableCell>
+                            <TableCell align="right">
+                              <IconButton size="small" onClick={() => handleEditWorker(w)}>
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteWorker(w.id)}
+                                disabled={deletingWorkerId === w.id}
+                              >
+                                {deletingWorkerId === w.id ? (
+                                  <InlineSpinner size={16} />
+                                ) : (
+                                  <DeleteIcon color="error" fontSize="small" />
+                                )}
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
               </CardContent>
             </Card>
           )}
