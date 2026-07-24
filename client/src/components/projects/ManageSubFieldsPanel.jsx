@@ -58,7 +58,7 @@ const distance = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
 // (ManageSubFieldsMap.jsx's DraggableSubFieldPolygon), there's no map camera
 // to fight over and no lat/lng conversion - everything here is already in
 // the parent's own local-meter space, so the drag math is plain vector math.
-function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel, scale }) {
+function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel, scale, allowShapeDrag = true, dashed = false }) {
   const [liveVertices, setLiveVertices] = useState(field.vertices);
   const [plantOffset, setPlantOffset] = useState({ dx: 0, dy: 0 });
   const [editingIndex, setEditingIndex] = useState(null);
@@ -95,6 +95,7 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
 
   const handleShapeMouseDown = (e) => {
     onSelect(field.id);
+    if (!allowShapeDrag) return;
     startDrag(
       () => field.vertices,
       (original, dx, dy) => {
@@ -158,10 +159,11 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
     <>
       <polygon
         points={points}
-        fill={isSelected ? "rgba(214,84,58,0.2)" : "rgba(31,77,58,0.15)"}
-        stroke={isSelected ? "#D6543A" : "#1F4D3A"}
+        fill={isSelected ? "rgba(214,84,58,0.2)" : dashed ? "none" : "rgba(31,77,58,0.15)"}
+        stroke={isSelected ? "#D6543A" : dashed ? "#8A7A5C" : "#1F4D3A"}
         strokeWidth={isSelected ? 3 : 2}
-        style={{ cursor: "move" }}
+        strokeDasharray={!isSelected && dashed ? "6 6" : undefined}
+        style={{ cursor: allowShapeDrag ? "move" : "pointer" }}
         onMouseDown={handleShapeMouseDown}
       />
       {(field.plantPositions || []).map((p, i) => {
@@ -241,7 +243,7 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
 // space (see FieldDrawingCanvas's referenceVertices mode), so - unlike the
 // map version - every shape can be drawn straight into one shared SVG with
 // no lat/lng conversion at all.
-function SubFieldsOverview({ parentField, subFields, selectedId, onSelect, onMoved }) {
+function SubFieldsOverview({ parentField, subFields, selectedId, onSelect, onMoved, isEditingBoundary, onMovedBoundary }) {
   const xs = parentField.vertices.map((v) => v.x);
   const ys = parentField.vertices.map((v) => v.y);
   const minX = Math.min(...xs);
@@ -255,11 +257,19 @@ function SubFieldsOverview({ parentField, subFields, selectedId, onSelect, onMov
   const toX = (x) => (x - minX) * scale + PREVIEW_PADDING;
   const toY = (y) => (y - minY) * scale + PREVIEW_PADDING;
   const toPixel = (v) => ({ x: toX(v.x), y: toY(v.y) });
-  const toPoints = (vertices) => vertices.map((v) => `${toX(v.x)},${toY(v.y)}`).join(" ");
 
   return (
     <svg width={PREVIEW_WIDTH} height={PREVIEW_HEIGHT}>
-      <polygon points={toPoints(parentField.vertices)} fill="none" stroke="#8A7A5C" strokeDasharray="6 6" strokeWidth={2} />
+      <DraggableSubFieldShape
+        field={{ id: parentField.id, vertices: parentField.vertices, plantPositions: [] }}
+        isSelected={isEditingBoundary}
+        onSelect={() => {}}
+        onMoved={onMovedBoundary}
+        toPixel={toPixel}
+        scale={scale}
+        allowShapeDrag={false}
+        dashed
+      />
       {subFields.map((f) => (
         <DraggableSubFieldShape
           key={f.id}
@@ -275,13 +285,10 @@ function SubFieldsOverview({ parentField, subFields, selectedId, onSelect, onMov
   );
 }
 
-// Map-less sibling of ManageSubFieldsMap - a "small field"'s sub-fields are
-// drawn once via FieldDrawingCanvas (like a standalone field) rather than
-// dragged/reshaped live on a map. That's a deliberate v1 scope cut: geometry
-// isn't editable after creation here (delete and redraw instead), matching
-// how standalone fields already behave. Everything else - selection, the
-// autosave property form, delete, copy of the Timeline/Labor tabs - mirrors
-// ManageSubFieldsMap.jsx closely.
+// Map-less sibling of ManageSubFieldsMap, porting its live drag/reshape
+// model onto plain SVG since a Small Field's sub-fields (and the field's own
+// outer boundary) already share one local-meter coordinate space with no
+// lat/lng conversion needed.
 function ManageSubFieldsPanel({
   parentField,
   subFields,
@@ -295,6 +302,7 @@ function ManageSubFieldsPanel({
   onClose,
 }) {
   const [selectedId, setSelectedId] = useState(null);
+  const [isEditingBoundary, setIsEditingBoundary] = useState(false);
   const [clipboard, setClipboard] = useState(null);
   const [drawnVertices, setDrawnVertices] = useState(null);
   const [newField, setNewField] = useState(emptyNewField);
@@ -406,6 +414,7 @@ function ManageSubFieldsPanel({
   const selectField = (fieldId) => {
     flushPendingSave();
     setSelectedId(fieldId);
+    setIsEditingBoundary(false);
     setDrawnVertices(null);
     const field = subFields.find((f) => f.id === fieldId);
     if (field) {
@@ -489,6 +498,18 @@ function ManageSubFieldsPanel({
     }
   };
 
+  const handleMovedBoundary = async (fieldId, vertices, resetOnFailure) => {
+    setIsSavingSelected(true);
+    const updated = await onUpdateGeometry(fieldId, { vertices });
+    setIsSavingSelected(false);
+    if (!updated) {
+      resetOnFailure();
+      setError("Resizing would leave an existing sub-field outside this boundary.");
+    } else {
+      setError("");
+    }
+  };
+
   const handleDoneEditing = () => {
     flushPendingSave();
     setSelectedId(null);
@@ -549,6 +570,34 @@ function ManageSubFieldsPanel({
           Drag a sub-field to reposition it, use the icons below to copy or delete one, or draw a new one
           further down.
         </Typography>
+
+        <Box>
+          {isEditingBoundary ? (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Drag a corner or click an edge's length to resize the outer boundary. Existing sub-fields
+                must stay inside it.
+              </Typography>
+              <Button size="small" variant="contained" onClick={() => setIsEditingBoundary(false)} fullWidth>
+                Done editing boundary
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="small"
+              variant="outlined"
+              fullWidth
+              onClick={() => {
+                setIsEditingBoundary(true);
+                setSelectedId(null);
+              }}
+            >
+              Edit outer boundary shape
+            </Button>
+          )}
+        </Box>
+
+        <Divider />
 
         {subFields.length > 0 && (
           <Box>
@@ -785,6 +834,8 @@ function ManageSubFieldsPanel({
             selectedId={selectedId}
             onSelect={selectField}
             onMoved={handleMoved}
+            isEditingBoundary={isEditingBoundary}
+            onMovedBoundary={handleMovedBoundary}
           />
         </Box>
         {selectedId && activeEditTab === 1 && (

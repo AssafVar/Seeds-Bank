@@ -171,7 +171,37 @@ public class FieldService : IFieldService
 
         if (field.ParentFieldId is not { } parentId)
         {
-            throw new ArgumentException("Only sub-fields can be repositioned this way.");
+            // A top-level container's own boundary. Only a genuine Small
+            // Field container qualifies - a Large Field's boundary is
+            // GPS-anchored and still draw-once (unlike its sub-fields, which
+            // project through that anchor), and a legacy standalone field
+            // (map-less but with its own PlantSpacing, predating the
+            // container model) isn't a container at all. A Small Field has
+            // nothing to anchor to, so reshaping it is just a local
+            // containment check against whatever sub-fields it already has -
+            // unlike moving a sub-field, there's no parent to stay inside.
+            var isSmallFieldContainer = field.OriginLat is null && field.OriginLng is null && field.PlantSpacing is null;
+            if (!isSmallFieldContainer)
+            {
+                throw new ArgumentException("Only sub-fields can be repositioned this way.");
+            }
+
+            var newBoundary = ValidateTopLevelVertices(request.Vertices);
+            var children = await _db.Fields
+                .Where(f => f.ParentFieldId == field.Id)
+                .ToListAsync();
+            foreach (var child in children)
+            {
+                var childVertices = JsonSerializer.Deserialize<List<VertexDto>>(child.VerticesJson) ?? new();
+                if (childVertices.Any(v => !PolygonMath.IsInside(v.X, v.Y, newBoundary)))
+                {
+                    throw new ArgumentException("Resizing would leave an existing sub-field outside this boundary.");
+                }
+            }
+
+            field.VerticesJson = JsonSerializer.Serialize(newBoundary);
+            await _db.SaveChangesAsync();
+            return ToDto(field);
         }
 
         var parent = await _db.Fields.FirstOrDefaultAsync(f => f.Id == parentId && f.ProjectId == projectId);
@@ -282,6 +312,19 @@ public class FieldService : IFieldService
         }
 
         return ValidateWithinParent(vertices, parent);
+    }
+
+    // A top-level container has no parent of its own to stay inside - the
+    // only requirement is a valid boundary. Whether it can still legally
+    // contain its existing sub-fields is checked separately by the caller.
+    private static List<VertexDto> ValidateTopLevelVertices(List<VertexDto>? vertices)
+    {
+        if (vertices is not { Count: >= 3 })
+        {
+            throw new ArgumentException("A field needs a boundary with at least 3 points.");
+        }
+
+        return vertices;
     }
 
     private static List<VertexDto> ValidateWithinParent(List<VertexDto> vertices, Field parent)
