@@ -52,8 +52,13 @@ public class FieldService : IFieldService
         }
 
         // A large field is a new, map-drawn, top-level boundary - it carries
-        // no planting data itself, only its future sub-fields do.
+        // no planting data itself, only its future sub-fields do. A small
+        // field is the same idea without ever touching a map: its boundary
+        // is drawn directly in local meters (no GPS projection needed since
+        // it was never real-world-anchored to begin with).
         var isLargeField = parent is null && request.GeoVertices is { Count: >= 3 };
+        var isSmallField = parent is null && !isLargeField && request.PlantSpacing is null
+            && request.Vertices is { Count: >= 3 };
 
         Field field;
         if (isLargeField)
@@ -79,10 +84,38 @@ public class FieldService : IFieldService
                 CreatedAt = DateTime.UtcNow,
             };
         }
+        else if (isSmallField)
+        {
+            field = new Field
+            {
+                ProjectId = projectId,
+                Name = request.Name,
+                Variety = null,
+                ShapeType = "polygon",
+                SowingStructure = "grid",
+                VerticesJson = JsonSerializer.Serialize(request.Vertices),
+                GeoVerticesJson = null,
+                OriginLat = null,
+                OriginLng = null,
+                LandWidth = null,
+                LandLength = null,
+                PlantSpacing = null,
+                RowSpacing = null,
+                CreatedAt = DateTime.UtcNow,
+            };
+        }
         else if (parent is not null)
         {
             ValidateSpacing(request.PlantSpacing, request.RowSpacing);
-            var vertices = ProjectAndValidateWithinParent(request.GeoVertices, parent);
+
+            // A sub-field of a map-anchored large field is drawn in GPS and
+            // projected through the parent's origin; a sub-field of a small
+            // field (no map, ever) is drawn directly in the parent's own
+            // local-meter space, so it needs no projection at all.
+            var isMapAnchored = parent.OriginLat is not null && parent.OriginLng is not null;
+            var vertices = isMapAnchored
+                ? ProjectAndValidateWithinParent(request.GeoVertices, parent)
+                : ValidateVerticesWithinParent(request.Vertices, parent);
 
             field = new Field
             {
@@ -93,7 +126,7 @@ public class FieldService : IFieldService
                 ShapeType = "polygon",
                 SowingStructure = request.SowingStructure == "staggered" ? "staggered" : "grid",
                 VerticesJson = JsonSerializer.Serialize(vertices),
-                GeoVerticesJson = JsonSerializer.Serialize(request.GeoVertices),
+                GeoVerticesJson = isMapAnchored ? JsonSerializer.Serialize(request.GeoVertices) : null,
                 LandWidth = null,
                 LandLength = null,
                 PlantSpacing = request.PlantSpacing,
@@ -128,7 +161,7 @@ public class FieldService : IFieldService
         return ToDto(field);
     }
 
-    public async Task<FieldDto?> UpdateGeometryAsync(string projectId, int fieldId, List<GeoVertexDto> geoVertices)
+    public async Task<FieldDto?> UpdateGeometryAsync(string projectId, int fieldId, UpdateFieldGeometryRequest request)
     {
         var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == fieldId && f.ProjectId == projectId);
         if (field is null)
@@ -147,9 +180,17 @@ public class FieldService : IFieldService
             throw new ArgumentException("Parent field not found.");
         }
 
-        var vertices = ProjectAndValidateWithinParent(geoVertices, parent);
+        // Same split as CreateAsync: a map-anchored parent's sub-field is
+        // drawn in GPS and projected through the parent's origin; a map-less
+        // parent's sub-field is already in the parent's own local-meter
+        // space, so it needs no projection at all.
+        var isMapAnchored = parent.OriginLat is not null && parent.OriginLng is not null;
+        var vertices = isMapAnchored
+            ? ProjectAndValidateWithinParent(request.GeoVertices, parent)
+            : ValidateVerticesWithinParent(request.Vertices, parent);
+
         field.VerticesJson = JsonSerializer.Serialize(vertices);
-        field.GeoVerticesJson = JsonSerializer.Serialize(geoVertices);
+        field.GeoVerticesJson = isMapAnchored ? JsonSerializer.Serialize(request.GeoVertices) : null;
         await _db.SaveChangesAsync();
 
         return ToDto(field);
@@ -227,10 +268,28 @@ public class FieldService : IFieldService
         }
 
         var vertices = GeoMath.Project(geoVertices, originLat, originLng);
+        return ValidateWithinParent(vertices, parent);
+    }
+
+    // A small field's sub-field is drawn directly in the parent's own local
+    // space (see FieldDrawingCanvas's referenceVertices mode client-side), so
+    // there's no GPS origin to project through - just the containment check.
+    private static List<VertexDto> ValidateVerticesWithinParent(List<VertexDto>? vertices, Field parent)
+    {
+        if (vertices is not { Count: >= 3 })
+        {
+            throw new ArgumentException("A sub-field needs a boundary with at least 3 points.");
+        }
+
+        return ValidateWithinParent(vertices, parent);
+    }
+
+    private static List<VertexDto> ValidateWithinParent(List<VertexDto> vertices, Field parent)
+    {
         var parentVertices = JsonSerializer.Deserialize<List<VertexDto>>(parent.VerticesJson) ?? new List<VertexDto>();
         if (vertices.Any(v => !PolygonMath.IsInside(v.X, v.Y, parentVertices)))
         {
-            throw new ArgumentException("Sub-field must stay within the large field's boundary.");
+            throw new ArgumentException("Sub-field must stay within the parent field's boundary.");
         }
 
         return vertices;

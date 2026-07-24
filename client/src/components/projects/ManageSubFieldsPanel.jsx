@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -20,26 +20,13 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { MapContainer, Polygon, Marker, CircleMarker, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import { STATUS_OPTIONS, STATUS_CHIP_COLOR, statusLabel } from "../../libs/fieldStatus.js";
-import {
-  DEFAULT_CENTER,
-  DEFAULT_ZOOM,
-  vertexIcon,
-  localToLatLng,
-  pointAtDistanceAlong,
-  MapView,
-  ClickCapture,
-  MapBaseLayers,
-  SegmentLengthLabel,
-} from "./mapDrawingShared.jsx";
 import { InlineSpinner } from "../common/Spinner.jsx";
+import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 import FieldTimeline from "./FieldTimeline.jsx";
 import FieldLaborTab from "./FieldLaborTab.jsx";
 import { getVegetableVarieties, getWorkers } from "../../services/serverCalls";
 
-const MIN_MAP_HEIGHT = 240;
 const emptyNewField = {
   name: "",
   variety: "Custom",
@@ -54,193 +41,248 @@ const emptyNewField = {
   notes: "",
 };
 const AUTOSAVE_DEBOUNCE_MS = 600;
+const PREVIEW_WIDTH = 400;
+const PREVIEW_HEIGHT = 320;
+const PREVIEW_PADDING = 16;
 
 // ISO datetime from the server -> the yyyy-mm-dd a native date input wants.
 const toDateInputValue = (isoString) => (isoString ? isoString.slice(0, 10) : "");
 
-// A saved sub-field, rendered as a whole-shape-draggable polygon. Leaflet's
-// vector layers (unlike Marker) have no built-in dragging, so this wires the
-// map's own mouse events by hand: mousedown captures the shape's starting
-// vertices and disables map panning, mousemove translates every vertex by
-// the pointer's delta, mouseup re-enables panning and reports the move up -
-// snapping back to the original position if the server rejects it (e.g. it
-// now falls outside the parent boundary).
-function DraggableSubFieldPolygon({ field, isSelected, onSelect, onMoved, suppressClickRef }) {
-  const map = useMap();
-  const [liveVertices, setLiveVertices] = useState(field.geoVertices);
-  // A pure shape-body drag is just a translation - it can't change the
-  // plant count or layout, so instead of waiting on a server round trip the
-  // already-computed dots just slide by the same delta as the boundary,
-  // live. Reshaping a single corner does change the fill, so that case
-  // leaves this at zero and waits for the recalculated set from the server.
-  const [plantOffset, setPlantOffset] = useState({ dLat: 0, dLng: 0 });
-  const dragRef = useRef(null);
+const distance = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+
+// A saved sub-field, rendered as a whole-shape-draggable polygon (mousedown
+// captures the shape's starting vertices, mousemove translates them by the
+// pointer's delta - converted from pixels to meters via the shared `scale` -
+// mouseup commits via onMoved, snapping back if the server rejects it, e.g.
+// it now falls outside the parent boundary). Unlike the Leaflet map version
+// (ManageSubFieldsMap.jsx's DraggableSubFieldPolygon), there's no map camera
+// to fight over and no lat/lng conversion - everything here is already in
+// the parent's own local-meter space, so the drag math is plain vector math.
+function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel, scale }) {
+  const [liveVertices, setLiveVertices] = useState(field.vertices);
+  const [plantOffset, setPlantOffset] = useState({ dx: 0, dy: 0 });
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
-    setLiveVertices(field.geoVertices);
-    setPlantOffset({ dLat: 0, dLng: 0 });
-  }, [field.geoVertices]);
+    setLiveVertices(field.vertices);
+    setPlantOffset({ dx: 0, dy: 0 });
+  }, [field.vertices]);
 
-  const handleMouseDown = (e) => {
-    // A plain click (mousedown with no movement) still bubbles up to the
-    // map as a native "click" afterward, which the draw-boundary
-    // ClickCapture would otherwise mistake for a new vertex. Arm the flag
-    // now and clear it just after that click has had a chance to fire.
-    suppressClickRef.current = true;
-    onSelect(field.id);
-    map.dragging.disable();
-    const original = field.geoVertices;
-    dragRef.current = { start: e.latlng, original };
+  const startDrag = (getOriginal, onDrag, onCommit) => (e) => {
+    e.stopPropagation();
+    const start = { x: e.clientX, y: e.clientY };
+    const original = getOriginal();
 
     const handleMouseMove = (moveEvt) => {
-      if (!dragRef.current) return;
-      const dLat = moveEvt.latlng.lat - dragRef.current.start.lat;
-      const dLng = moveEvt.latlng.lng - dragRef.current.start.lng;
-      setLiveVertices(dragRef.current.original.map((v) => ({ lat: v.lat + dLat, lng: v.lng + dLng })));
-      setPlantOffset({ dLat, dLng });
+      const dx = (moveEvt.clientX - start.x) / scale;
+      const dy = (moveEvt.clientY - start.y) / scale;
+      onDrag(original, dx, dy);
     };
 
     const handleMouseUp = (upEvt) => {
-      map.off("mousemove", handleMouseMove);
-      map.off("mouseup", handleMouseUp);
-      map.dragging.enable();
-      const dragInfo = dragRef.current;
-      dragRef.current = null;
-      setTimeout(() => {
-        suppressClickRef.current = false;
-      }, 0);
-      if (!dragInfo) return;
-
-      const dLat = upEvt.latlng.lat - dragInfo.start.lat;
-      const dLng = upEvt.latlng.lng - dragInfo.start.lng;
-      if (dLat === 0 && dLng === 0) return;
-
-      const moved = dragInfo.original.map((v) => ({ lat: v.lat + dLat, lng: v.lng + dLng }));
-      setLiveVertices(moved);
-      // plantOffset is left as-is (not reset here) so the dots stay put at
-      // their translated spot until the server's recalculated field.vertices
-      // arrives and the effect above zeroes the offset back out; resetting
-      // it now would snap them back to the pre-drag position for a beat.
-      onMoved(field.id, moved, () => {
-        setLiveVertices(dragInfo.original);
-        setPlantOffset({ dLat: 0, dLng: 0 });
-      });
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      const dx = (upEvt.clientX - start.x) / scale;
+      const dy = (upEvt.clientY - start.y) / scale;
+      if (dx === 0 && dy === 0) return; // a plain click, not a drag - selection already happened on mousedown
+      onCommit(original, dx, dy);
     };
 
-    map.on("mousemove", handleMouseMove);
-    map.on("mouseup", handleMouseUp);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
   };
 
-  // Reshaping one corner - Leaflet Markers drag themselves (unlike Path
-  // layers), so this just tracks the single vertex being moved rather than
-  // reusing the whole-shape mousemove/mouseup wiring above.
-  const handleVertexDragStart = () => {
-    suppressClickRef.current = true;
+  const handleShapeMouseDown = (e) => {
+    onSelect(field.id);
+    startDrag(
+      () => field.vertices,
+      (original, dx, dy) => {
+        setLiveVertices(original.map((v) => ({ x: v.x + dx, y: v.y + dy })));
+        setPlantOffset({ dx, dy });
+      },
+      (original, dx, dy) => {
+        const moved = original.map((v) => ({ x: v.x + dx, y: v.y + dy }));
+        setLiveVertices(moved);
+        onMoved(field.id, moved, () => {
+          setLiveVertices(original);
+          setPlantOffset({ dx: 0, dy: 0 });
+        });
+      }
+    )(e);
   };
 
-  const handleVertexDrag = (index, latlng) => {
-    setLiveVertices((prev) => prev.map((v, i) => (i === index ? { lat: latlng.lat, lng: latlng.lng } : v)));
+  const handleVertexMouseDown = (index) => (e) => {
+    startDrag(
+      () => field.vertices,
+      (original, dx, dy) => {
+        setLiveVertices(original.map((v, i) => (i === index ? { x: v.x + dx, y: v.y + dy } : v)));
+      },
+      (original, dx, dy) => {
+        const moved = original.map((v, i) => (i === index ? { x: v.x + dx, y: v.y + dy } : v));
+        setLiveVertices(moved);
+        onMoved(field.id, moved, () => setLiveVertices(original));
+      }
+    )(e);
   };
 
-  const handleVertexDragEnd = (index, latlng) => {
-    const moved = field.geoVertices.map((v, i) => (i === index ? { lat: latlng.lat, lng: latlng.lng } : v));
-    setLiveVertices(moved);
-    onMoved(field.id, moved, () => setLiveVertices(field.geoVertices));
-    setTimeout(() => {
-      suppressClickRef.current = false;
-    }, 0);
+  const startEditSegment = (index) => {
+    const a = liveVertices[index];
+    const b = liveVertices[(index + 1) % liveVertices.length];
+    setEditingIndex(index);
+    setEditValue(distance(a, b).toFixed(2));
   };
 
-  // Typing an exact edge length moves the far vertex along that edge's
-  // direction to match, same idea as dragging a corner but precise.
-  const handleSegmentLengthChange = (targetIndex, anchor, meters) => {
-    const newPoint = pointAtDistanceAlong(anchor, field.geoVertices[targetIndex], meters);
-    const moved = field.geoVertices.map((v, i) => (i === targetIndex ? newPoint : v));
-    setLiveVertices(moved);
-    onMoved(field.id, moved, () => setLiveVertices(field.geoVertices));
+  const commitEditSegment = () => {
+    const newLength = Number(editValue);
+    if (editingIndex === null || !(newLength > 0)) {
+      setEditingIndex(null);
+      return;
+    }
+    const a = liveVertices[editingIndex];
+    const bIndex = (editingIndex + 1) % liveVertices.length;
+    const b = liveVertices[bIndex];
+    const currentLength = distance(a, b) || 1;
+    const dx = ((b.x - a.x) / currentLength) * newLength;
+    const dy = ((b.y - a.y) / currentLength) * newLength;
+    const updated = [...liveVertices];
+    updated[bIndex] = { x: a.x + dx, y: a.y + dy };
+    setLiveVertices(updated);
+    onMoved(field.id, updated, () => setLiveVertices(field.vertices));
+    setEditingIndex(null);
   };
+
+  const points = liveVertices.map((v) => { const p = toPixel(v); return `${p.x},${p.y}`; }).join(" ");
 
   return (
     <>
-      <Polygon
-        positions={liveVertices.map((v) => [v.lat, v.lng])}
-        pathOptions={{
-          color: isSelected ? "#D6543A" : "#1F4D3A",
-          weight: isSelected ? 3 : 2,
-          fillOpacity: 0.25,
-        }}
-        eventHandlers={{ mousedown: handleMouseDown }}
+      <polygon
+        points={points}
+        fill={isSelected ? "rgba(214,84,58,0.2)" : "rgba(31,77,58,0.15)"}
+        stroke={isSelected ? "#D6543A" : "#1F4D3A"}
+        strokeWidth={isSelected ? 3 : 2}
+        style={{ cursor: "move" }}
+        onMouseDown={handleShapeMouseDown}
       />
+      {(field.plantPositions || []).map((p, i) => {
+        const point = toPixel({ x: p.x + plantOffset.dx, y: p.y + plantOffset.dy });
+        return <circle key={i} cx={point.x} cy={point.y} r={2} fill="#1F4D3A" style={{ pointerEvents: "none" }} />;
+      })}
       {isSelected &&
-        liveVertices.map((v, i) => (
-          <Marker
-            key={i}
-            position={[v.lat, v.lng]}
-            icon={vertexIcon}
-            draggable
-            eventHandlers={{
-              dragstart: handleVertexDragStart,
-              drag: (e) => handleVertexDrag(i, e.target.getLatLng()),
-              dragend: (e) => handleVertexDragEnd(i, e.target.getLatLng()),
-            }}
-          />
-        ))}
-      {isSelected &&
-        liveVertices.map((a, i) => {
-          const targetIndex = (i + 1) % liveVertices.length;
+        liveVertices.map((v, i) => {
+          const p = toPixel(v);
           return (
-            <SegmentLengthLabel
-              key={`edge-${i}`}
-              a={a}
-              b={liveVertices[targetIndex]}
-              suppressClickRef={suppressClickRef}
-              onApply={(meters) => handleSegmentLengthChange(targetIndex, a, meters)}
+            <circle
+              key={`vertex-${i}`}
+              cx={p.x}
+              cy={p.y}
+              r={5}
+              fill="#fff"
+              stroke="#1F4D3A"
+              strokeWidth={2}
+              style={{ cursor: "pointer" }}
+              onMouseDown={handleVertexMouseDown(i)}
             />
           );
         })}
-      <SubFieldPlants field={field} offset={plantOffset} />
+      {isSelected &&
+        liveVertices.map((a, i) => {
+          const targetIndex = (i + 1) % liveVertices.length;
+          const b = liveVertices[targetIndex];
+          const pa = toPixel(a);
+          const pb = toPixel(b);
+          return (
+            <text
+              key={`edge-${i}`}
+              x={(pa.x + pb.x) / 2}
+              y={(pa.y + pb.y) / 2 - 6}
+              fontSize={11}
+              fill="#2B241C"
+              textAnchor="middle"
+              style={{ cursor: "pointer", userSelect: "none" }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                startEditSegment(i);
+              }}
+            >
+              {distance(a, b).toFixed(2)}m
+            </text>
+          );
+        })}
+      {editingIndex !== null &&
+        (() => {
+          const a = liveVertices[editingIndex];
+          const b = liveVertices[(editingIndex + 1) % liveVertices.length];
+          const pa = toPixel(a);
+          const pb = toPixel(b);
+          const midX = (pa.x + pb.x) / 2;
+          const midY = (pa.y + pb.y) / 2;
+          return (
+            <foreignObject x={midX - 50} y={midY - 36} width={100} height={40}>
+              <TextField
+                autoFocus
+                size="small"
+                type="number"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={commitEditSegment}
+                onKeyDown={(e) => e.key === "Enter" && commitEditSegment()}
+                sx={{ width: 100, bgcolor: "background.paper" }}
+              />
+            </foreignObject>
+          );
+        })()}
     </>
   );
 }
 
-// Leaflet sizes its panes from the container's dimensions at mount/last
-// invalidateSize() call and doesn't notice a plain CSS/flex-basis resize
-// (there's no window "resize" event to react to), so shrinking the map
-// panel when switching to the Field Data tab would otherwise leave the
-// tiles clipped to the old, larger size until the browser window itself
-// was resized. Nudging it once the CSS transition finishes fixes that.
-function MapResizeHandler({ trigger }) {
-  const map = useMap();
-  useEffect(() => {
-    const timeout = setTimeout(() => map.invalidateSize(), 220);
-    return () => clearTimeout(timeout);
-  }, [map, trigger]);
-  return null;
+// A small field's sub-fields all share the parent's own local coordinate
+// space (see FieldDrawingCanvas's referenceVertices mode), so - unlike the
+// map version - every shape can be drawn straight into one shared SVG with
+// no lat/lng conversion at all.
+function SubFieldsOverview({ parentField, subFields, selectedId, onSelect, onMoved }) {
+  const xs = parentField.vertices.map((v) => v.x);
+  const ys = parentField.vertices.map((v) => v.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const shapeWidth = Math.max(...xs) - minX || 1;
+  const shapeHeight = Math.max(...ys) - minY || 1;
+  const scale = Math.min(
+    (PREVIEW_WIDTH - PREVIEW_PADDING * 2) / shapeWidth,
+    (PREVIEW_HEIGHT - PREVIEW_PADDING * 2) / shapeHeight
+  );
+  const toX = (x) => (x - minX) * scale + PREVIEW_PADDING;
+  const toY = (y) => (y - minY) * scale + PREVIEW_PADDING;
+  const toPixel = (v) => ({ x: toX(v.x), y: toY(v.y) });
+  const toPoints = (vertices) => vertices.map((v) => `${toX(v.x)},${toY(v.y)}`).join(" ");
+
+  return (
+    <svg width={PREVIEW_WIDTH} height={PREVIEW_HEIGHT}>
+      <polygon points={toPoints(parentField.vertices)} fill="none" stroke="#8A7A5C" strokeDasharray="6 6" strokeWidth={2} />
+      {subFields.map((f) => (
+        <DraggableSubFieldShape
+          key={f.id}
+          field={f}
+          isSelected={f.id === selectedId}
+          onSelect={onSelect}
+          onMoved={onMoved}
+          toPixel={toPixel}
+          scale={scale}
+        />
+      ))}
+    </svg>
+  );
 }
 
-function SubFieldPlants({ field, offset }) {
-  if (!field.plantPositions?.length) {
-    return null;
-  }
-  const toLatLng = localToLatLng(field.vertices, field.geoVertices);
-  const dLat = offset?.dLat || 0;
-  const dLng = offset?.dLng || 0;
-  return field.plantPositions.map((p, i) => {
-    const latLng = toLatLng(p);
-    if (!latLng) return null;
-    return (
-      <CircleMarker
-        key={i}
-        center={[latLng.lat + dLat, latLng.lng + dLng]}
-        radius={3}
-        pathOptions={{ color: "#1F4D3A", fillColor: "#1F4D3A", fillOpacity: 0.9, weight: 1 }}
-        interactive={false}
-      />
-    );
-  });
-}
-
-function ManageSubFieldsMap({
+// Map-less sibling of ManageSubFieldsMap - a "small field"'s sub-fields are
+// drawn once via FieldDrawingCanvas (like a standalone field) rather than
+// dragged/reshaped live on a map. That's a deliberate v1 scope cut: geometry
+// isn't editable after creation here (delete and redraw instead), matching
+// how standalone fields already behave. Everything else - selection, the
+// autosave property form, delete, copy of the Timeline/Labor tabs - mirrors
+// ManageSubFieldsMap.jsx closely.
+function ManageSubFieldsPanel({
   parentField,
   subFields,
   onCreate,
@@ -254,9 +296,7 @@ function ManageSubFieldsMap({
 }) {
   const [selectedId, setSelectedId] = useState(null);
   const [clipboard, setClipboard] = useState(null);
-
-  const [drawVertices, setDrawVertices] = useState([]);
-  const [isDrawClosed, setIsDrawClosed] = useState(false);
+  const [drawnVertices, setDrawnVertices] = useState(null);
   const [newField, setNewField] = useState(emptyNewField);
   const [error, setError] = useState("");
   const [activeEditTab, setActiveEditTab] = useState(0);
@@ -271,7 +311,6 @@ function ManageSubFieldsMap({
 
   const saveTimeoutRef = useRef(null);
   const pendingSaveRef = useRef(null);
-  const suppressClickRef = useRef(false);
 
   useEffect(() => {
     getVegetableVarieties().then((data) => data && setVarieties(data));
@@ -345,10 +384,6 @@ function ManageSubFieldsMap({
     }, AUTOSAVE_DEBOUNCE_MS);
   };
 
-  // Updates the form, and - while editing an existing sub-field - autosaves
-  // the change (debounced for free-typed text, immediate for discrete
-  // picks like variety/sowing structure) so switching to another sub-field
-  // never loses an edit.
   const updateFieldValue = (patch, immediate) => {
     const updated = { ...newField, ...patch };
     setNewField(updated);
@@ -371,6 +406,7 @@ function ManageSubFieldsMap({
   const selectField = (fieldId) => {
     flushPendingSave();
     setSelectedId(fieldId);
+    setDrawnVertices(null);
     const field = subFields.find((f) => f.id === fieldId);
     if (field) {
       const status = field.status || "planning";
@@ -387,45 +423,20 @@ function ManageSubFieldsMap({
         yieldUnit: field.yieldUnit || "",
         notes: field.notes || "",
       });
-      // A field still being planned opens on its shape - once it's actually
-      // sown, the shape rarely needs touching again and the agricultural
-      // data is what you came here for.
       setActiveEditTab(status === "planning" ? 0 : 1);
     }
   };
 
-  const handleDrawClick = (point) => {
-    if (suppressClickRef.current) {
-      // This click is the tail end of selecting/dragging an existing
-      // sub-field, not an intent to add a new boundary point.
-      return;
+  const handleDeleteField = async (field) => {
+    discardPendingSave(field.id);
+    setDeletingFieldId(field.id);
+    const success = await onDelete(field.id);
+    setDeletingFieldId(null);
+    if (success && field.id === selectedId) {
+      setSelectedId(null);
+      setNewField(emptyNewField);
     }
-    setDrawVertices((prev) => [...prev, point]);
   };
-
-  const handleDrawUndo = () => setDrawVertices((prev) => prev.slice(0, -1));
-
-  const handleDrawVertexDrag = (index, latlng) => {
-    const point = { lat: latlng.lat, lng: latlng.lng };
-    setDrawVertices((prev) => prev.map((v, i) => (i === index ? point : v)));
-  };
-
-  const handleDrawSegmentLengthChange = (targetIndex, anchor, meters) => {
-    const newPoint = pointAtDistanceAlong(anchor, drawVertices[targetIndex], meters);
-    setDrawVertices((prev) => prev.map((v, i) => (i === targetIndex ? newPoint : v)));
-  };
-
-  const handleDrawClear = () => {
-    setDrawVertices([]);
-    setIsDrawClosed(false);
-  };
-
-  const handleDrawClose = () => {
-    if (drawVertices.length < 3) return;
-    setIsDrawClosed(true);
-  };
-
-  const handleDrawEditAgain = () => setIsDrawClosed(false);
 
   const handleCopy = (field) => {
     setClipboard({
@@ -434,28 +445,25 @@ function ManageSubFieldsMap({
       sowingStructure: field.sowingStructure,
       plantSpacing: field.plantSpacing,
       rowSpacing: field.rowSpacing,
-      geoVertices: field.geoVertices,
+      vertices: field.vertices,
     });
   };
 
   const handlePaste = async () => {
     if (!clipboard) return;
 
-    // Pasted directly on top of the source shape rather than at a computed
-    // offset - an offset guess (e.g. shifted by a fraction of its own width)
-    // frequently landed outside the parent boundary since sub-fields
-    // typically already tile most of it, which silently failed the create
-    // with no obvious visual cause. Stacking it exactly on the original is
-    // always a valid position (it's identical to one that already passed
-    // the boundary check), and the new copy is immediately draggable - same
-    // as any other sub-field - so the user just drags it off to one side.
+    // Pasted directly on top of the source shape - see ManageSubFieldsMap.jsx's
+    // handlePaste for why: an offset guess routinely landed outside the
+    // parent boundary, while stacking it exactly on the original is always
+    // valid (identical to a shape that already passed the check), and it's
+    // immediately draggable off to one side.
     setIsPasting(true);
     const created = await onCreate({
       name: `${clipboard.name} copy`,
       variety: clipboard.variety,
       shapeType: "polygon",
       parentFieldId: parentField.id,
-      geoVertices: clipboard.geoVertices,
+      vertices: clipboard.vertices,
       sowingStructure: clipboard.sowingStructure,
       plantSpacing: clipboard.plantSpacing,
       rowSpacing: clipboard.rowSpacing,
@@ -469,26 +477,13 @@ function ManageSubFieldsMap({
     }
   };
 
-  const handleDeleteField = async (field) => {
-    discardPendingSave(field.id);
-    setDeletingFieldId(field.id);
-    const success = await onDelete(field.id);
-    setDeletingFieldId(null);
-    if (success && field.id === selectedId) {
-      setSelectedId(null);
-      setNewField(emptyNewField);
-      // Clipboard is intentionally left alone even if its source field was
-      // just deleted - the copied shape/spacing is still useful to paste.
-    }
-  };
-
-  const handleMoved = async (fieldId, geoVertices, resetOnFailure) => {
+  const handleMoved = async (fieldId, vertices, resetOnFailure) => {
     setIsSavingSelected(true);
-    const updated = await onUpdateGeometry(fieldId, { geoVertices });
+    const updated = await onUpdateGeometry(fieldId, { vertices });
     setIsSavingSelected(false);
     if (!updated) {
       resetOnFailure();
-      setError("That position is outside the large field's boundary.");
+      setError("That position is outside the parent field's boundary.");
     } else {
       setError("");
     }
@@ -507,7 +502,7 @@ function ManageSubFieldsMap({
       setError("Please fill in a name and positive spacing values");
       return;
     }
-    if (!isDrawClosed || drawVertices.length < 3) {
+    if (!drawnVertices || drawnVertices.length < 3) {
       setError("Draw and close a boundary with at least 3 points");
       return;
     }
@@ -518,15 +513,14 @@ function ManageSubFieldsMap({
       variety: newField.variety === "Custom" ? null : newField.variety,
       shapeType: "polygon",
       parentFieldId: parentField.id,
-      geoVertices: drawVertices,
+      vertices: drawnVertices,
       sowingStructure: newField.sowingStructure,
       plantSpacing: spacingValues[0],
       rowSpacing: spacingValues[1],
     });
     setIsCreatingSubField(false);
     if (created) {
-      setDrawVertices([]);
-      setIsDrawClosed(false);
+      setDrawnVertices(null);
       setNewField(emptyNewField);
       setError("");
     } else {
@@ -534,35 +528,13 @@ function ManageSubFieldsMap({
     }
   };
 
-  // Pulled fresh from `subFields` (not `newField`) each render, so it
-  // reflects the server's recalculated capacity for the current shape and
-  // spacing - including right after a corner/shape drag - not just what's
-  // pending in the form.
   const selectedField = subFields.find((f) => f.id === selectedId);
-
-  const drawSegments = useMemo(() => {
-    const list = [];
-    for (let i = 0; i < drawVertices.length - 1; i++) {
-      list.push([drawVertices[i], drawVertices[i + 1]]);
-    }
-    if (isDrawClosed && drawVertices.length >= 3) {
-      list.push([drawVertices[drawVertices.length - 1], drawVertices[0]]);
-    }
-    return list;
-  }, [drawVertices, isDrawClosed]);
-
-  // Once a field is past planning, its shape rarely needs the map's full
-  // attention any more - the map stays reachable (Shape & Basics is one
-  // click away) but shrinks to a small locator/drag target while the
-  // agricultural data panel takes the room instead.
-  const isDataFocused = Boolean(selectedId) && (activeEditTab === 1 || activeEditTab === 2);
 
   return (
     <Box sx={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden" }}>
       <Box
         sx={{
-          width: isDataFocused ? 520 : 360,
-          transition: "width 0.2s ease",
+          width: 460,
           flexShrink: 0,
           p: 3,
           overflowY: "auto",
@@ -574,8 +546,8 @@ function ManageSubFieldsMap({
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          Drag a sub-field on the map to reposition it, use the icons below to copy or delete one, or draw a new
-          one further down.
+          Drag a sub-field to reposition it, use the icons below to copy or delete one, or draw a new one
+          further down.
         </Typography>
 
         {subFields.length > 0 && (
@@ -599,11 +571,7 @@ function ManageSubFieldsMap({
                         onClick={() => handleDeleteField(f)}
                         disabled={deletingFieldId === f.id}
                       >
-                        {deletingFieldId === f.id ? (
-                          <InlineSpinner size={16} />
-                        ) : (
-                          <DeleteIcon fontSize="small" color="error" />
-                        )}
+                        {deletingFieldId === f.id ? <InlineSpinner size={16} /> : <DeleteIcon fontSize="small" color="error" />}
                       </IconButton>
                     </Box>
                   }
@@ -636,7 +604,7 @@ function ManageSubFieldsMap({
               {isPasting ? <InlineSpinner size={18} /> : `Paste copy of "${clipboard.name}"`}
             </Button>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-              The copy lands on top of the original - drag it on the map to reposition it.
+              The copy lands on top of the original - drag it to reposition it.
             </Typography>
           </Box>
         )}
@@ -666,7 +634,7 @@ function ManageSubFieldsMap({
             variant="fullWidth"
             sx={{ minHeight: 36, "& .MuiTab-root": { minHeight: 36 } }}
           >
-            <Tab label="Shape & Basics" />
+            <Tab label="Basics" />
             <Tab label="Field Data" />
             <Tab label="Labor" />
           </Tabs>
@@ -687,9 +655,9 @@ function ManageSubFieldsMap({
               onChange={(e) => updateFieldValue({ name: e.target.value })}
             />
             <FormControl fullWidth>
-              <InputLabel id="new-subfield-variety-label">Vegetable variety</InputLabel>
+              <InputLabel id="small-subfield-variety-label">Vegetable variety</InputLabel>
               <Select
-                labelId="new-subfield-variety-label"
+                labelId="small-subfield-variety-label"
                 label="Vegetable variety"
                 value={newField.variety}
                 onChange={(e) => handleVarietyChange(e.target.value)}
@@ -726,15 +694,18 @@ function ManageSubFieldsMap({
               value={newField.rowSpacing}
               onChange={(e) => updateFieldValue({ rowSpacing: e.target.value })}
             />
+            {!selectedId && (
+              <FieldDrawingCanvas onFinish={setDrawnVertices} referenceVertices={parentField.vertices} />
+            )}
           </>
         )}
 
         {selectedId && activeEditTab === 1 && (
           <>
             <FormControl fullWidth>
-              <InputLabel id="subfield-status-label">Status</InputLabel>
+              <InputLabel id="small-subfield-status-label">Status</InputLabel>
               <Select
-                labelId="subfield-status-label"
+                labelId="small-subfield-status-label"
                 label="Status"
                 value={newField.status}
                 onChange={(e) => updateFieldValue({ status: e.target.value }, true)}
@@ -786,25 +757,6 @@ function ManageSubFieldsMap({
           </>
         )}
 
-        {!selectedId && (
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-            <Button size="small" onClick={handleDrawUndo} disabled={drawVertices.length === 0 || isDrawClosed}>
-              Undo point
-            </Button>
-            <Button size="small" onClick={handleDrawClear}>
-              Clear
-            </Button>
-            <Button size="small" variant="contained" onClick={handleDrawClose} disabled={drawVertices.length < 3 || isDrawClosed}>
-              Close Shape
-            </Button>
-            {isDrawClosed && (
-              <Button size="small" onClick={handleDrawEditAgain}>
-                Edit again
-              </Button>
-            )}
-          </Box>
-        )}
-
         {error && (
           <Typography variant="body2" color="error">
             {error}
@@ -825,78 +777,18 @@ function ManageSubFieldsMap({
         </Box>
       </Box>
 
-      <Box
-        sx={{
-          flex: isDataFocused ? "0 0 320px" : 1,
-          minHeight: 0,
-          display: "flex",
-          transition: "flex-basis 0.2s ease",
-        }}
-      >
-        <Box sx={{ border: "1px solid", borderColor: "divider", flex: 1, minHeight: MIN_MAP_HEIGHT }}>
-          <MapContainer
-            center={[DEFAULT_CENTER.lat, DEFAULT_CENTER.lng]}
-            zoom={DEFAULT_ZOOM}
-            style={{ height: "100%", width: "100%" }}
-          >
-            <MapBaseLayers />
-            <MapView fitTo={parentField.geoVertices} />
-            <MapResizeHandler trigger={isDataFocused} />
-            <ClickCapture disabled={isDrawClosed} onClick={handleDrawClick} />
-
-            <Polygon
-              positions={parentField.geoVertices.map((v) => [v.lat, v.lng])}
-              pathOptions={{ color: "#8A7A5C", weight: 2, dashArray: "6 6", fillOpacity: 0 }}
-            />
-
-            {subFields.map((f) => (
-              <DraggableSubFieldPolygon
-                key={f.id}
-                field={f}
-                isSelected={f.id === selectedId}
-                onSelect={selectField}
-                onMoved={handleMoved}
-                suppressClickRef={suppressClickRef}
-              />
-            ))}
-
-            {drawVertices.length >= 2 && (
-              <Polygon
-                positions={drawVertices.map((v) => [v.lat, v.lng])}
-                pathOptions={{ color: "#1F4D3A", fillOpacity: isDrawClosed ? 0.15 : 0 }}
-              />
-            )}
-            {drawSegments.map(([a, b], i) => {
-              const targetIndex = isDrawClosed && i === drawSegments.length - 1 ? 0 : i + 1;
-              return (
-                <SegmentLengthLabel
-                  key={`draw-segment-${i}`}
-                  a={a}
-                  b={b}
-                  suppressClickRef={suppressClickRef}
-                  onApply={(meters) => handleDrawSegmentLengthChange(targetIndex, a, meters)}
-                />
-              );
-            })}
-            {drawVertices.map((v, i) => (
-              <Marker
-                key={`draw-vertex-${i}`}
-                position={[v.lat, v.lng]}
-                icon={vertexIcon}
-                draggable
-                eventHandlers={{
-                  drag: (e) => handleDrawVertexDrag(i, e.target.getLatLng()),
-                  dragend: (e) => handleDrawVertexDrag(i, e.target.getLatLng()),
-                }}
-              />
-            ))}
-          </MapContainer>
+      <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <Box sx={{ flex: 1, minHeight: 0, display: "flex", alignItems: "flex-start", justifyContent: "center", p: 3, overflow: "auto" }}>
+          <SubFieldsOverview
+            parentField={parentField}
+            subFields={subFields}
+            selectedId={selectedId}
+            onSelect={selectField}
+            onMoved={handleMoved}
+          />
         </Box>
-      </Box>
-
-      {isDataFocused && (
-        <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", borderLeft: "1px solid", borderColor: "divider" }}>
-          {activeEditTab === 1 && (
+        {selectedId && activeEditTab === 1 && (
+          <Box sx={{ borderTop: "1px solid", borderColor: "divider", overflowY: "auto", maxHeight: "40%" }}>
             <FieldTimeline
               status={selectedField?.status}
               sowingDate={selectedField?.sowingDate}
@@ -906,8 +798,10 @@ function ManageSubFieldsMap({
               totalCapacity={selectedField?.totalCapacity}
               varieties={varieties}
             />
-          )}
-          {activeEditTab === 2 && (
+          </Box>
+        )}
+        {selectedId && activeEditTab === 2 && (
+          <Box sx={{ borderTop: "1px solid", borderColor: "divider", overflowY: "auto", maxHeight: "40%" }}>
             <FieldLaborTab
               fieldId={selectedId}
               workers={workers}
@@ -915,11 +809,11 @@ function ManageSubFieldsMap({
               onCreateWorkLog={onCreateWorkLog}
               onDeleteWorkLog={onDeleteWorkLog}
             />
-          )}
-        </Box>
-      )}
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }
 
-export default ManageSubFieldsMap;
+export default ManageSubFieldsPanel;

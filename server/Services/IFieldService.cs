@@ -6,7 +6,7 @@ public interface IFieldService
 {
     Task<List<FieldDto>> GetByProjectAsync(string projectId);
     Task<FieldDto> CreateAsync(string projectId, FieldRequest request);
-    Task<FieldDto?> UpdateGeometryAsync(string projectId, int fieldId, List<GeoVertexDto> geoVertices);
+    Task<FieldDto?> UpdateGeometryAsync(string projectId, int fieldId, UpdateFieldGeometryRequest request);
     Task<FieldDto?> UpdatePropertiesAsync(string projectId, int fieldId, UpdateFieldPropertiesRequest request);
     Task<bool> DeleteAsync(string projectId, int fieldId);
 }

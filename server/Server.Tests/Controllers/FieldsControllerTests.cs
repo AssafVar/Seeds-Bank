@@ -67,7 +67,7 @@ public class FieldsControllerTests
     public async Task UpdateFieldGeometry_returns_not_found_for_a_missing_field()
     {
         var fieldService = new Mock<IFieldService>();
-        fieldService.Setup(s => s.UpdateGeometryAsync("p1", 999, It.IsAny<List<GeoVertexDto>>())).ReturnsAsync((FieldDto?)null);
+        fieldService.Setup(s => s.UpdateGeometryAsync("p1", 999, It.IsAny<UpdateFieldGeometryRequest>())).ReturnsAsync((FieldDto?)null);
         var controller = MakeController(fieldService, new Mock<IFieldWorkLogService>());
 
         var result = await controller.UpdateFieldGeometry("u1", "p1", 999, new UpdateFieldGeometryRequest());
@@ -79,7 +79,7 @@ public class FieldsControllerTests
     public async Task UpdateFieldGeometry_returns_bad_request_when_the_service_rejects_the_geometry()
     {
         var fieldService = new Mock<IFieldService>();
-        fieldService.Setup(s => s.UpdateGeometryAsync("p1", 1, It.IsAny<List<GeoVertexDto>>()))
+        fieldService.Setup(s => s.UpdateGeometryAsync("p1", 1, It.IsAny<UpdateFieldGeometryRequest>()))
             .ThrowsAsync(new ArgumentException("Sub-field must stay within the large field's boundary."));
         var controller = MakeController(fieldService, new Mock<IFieldWorkLogService>());
 

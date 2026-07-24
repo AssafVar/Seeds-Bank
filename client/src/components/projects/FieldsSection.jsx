@@ -5,12 +5,8 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
-import FormControl from "@mui/material/FormControl";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
-import InputLabel from "@mui/material/InputLabel";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
@@ -23,7 +19,6 @@ import {
   deleteFieldWorkLog,
   getFields,
   getFieldWorkLogs,
-  getVegetableVarieties,
   updateFieldGeometry,
   updateFieldProperties,
 } from "../../services/serverCalls";
@@ -31,10 +26,10 @@ import { STATUS_CHIP_COLOR, statusLabel } from "../../libs/fieldStatus.js";
 import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 import FieldMapDrawing from "./FieldMapDrawing.jsx";
 import ManageSubFieldsMap from "./ManageSubFieldsMap.jsx";
+import ManageSubFieldsPanel from "./ManageSubFieldsPanel.jsx";
 import ModalCloseButton from "../common/ModalCloseButton.jsx";
 import Spinner, { InlineSpinner } from "../common/Spinner.jsx";
 
-const emptyForm = { name: "", landWidth: "", landLength: "", plantSpacing: "", rowSpacing: "" };
 const PREVIEW_WIDTH = 280;
 const PREVIEW_HEIGHT = 180;
 const PREVIEW_PADDING = 10;
@@ -136,7 +131,7 @@ function FieldCard({ field, onDelete, actions, onClick, selected }) {
               {field.sowingStructure === "staggered" && (
                 <Chip label="Staggered" size="small" variant="outlined" />
               )}
-              {field.plantSpacing == null && <Chip label="Large field" size="small" />}
+              {field.plantSpacing == null && <Chip label="Container" size="small" />}
             </Box>
           </Box>
           <IconButton size="small" onClick={handleDeleteClick} disabled={isDeleting}>
@@ -173,26 +168,19 @@ function FieldCard({ field, onDelete, actions, onClick, selected }) {
 function FieldsSection({ userId, projectId }) {
   const [fields, setFields] = useState([]);
   const [isLoadingFields, setIsLoadingFields] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [shapeMode, setShapeMode] = useState("rectangle");
-  const [form, setForm] = useState(emptyForm);
-  const [variety, setVariety] = useState("Custom");
-  const [sowingStructure, setSowingStructure] = useState("grid");
-  const [polygonVertices, setPolygonVertices] = useState(null);
-  const [errorMessage, setErrorMessage] = useState("");
 
-  const [isAddingLargeField, setIsAddingLargeField] = useState(false);
-  const [largeFieldName, setLargeFieldName] = useState("");
-  const [largeFieldVertices, setLargeFieldVertices] = useState(null);
-  const [largeFieldError, setLargeFieldError] = useState("");
+  const [isAddingField, setIsAddingField] = useState(false);
+  const [fieldName, setFieldName] = useState("");
+  const [fieldVertices, setFieldVertices] = useState(null);
+  const [fieldError, setFieldError] = useState("");
+  // "map" draws a real-world GPS boundary; "canvas" draws the same
+  // container concept locally, with no map at all - both submit through
+  // handleCreateField, just with a different payload key.
+  const [boundaryMode, setBoundaryMode] = useState("map");
+  const [isCreatingField, setIsCreatingField] = useState(false);
 
   const [managingParentField, setManagingParentField] = useState(null);
   const [selectedFieldId, setSelectedFieldId] = useState(null);
-
-  const [isCreatingField, setIsCreatingField] = useState(false);
-  const [isCreatingLargeField, setIsCreatingLargeField] = useState(false);
-
-  const [varieties, setVarieties] = useState([]);
 
   const toggleFieldSelection = (fieldId) => {
     setSelectedFieldId((prev) => (prev === fieldId ? null : fieldId));
@@ -212,124 +200,43 @@ function FieldsSection({ userId, projectId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, projectId]);
 
-  useEffect(() => {
-    getVegetableVarieties().then((data) => data && setVarieties(data));
-  }, []);
-
-  const handleVarietyChange = (name) => {
-    setVariety(name);
-    const match = varieties.find((v) => v.name === name);
-    if (match) {
-      setForm((prev) => ({
-        ...prev,
-        plantSpacing: String(match.plantSpacing),
-        rowSpacing: String(match.rowSpacing),
-      }));
-    }
-  };
-
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-    setForm(emptyForm);
-    setVariety("Custom");
-    setSowingStructure("grid");
-    setShapeMode("rectangle");
-    setPolygonVertices(null);
-    setErrorMessage("");
-  };
-
-  const openAddFieldDialog = () => {
-    setIsDialogOpen(true);
-  };
-
-  const closeLargeFieldDialog = () => {
-    setIsAddingLargeField(false);
-    setLargeFieldName("");
-    setLargeFieldVertices(null);
-    setLargeFieldError("");
+  const closeAddFieldDialog = () => {
+    setIsAddingField(false);
+    setFieldName("");
+    setFieldVertices(null);
+    setFieldError("");
+    setBoundaryMode("map");
   };
 
   const handleCreateField = async () => {
-    const { name, plantSpacing, rowSpacing } = form;
-    const spacingValues = [plantSpacing, rowSpacing].map(Number);
-    if (!name || spacingValues.some((v) => !(v > 0))) {
-      setErrorMessage("Please fill in a name and positive spacing values");
+    if (!fieldName) {
+      setFieldError("Please enter a name");
       return;
     }
-
-    let payload;
-    if (shapeMode === "rectangle") {
-      const dimensionValues = [form.landWidth, form.landLength].map(Number);
-      if (dimensionValues.some((v) => !(v > 0))) {
-        setErrorMessage("Please fill in positive land width and length");
-        return;
-      }
-      payload = {
-        name,
-        variety: variety === "Custom" ? null : variety,
-        shapeType: "rectangle",
-        landWidth: dimensionValues[0],
-        landLength: dimensionValues[1],
-        sowingStructure,
-        plantSpacing: spacingValues[0],
-        rowSpacing: spacingValues[1],
-      };
-    } else {
-      if (!polygonVertices || polygonVertices.length < 3) {
-        setErrorMessage("Draw and close a shape with at least 3 points");
-        return;
-      }
-      payload = {
-        name,
-        variety: variety === "Custom" ? null : variety,
-        shapeType: "polygon",
-        vertices: polygonVertices,
-        sowingStructure,
-        plantSpacing: spacingValues[0],
-        rowSpacing: spacingValues[1],
-      };
+    if (!fieldVertices || fieldVertices.length < 3) {
+      setFieldError("Draw and close a boundary with at least 3 points");
+      return;
     }
 
     setIsCreatingField(true);
-    const created = await createField(userId, projectId, payload);
+    const created = await createField(userId, projectId, {
+      name: fieldName,
+      shapeType: "polygon",
+      ...(boundaryMode === "map" ? { geoVertices: fieldVertices } : { vertices: fieldVertices }),
+    });
     setIsCreatingField(false);
     if (created) {
       setFields([created, ...fields]);
-      closeDialog();
+      closeAddFieldDialog();
     } else {
-      setErrorMessage("Failed to create field");
-    }
-  };
-
-  const handleCreateLargeField = async () => {
-    if (!largeFieldName) {
-      setLargeFieldError("Please enter a name");
-      return;
-    }
-    if (!largeFieldVertices || largeFieldVertices.length < 3) {
-      setLargeFieldError("Draw and close a boundary with at least 3 points");
-      return;
-    }
-
-    setIsCreatingLargeField(true);
-    const created = await createField(userId, projectId, {
-      name: largeFieldName,
-      shapeType: "polygon",
-      geoVertices: largeFieldVertices,
-    });
-    setIsCreatingLargeField(false);
-    if (created) {
-      setFields([created, ...fields]);
-      closeLargeFieldDialog();
-    } else {
-      setLargeFieldError("Failed to create large field");
+      setFieldError("Failed to create field");
     }
   };
 
   const handleDeleteField = async (fieldId) => {
     const success = await deleteField(userId, projectId, fieldId);
     if (success) {
-      // Deleting a large field cascades to its sub-fields server-side.
+      // Deleting a field cascades to its sub-fields server-side.
       setFields(fields.filter((field) => field.id !== fieldId && field.parentFieldId !== fieldId));
     }
     return success;
@@ -363,7 +270,11 @@ function FieldsSection({ userId, projectId }) {
   const handleCreateWorkLog = (fieldId, payload) => createFieldWorkLog(userId, projectId, fieldId, payload);
   const handleDeleteWorkLog = (fieldId, logId) => deleteFieldWorkLog(userId, projectId, fieldId, logId);
 
-  const largeFields = fields.filter((f) => f.parentFieldId == null && f.plantSpacing == null);
+  // Every top-level field is a container - a boundary only, with sub-fields
+  // (each carrying their own spacing/variety) added afterward via Manage
+  // Sub-Fields. standaloneFields is kept only to still display fields
+  // created before this model existed (they have their own spacing).
+  const containerFields = fields.filter((f) => f.parentFieldId == null && f.plantSpacing == null);
   const standaloneFields = fields.filter((f) => f.parentFieldId == null && f.plantSpacing != null);
   const subFieldsByParent = fields.reduce((acc, f) => {
     if (f.parentFieldId != null) {
@@ -375,113 +286,11 @@ function FieldsSection({ userId, projectId }) {
   const addFieldDialog = (
     <Dialog
       fullScreen
-      open={isDialogOpen}
-      onClose={closeDialog}
+      open={isAddingField}
+      onClose={closeAddFieldDialog}
       PaperProps={{ sx: { display: "flex", flexDirection: "column" } }}
     >
-      <FullScreenDialogHeader title="Add Field" onClose={closeDialog} />
-      <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", p: 3, overflow: "hidden" }}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 720, flexShrink: 0 }}>
-          <ToggleButtonGroup
-            exclusive
-            value={shapeMode}
-            onChange={(e, value) => value && setShapeMode(value)}
-            size="small"
-          >
-            <ToggleButton value="rectangle">Rectangle</ToggleButton>
-            <ToggleButton value="polygon">Custom shape</ToggleButton>
-          </ToggleButtonGroup>
-          <TextField
-            label="Field name"
-            fullWidth
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <FormControl fullWidth>
-            <InputLabel id="variety-label">Vegetable variety</InputLabel>
-            <Select
-              labelId="variety-label"
-              label="Vegetable variety"
-              value={variety}
-              onChange={(e) => handleVarietyChange(e.target.value)}
-            >
-              <MenuItem value="Custom">Custom</MenuItem>
-              {varieties.map((v) => (
-                <MenuItem key={v.name} value={v.name}>
-                  {v.name} ({v.plantSpacing}m × {v.rowSpacing}m)
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <Box>
-            <Typography variant="body2" sx={{ mb: 0.5 }}>
-              Sowing structure
-            </Typography>
-            <ToggleButtonGroup
-              exclusive
-              value={sowingStructure}
-              onChange={(e, value) => value && setSowingStructure(value)}
-              size="small"
-            >
-              <ToggleButton value="grid">Grid (aligned rows)</ToggleButton>
-              <ToggleButton value="staggered">Staggered (denser)</ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
-
-          {shapeMode === "rectangle" && (
-            <>
-              <TextField
-                label="Land width (m)" type="number" fullWidth
-                value={form.landWidth}
-                onChange={(e) => setForm({ ...form, landWidth: e.target.value })}
-              />
-              <TextField
-                label="Land length (m)" type="number" fullWidth
-                value={form.landLength}
-                onChange={(e) => setForm({ ...form, landLength: e.target.value })}
-              />
-            </>
-          )}
-
-          <TextField
-            label="Plant spacing (m)" type="number" fullWidth
-            value={form.plantSpacing}
-            onChange={(e) => setForm({ ...form, plantSpacing: e.target.value })}
-          />
-          <TextField
-            label="Row spacing (m)" type="number" fullWidth
-            value={form.rowSpacing}
-            onChange={(e) => setForm({ ...form, rowSpacing: e.target.value })}
-          />
-
-          {shapeMode === "polygon" && <FieldDrawingCanvas onFinish={setPolygonVertices} />}
-
-          {errorMessage && (
-            <Typography variant="body2" color="error">
-              {errorMessage}
-            </Typography>
-          )}
-
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Button onClick={closeDialog}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreateField} disabled={isCreatingField}>
-              {isCreatingField ? <InlineSpinner size={20} /> : "Create"}
-            </Button>
-          </Box>
-        </Box>
-      </Box>
-    </Dialog>
-  );
-
-  const addLargeFieldDialog = (
-    <Dialog
-      fullScreen
-      open={isAddingLargeField}
-      onClose={closeLargeFieldDialog}
-      PaperProps={{ sx: { display: "flex", flexDirection: "column" } }}
-    >
-      <FullScreenDialogHeader title="Add Large Field" onClose={closeLargeFieldDialog} />
+      <FullScreenDialogHeader title="Add Field" onClose={closeAddFieldDialog} />
       <Box sx={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden" }}>
         <Box
           sx={{
@@ -497,29 +306,46 @@ function FieldsSection({ userId, projectId }) {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            Draw the outer boundary of the large field on the map. You'll be able to divide it into
-            smaller sub-fields for planting afterward.
+            Draw the outer boundary of the field{boundaryMode === "map" ? " on the map" : ""}. You'll be
+            able to divide it into smaller sub-fields for planting afterward.
           </Typography>
+          <ToggleButtonGroup
+            exclusive
+            value={boundaryMode}
+            onChange={(e, value) => {
+              if (!value) return;
+              setBoundaryMode(value);
+              setFieldVertices(null);
+            }}
+            size="small"
+          >
+            <ToggleButton value="map">Position on a map</ToggleButton>
+            <ToggleButton value="canvas">Draw without a map</ToggleButton>
+          </ToggleButtonGroup>
           <TextField
-            label="Large field name"
+            label="Field name"
             fullWidth
-            value={largeFieldName}
-            onChange={(e) => setLargeFieldName(e.target.value)}
+            value={fieldName}
+            onChange={(e) => setFieldName(e.target.value)}
           />
-          {largeFieldError && (
+          {fieldError && (
             <Typography variant="body2" color="error">
-              {largeFieldError}
+              {fieldError}
             </Typography>
           )}
           <Box sx={{ display: "flex", gap: 1 }}>
-            <Button onClick={closeLargeFieldDialog}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreateLargeField} disabled={isCreatingLargeField}>
-              {isCreatingLargeField ? <InlineSpinner size={20} /> : "Create"}
+            <Button onClick={closeAddFieldDialog}>Cancel</Button>
+            <Button variant="contained" onClick={handleCreateField} disabled={isCreatingField}>
+              {isCreatingField ? <InlineSpinner size={20} /> : "Create"}
             </Button>
           </Box>
         </Box>
         <Box sx={{ flex: 1, minHeight: 0, display: "flex", p: 3 }}>
-          <FieldMapDrawing onFinish={setLargeFieldVertices} />
+          {boundaryMode === "map" ? (
+            <FieldMapDrawing onFinish={setFieldVertices} />
+          ) : (
+            <FieldDrawingCanvas onFinish={setFieldVertices} />
+          )}
         </Box>
       </Box>
     </Dialog>
@@ -536,18 +362,33 @@ function FieldsSection({ userId, projectId }) {
         title={`Manage Sub-Fields of ${managingParentField.name}`}
         onClose={() => setManagingParentField(null)}
       />
-      <ManageSubFieldsMap
-        parentField={managingParentField}
-        subFields={subFieldsByParent[managingParentField.id] || []}
-        onCreate={handleCreateSubField}
-        onUpdateGeometry={handleUpdateSubFieldGeometry}
-        onUpdateProperties={handleUpdateSubFieldProperties}
-        onDelete={handleDeleteField}
-        onGetWorkLogs={handleGetWorkLogs}
-        onCreateWorkLog={handleCreateWorkLog}
-        onDeleteWorkLog={handleDeleteWorkLog}
-        onClose={() => setManagingParentField(null)}
-      />
+      {managingParentField.geoVertices != null ? (
+        <ManageSubFieldsMap
+          parentField={managingParentField}
+          subFields={subFieldsByParent[managingParentField.id] || []}
+          onCreate={handleCreateSubField}
+          onUpdateGeometry={handleUpdateSubFieldGeometry}
+          onUpdateProperties={handleUpdateSubFieldProperties}
+          onDelete={handleDeleteField}
+          onGetWorkLogs={handleGetWorkLogs}
+          onCreateWorkLog={handleCreateWorkLog}
+          onDeleteWorkLog={handleDeleteWorkLog}
+          onClose={() => setManagingParentField(null)}
+        />
+      ) : (
+        <ManageSubFieldsPanel
+          parentField={managingParentField}
+          subFields={subFieldsByParent[managingParentField.id] || []}
+          onCreate={handleCreateSubField}
+          onUpdateGeometry={handleUpdateSubFieldGeometry}
+          onUpdateProperties={handleUpdateSubFieldProperties}
+          onDelete={handleDeleteField}
+          onGetWorkLogs={handleGetWorkLogs}
+          onCreateWorkLog={handleCreateWorkLog}
+          onDeleteWorkLog={handleDeleteWorkLog}
+          onClose={() => setManagingParentField(null)}
+        />
+      )}
     </Dialog>
   );
 
@@ -555,14 +396,9 @@ function FieldsSection({ userId, projectId }) {
     <Box sx={{ mt: 4 }}>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
         <Typography variant="h5">Fields</Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button variant="outlined" onClick={() => setIsAddingLargeField(true)}>
-            Add Large Field
-          </Button>
-          <Button variant="contained" onClick={openAddFieldDialog}>
-            Add Field
-          </Button>
-        </Box>
+        <Button variant="contained" onClick={() => setIsAddingField(true)}>
+          Add Field
+        </Button>
       </Box>
 
       {isLoadingFields ? (
@@ -573,7 +409,7 @@ function FieldsSection({ userId, projectId }) {
         </Typography>
       ) : (
         <Grid container spacing={2}>
-          {largeFields.map((field) => (
+          {containerFields.map((field) => (
             <Grid item xs={12} key={field.id}>
               <FieldCard
                 field={field}
@@ -624,7 +460,6 @@ function FieldsSection({ userId, projectId }) {
       )}
 
       {addFieldDialog}
-      {addLargeFieldDialog}
       {manageSubFieldsDialog}
     </Box>
   );

@@ -148,9 +148,11 @@ export const createField = async (userId, projectId, field) => {
   }
 };
 
-export const updateFieldGeometry = async (userId, projectId, fieldId, geoVertices) => {
+// body is { geoVertices } for a map-anchored sub-field or { vertices } for a
+// map-less one - the caller picks based on which kind of parent it has.
+export const updateFieldGeometry = async (userId, projectId, fieldId, body) => {
   try {
-    const response = await api.put(`/projects/${userId}/${projectId}/fields/${fieldId}/geometry`, { geoVertices });
+    const response = await api.put(`/projects/${userId}/${projectId}/fields/${fieldId}/geometry`, body);
     return response.data;
   } catch (err) {
     console.log(err);

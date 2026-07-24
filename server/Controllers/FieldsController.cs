@@ -51,7 +51,7 @@ public class FieldsController : OwnedResourceControllerBase
 
         try
         {
-            var field = await _fieldService.UpdateGeometryAsync(projectId, fieldId, request.GeoVertices);
+            var field = await _fieldService.UpdateGeometryAsync(projectId, fieldId, request);
             return field is null ? NotFound() : Ok(field);
         }
         catch (ArgumentException ex)
