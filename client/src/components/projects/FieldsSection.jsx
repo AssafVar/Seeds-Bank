@@ -18,12 +18,15 @@ import Typography from "@mui/material/Typography";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
   createField,
+  createFieldWorkLog,
   deleteField,
+  deleteFieldWorkLog,
   getFields,
+  getFieldWorkLogs,
+  getVegetableVarieties,
   updateFieldGeometry,
   updateFieldProperties,
 } from "../../services/serverCalls";
-import vegetableVarieties from "../../libs/vegetableVarieties";
 import { STATUS_CHIP_COLOR, statusLabel } from "../../libs/fieldStatus.js";
 import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 import FieldMapDrawing from "./FieldMapDrawing.jsx";
@@ -189,6 +192,8 @@ function FieldsSection({ userId, projectId }) {
   const [isCreatingField, setIsCreatingField] = useState(false);
   const [isCreatingLargeField, setIsCreatingLargeField] = useState(false);
 
+  const [varieties, setVarieties] = useState([]);
+
   const toggleFieldSelection = (fieldId) => {
     setSelectedFieldId((prev) => (prev === fieldId ? null : fieldId));
   };
@@ -207,9 +212,13 @@ function FieldsSection({ userId, projectId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, projectId]);
 
+  useEffect(() => {
+    getVegetableVarieties().then((data) => data && setVarieties(data));
+  }, []);
+
   const handleVarietyChange = (name) => {
     setVariety(name);
-    const match = vegetableVarieties.find((v) => v.name === name);
+    const match = varieties.find((v) => v.name === name);
     if (match) {
       setForm((prev) => ({
         ...prev,
@@ -350,6 +359,10 @@ function FieldsSection({ userId, projectId }) {
     return updated;
   };
 
+  const handleGetWorkLogs = (fieldId) => getFieldWorkLogs(userId, projectId, fieldId);
+  const handleCreateWorkLog = (fieldId, payload) => createFieldWorkLog(userId, projectId, fieldId, payload);
+  const handleDeleteWorkLog = (fieldId, logId) => deleteFieldWorkLog(userId, projectId, fieldId, logId);
+
   const largeFields = fields.filter((f) => f.parentFieldId == null && f.plantSpacing == null);
   const standaloneFields = fields.filter((f) => f.parentFieldId == null && f.plantSpacing != null);
   const subFieldsByParent = fields.reduce((acc, f) => {
@@ -393,7 +406,7 @@ function FieldsSection({ userId, projectId }) {
               onChange={(e) => handleVarietyChange(e.target.value)}
             >
               <MenuItem value="Custom">Custom</MenuItem>
-              {vegetableVarieties.map((v) => (
+              {varieties.map((v) => (
                 <MenuItem key={v.name} value={v.name}>
                   {v.name} ({v.plantSpacing}m × {v.rowSpacing}m)
                 </MenuItem>
@@ -530,6 +543,9 @@ function FieldsSection({ userId, projectId }) {
         onUpdateGeometry={handleUpdateSubFieldGeometry}
         onUpdateProperties={handleUpdateSubFieldProperties}
         onDelete={handleDeleteField}
+        onGetWorkLogs={handleGetWorkLogs}
+        onCreateWorkLog={handleCreateWorkLog}
+        onDeleteWorkLog={handleDeleteWorkLog}
         onClose={() => setManagingParentField(null)}
       />
     </Dialog>

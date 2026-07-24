@@ -22,7 +22,6 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { MapContainer, Polygon, Marker, CircleMarker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import vegetableVarieties from "../../libs/vegetableVarieties";
 import { STATUS_OPTIONS, STATUS_CHIP_COLOR, statusLabel } from "../../libs/fieldStatus.js";
 import {
   DEFAULT_CENTER,
@@ -37,6 +36,8 @@ import {
 } from "./mapDrawingShared.jsx";
 import { InlineSpinner } from "../common/Spinner.jsx";
 import FieldTimeline from "./FieldTimeline.jsx";
+import FieldLaborTab from "./FieldLaborTab.jsx";
+import { getVegetableVarieties, getWorkers } from "../../services/serverCalls";
 
 const MIN_MAP_HEIGHT = 240;
 const emptyNewField = {
@@ -239,7 +240,18 @@ function SubFieldPlants({ field, offset }) {
   });
 }
 
-function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry, onUpdateProperties, onDelete, onClose }) {
+function ManageSubFieldsMap({
+  parentField,
+  subFields,
+  onCreate,
+  onUpdateGeometry,
+  onUpdateProperties,
+  onDelete,
+  onGetWorkLogs,
+  onCreateWorkLog,
+  onDeleteWorkLog,
+  onClose,
+}) {
   const [selectedId, setSelectedId] = useState(null);
   const [clipboard, setClipboard] = useState(null);
 
@@ -254,9 +266,17 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   const [isCreatingSubField, setIsCreatingSubField] = useState(false);
   const [deletingFieldId, setDeletingFieldId] = useState(null);
 
+  const [varieties, setVarieties] = useState([]);
+  const [workers, setWorkers] = useState([]);
+
   const saveTimeoutRef = useRef(null);
   const pendingSaveRef = useRef(null);
   const suppressClickRef = useRef(false);
+
+  useEffect(() => {
+    getVegetableVarieties().then((data) => data && setVarieties(data));
+    getWorkers().then((data) => data && setWorkers(data));
+  }, []);
 
   const commitSave = async (fieldId, values) => {
     const spacingValues = [values.plantSpacing, values.rowSpacing].map(Number);
@@ -338,7 +358,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   };
 
   const handleVarietyChange = (name) => {
-    const match = vegetableVarieties.find((v) => v.name === name);
+    const match = varieties.find((v) => v.name === name);
     updateFieldValue(
       {
         variety: name,
@@ -535,7 +555,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
   // attention any more - the map stays reachable (Shape & Basics is one
   // click away) but shrinks to a small locator/drag target while the
   // agricultural data panel takes the room instead.
-  const isDataFocused = Boolean(selectedId) && activeEditTab === 1;
+  const isDataFocused = Boolean(selectedId) && (activeEditTab === 1 || activeEditTab === 2);
 
   return (
     <Box sx={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden" }}>
@@ -648,6 +668,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
           >
             <Tab label="Shape & Basics" />
             <Tab label="Field Data" />
+            <Tab label="Labor" />
           </Tabs>
         )}
 
@@ -674,7 +695,7 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
                 onChange={(e) => handleVarietyChange(e.target.value)}
               >
                 <MenuItem value="Custom">Custom</MenuItem>
-                {vegetableVarieties.map((v) => (
+                {varieties.map((v) => (
                   <MenuItem key={v.name} value={v.name}>
                     {v.name} ({v.plantSpacing}m × {v.rowSpacing}m)
                   </MenuItem>
@@ -875,14 +896,26 @@ function ManageSubFieldsMap({ parentField, subFields, onCreate, onUpdateGeometry
 
       {isDataFocused && (
         <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", borderLeft: "1px solid", borderColor: "divider" }}>
-          <FieldTimeline
-            status={selectedField?.status}
-            sowingDate={selectedField?.sowingDate}
-            harvestDate={selectedField?.harvestDate}
-            variety={selectedField?.variety}
-            areaM2={selectedField?.area}
-            totalCapacity={selectedField?.totalCapacity}
-          />
+          {activeEditTab === 1 && (
+            <FieldTimeline
+              status={selectedField?.status}
+              sowingDate={selectedField?.sowingDate}
+              harvestDate={selectedField?.harvestDate}
+              variety={selectedField?.variety}
+              areaM2={selectedField?.area}
+              totalCapacity={selectedField?.totalCapacity}
+              varieties={varieties}
+            />
+          )}
+          {activeEditTab === 2 && (
+            <FieldLaborTab
+              fieldId={selectedId}
+              workers={workers}
+              onGetWorkLogs={onGetWorkLogs}
+              onCreateWorkLog={onCreateWorkLog}
+              onDeleteWorkLog={onDeleteWorkLog}
+            />
+          )}
         </Box>
       )}
     </Box>

@@ -176,6 +176,34 @@ export const deleteField = async (userId, projectId, fieldId) => {
   }
 };
 
+export const getFieldWorkLogs = async (userId, projectId, fieldId) => {
+  try {
+    const results = await api.get(`/projects/${userId}/${projectId}/fields/${fieldId}/work-logs`);
+    return results.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const createFieldWorkLog = async (userId, projectId, fieldId, log) => {
+  try {
+    const response = await api.post(`/projects/${userId}/${projectId}/fields/${fieldId}/work-logs`, log);
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const deleteFieldWorkLog = async (userId, projectId, fieldId, logId) => {
+  try {
+    const response = await api.delete(`/projects/${userId}/${projectId}/fields/${fieldId}/work-logs/${logId}`);
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
 export const getSiteContent = async () => {
   try {
     const results = await api.get("/site-content");
@@ -256,6 +284,81 @@ export const deleteNewsPost = async (id) => {
   } catch (err) {
     console.log(err);
     return false;
+  }
+};
+
+export const getVegetableVarieties = async () => {
+  try {
+    const results = await api.get("/vegetable-varieties");
+    return results.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const createVegetableVariety = async (variety) => {
+  try {
+    const response = await api.post("/vegetable-varieties", variety);
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const updateVegetableVariety = async (id, variety) => {
+  try {
+    const response = await api.put(`/vegetable-varieties/${id}`, variety);
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
+export const deleteVegetableVariety = async (id) => {
+  try {
+    const response = await api.delete(`/vegetable-varieties/${id}`);
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
+export const getWorkers = async () => {
+  try {
+    const results = await api.get("/workers");
+    return results.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const createWorker = async (worker) => {
+  try {
+    const response = await api.post("/workers", worker);
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const updateWorker = async (id, worker) => {
+  try {
+    const response = await api.put(`/workers/${id}`, worker);
+    return response.status === 200;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
+export const deleteWorker = async (id) => {
+  try {
+    const response = await api.delete(`/workers/${id}`);
+    return response.status === 200;
+  } catch (err) {
+    throw err;
   }
 };
 

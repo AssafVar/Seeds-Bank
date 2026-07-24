@@ -65,6 +65,9 @@ builder.Services.AddScoped<IProjectsService, ProjectsService>();
 builder.Services.AddScoped<ISiteContentService, SiteContentService>();
 builder.Services.AddScoped<INewsService, NewsService>();
 builder.Services.AddScoped<IFieldService, FieldService>();
+builder.Services.AddScoped<IVegetableVarietyService, VegetableVarietyService>();
+builder.Services.AddScoped<IWorkerService, WorkerService>();
+builder.Services.AddScoped<IFieldWorkLogService, FieldWorkLogService>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 builder.Services.AddControllers().AddJsonOptions(options =>

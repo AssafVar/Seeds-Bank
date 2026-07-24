@@ -16,6 +16,9 @@ public class AppDbContext : DbContext
     public DbSet<GalleryImage> GalleryImages => Set<GalleryImage>();
     public DbSet<NewsPost> NewsPosts => Set<NewsPost>();
     public DbSet<Field> Fields => Set<Field>();
+    public DbSet<VegetableVariety> VegetableVarieties => Set<VegetableVariety>();
+    public DbSet<Worker> Workers => Set<Worker>();
+    public DbSet<FieldWorkLog> FieldWorkLogs => Set<FieldWorkLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,5 +32,21 @@ public class AppDbContext : DbContext
             .WithMany(f => f.Children)
             .HasForeignKey(f => f.ParentFieldId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // A field's work logs have no meaning once the field itself is
+        // gone, so they cascade away with it - but a worker with existing
+        // logged hours can't be deleted out from under them (Restrict),
+        // preserving historical labor records.
+        modelBuilder.Entity<FieldWorkLog>()
+            .HasOne(l => l.Field)
+            .WithMany()
+            .HasForeignKey(l => l.FieldId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<FieldWorkLog>()
+            .HasOne(l => l.Worker)
+            .WithMany()
+            .HasForeignKey(l => l.WorkerId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

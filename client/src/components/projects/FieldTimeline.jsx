@@ -14,7 +14,7 @@ const formatNumber = (n) => Math.round(n).toLocaleString();
 // plus a materials estimate below it - both recomputed from the real clock
 // on every render (not stored anywhere), so they move on their own as days
 // pass rather than needing the underlying field data to change.
-function FieldTimeline({ status, sowingDate, harvestDate, variety, areaM2, totalCapacity }) {
+function FieldTimeline({ status, sowingDate, harvestDate, variety, areaM2, totalCapacity, varieties = [] }) {
   const today = new Date();
   const sown = sowingDate ? new Date(sowingDate) : null;
   const harvest = harvestDate ? new Date(harvestDate) : null;
@@ -36,7 +36,7 @@ function FieldTimeline({ status, sowingDate, harvestDate, variety, areaM2, total
     remainingFraction = Math.max(0, 1 - elapsedDays / totalDays);
   }
 
-  const materials = estimateMaterials({ variety, areaM2, totalCapacity, remainingFraction });
+  const materials = estimateMaterials({ variety, areaM2, totalCapacity, remainingFraction, varieties });
 
   let ganttSection;
   if (!sown) {
