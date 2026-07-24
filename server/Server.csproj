@@ -18,4 +18,14 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Server.Tests lives under this project's own directory, so the SDK's
+         default recursive globbing would otherwise compile its files (and
+         its generated Xunit GlobalUsings) into this web project too. -->
+    <Compile Remove="Server.Tests/**" />
+    <Content Remove="Server.Tests/**" />
+    <EmbeddedResource Remove="Server.Tests/**" />
+    <None Remove="Server.Tests/**" />
+  </ItemGroup>
+
 </Project>
