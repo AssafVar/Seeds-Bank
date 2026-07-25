@@ -22,7 +22,6 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { STATUS_OPTIONS, STATUS_CHIP_COLOR, statusLabel } from "../../libs/fieldStatus.js";
 import { InlineSpinner } from "../common/Spinner.jsx";
-import FieldDrawingCanvas from "./FieldDrawingCanvas.jsx";
 import FieldTimeline from "./FieldTimeline.jsx";
 import FieldLaborTab from "./FieldLaborTab.jsx";
 import { getVegetableVarieties, getWorkers } from "../../services/serverCalls";
@@ -165,6 +164,7 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
         strokeDasharray={!isSelected && dashed ? "6 6" : undefined}
         style={{ cursor: allowShapeDrag ? "move" : "pointer" }}
         onMouseDown={handleShapeMouseDown}
+        onClick={(e) => e.stopPropagation()}
       />
       {(field.plantPositions || []).map((p, i) => {
         const point = toPixel({ x: p.x + plantOffset.dx, y: p.y + plantOffset.dy });
@@ -184,6 +184,7 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
               strokeWidth={2}
               style={{ cursor: "pointer" }}
               onMouseDown={handleVertexMouseDown(i)}
+              onClick={(e) => e.stopPropagation()}
             />
           );
         })}
@@ -240,10 +241,31 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
 }
 
 // A small field's sub-fields all share the parent's own local coordinate
-// space (see FieldDrawingCanvas's referenceVertices mode), so - unlike the
-// map version - every shape can be drawn straight into one shared SVG with
-// no lat/lng conversion at all.
-function SubFieldsOverview({ parentField, subFields, selectedId, onSelect, onMoved, isEditingBoundary, onMovedBoundary }) {
+// space, so - unlike the map version - every shape (including the one
+// currently being drawn) can live in one shared SVG with no lat/lng
+// conversion at all. Drawing a new sub-field happens right here, on top of
+// the existing ones, the same way ManageSubFieldsMap draws directly onto
+// the same map that already shows its siblings - so the free space (and
+// what's already been claimed) is always visible while placing corners.
+function SubFieldsOverview({
+  parentField,
+  subFields,
+  selectedId,
+  onSelect,
+  onMoved,
+  isEditingBoundary,
+  onMovedBoundary,
+  isDrawing,
+  drawVertices,
+  isDrawClosed,
+  onDrawClick,
+  onDrawVertexDrag,
+  drawEditingIndex,
+  drawEditValue,
+  onDrawEditValueChange,
+  onStartDrawEditSegment,
+  onCommitDrawEditSegment,
+}) {
   const xs = parentField.vertices.map((v) => v.x);
   const ys = parentField.vertices.map((v) => v.y);
   const minX = Math.min(...xs);
@@ -257,9 +279,45 @@ function SubFieldsOverview({ parentField, subFields, selectedId, onSelect, onMov
   const toX = (x) => (x - minX) * scale + PREVIEW_PADDING;
   const toY = (y) => (y - minY) * scale + PREVIEW_PADDING;
   const toPixel = (v) => ({ x: toX(v.x), y: toY(v.y) });
+  const toLocal = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left - PREVIEW_PADDING) / scale + minX,
+      y: (e.clientY - rect.top - PREVIEW_PADDING) / scale + minY,
+    };
+  };
+
+  const handleSvgClick = (e) => {
+    if (isDrawing && !isDrawClosed) {
+      onDrawClick(toLocal(e));
+    }
+  };
+
+  const handleDrawVertexMouseDown = (index) => (e) => {
+    e.stopPropagation();
+    const start = { x: e.clientX, y: e.clientY };
+    const original = drawVertices[index];
+
+    const handleMouseMove = (moveEvt) => {
+      const dx = (moveEvt.clientX - start.x) / scale;
+      const dy = (moveEvt.clientY - start.y) / scale;
+      onDrawVertexDrag(index, { x: original.x + dx, y: original.y + dy });
+    };
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
 
   return (
-    <svg width={PREVIEW_WIDTH} height={PREVIEW_HEIGHT}>
+    <svg
+      width={PREVIEW_WIDTH}
+      height={PREVIEW_HEIGHT}
+      onClick={handleSvgClick}
+      style={{ cursor: isDrawing && !isDrawClosed ? "crosshair" : "default" }}
+    >
       <DraggableSubFieldShape
         field={{ id: parentField.id, vertices: parentField.vertices, plantPositions: [] }}
         isSelected={isEditingBoundary}
@@ -281,6 +339,91 @@ function SubFieldsOverview({ parentField, subFields, selectedId, onSelect, onMov
           scale={scale}
         />
       ))}
+      {isDrawing && drawVertices.length > 0 && (
+        isDrawClosed ? (
+          <polygon
+            points={drawVertices.map((v) => { const p = toPixel(v); return `${p.x},${p.y}`; }).join(" ")}
+            fill="rgba(31,77,58,0.15)"
+            stroke="#1F4D3A"
+            strokeWidth={2}
+          />
+        ) : (
+          <polyline
+            points={drawVertices.map((v) => { const p = toPixel(v); return `${p.x},${p.y}`; }).join(" ")}
+            fill="none"
+            stroke="#1F4D3A"
+            strokeWidth={2}
+          />
+        )
+      )}
+      {isDrawing &&
+        drawVertices.map((a, i) => {
+          if (!isDrawClosed && i === drawVertices.length - 1) return null;
+          const targetIndex = (i + 1) % drawVertices.length;
+          const b = drawVertices[targetIndex];
+          const pa = toPixel(a);
+          const pb = toPixel(b);
+          return (
+            <text
+              key={`draw-edge-${i}`}
+              x={(pa.x + pb.x) / 2}
+              y={(pa.y + pb.y) / 2 - 6}
+              fontSize={11}
+              fill="#2B241C"
+              textAnchor="middle"
+              style={{ cursor: "pointer", userSelect: "none" }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartDrawEditSegment(i);
+              }}
+            >
+              {distance(a, b).toFixed(2)}m
+            </text>
+          );
+        })}
+      {isDrawing &&
+        drawVertices.map((v, i) => {
+          const p = toPixel(v);
+          return (
+            <circle
+              key={`draw-vertex-${i}`}
+              cx={p.x}
+              cy={p.y}
+              r={5}
+              fill="#fff"
+              stroke="#1F4D3A"
+              strokeWidth={2}
+              style={{ cursor: "grab" }}
+              onMouseDown={handleDrawVertexMouseDown(i)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          );
+        })}
+      {isDrawing &&
+        drawEditingIndex !== null &&
+        (() => {
+          const a = drawVertices[drawEditingIndex];
+          const b = drawVertices[(drawEditingIndex + 1) % drawVertices.length];
+          const pa = toPixel(a);
+          const pb = toPixel(b);
+          const midX = (pa.x + pb.x) / 2;
+          const midY = (pa.y + pb.y) / 2;
+          return (
+            <foreignObject x={midX - 50} y={midY - 36} width={100} height={40}>
+              <TextField
+                autoFocus
+                size="small"
+                type="number"
+                value={drawEditValue}
+                onChange={(e) => onDrawEditValueChange(e.target.value)}
+                onBlur={onCommitDrawEditSegment}
+                onKeyDown={(e) => e.key === "Enter" && onCommitDrawEditSegment()}
+                sx={{ width: 100, bgcolor: "background.paper" }}
+              />
+            </foreignObject>
+          );
+        })()}
     </svg>
   );
 }
@@ -304,7 +447,10 @@ function ManageSubFieldsPanel({
   const [selectedId, setSelectedId] = useState(null);
   const [isEditingBoundary, setIsEditingBoundary] = useState(false);
   const [clipboard, setClipboard] = useState(null);
-  const [drawnVertices, setDrawnVertices] = useState(null);
+  const [drawVertices, setDrawVertices] = useState([]);
+  const [isDrawClosed, setIsDrawClosed] = useState(false);
+  const [drawEditingIndex, setDrawEditingIndex] = useState(null);
+  const [drawEditValue, setDrawEditValue] = useState("");
   const [newField, setNewField] = useState(emptyNewField);
   const [error, setError] = useState("");
   const [activeEditTab, setActiveEditTab] = useState(0);
@@ -415,7 +561,8 @@ function ManageSubFieldsPanel({
     flushPendingSave();
     setSelectedId(fieldId);
     setIsEditingBoundary(false);
-    setDrawnVertices(null);
+    setDrawVertices([]);
+    setIsDrawClosed(false);
     const field = subFields.find((f) => f.id === fieldId);
     if (field) {
       const status = field.status || "planning";
@@ -517,13 +664,68 @@ function ManageSubFieldsPanel({
     setError("");
   };
 
+  // Drawing a new sub-field happens live on the same SubFieldsOverview SVG
+  // that already shows the parent boundary and its existing siblings - see
+  // ManageSubFieldsMap.jsx's identical draw-on-the-map handlers, which this
+  // mirrors so free space (and what's already claimed) is visible the whole
+  // time, not just guessed at in a separate blind canvas.
+  const handleDrawClick = (point) => {
+    if (isDrawClosed) return;
+    setDrawVertices((prev) => [...prev, point]);
+  };
+
+  const handleDrawVertexDrag = (index, point) => {
+    setDrawVertices((prev) => prev.map((v, i) => (i === index ? point : v)));
+  };
+
+  const handleDrawUndo = () => setDrawVertices((prev) => prev.slice(0, -1));
+
+  const handleDrawClear = () => {
+    setDrawVertices([]);
+    setIsDrawClosed(false);
+  };
+
+  const handleDrawClose = () => {
+    if (drawVertices.length < 3) return;
+    setIsDrawClosed(true);
+  };
+
+  const handleDrawEditAgain = () => setIsDrawClosed(false);
+
+  const startDrawEditSegment = (index) => {
+    const a = drawVertices[index];
+    const b = drawVertices[(index + 1) % drawVertices.length];
+    setDrawEditingIndex(index);
+    setDrawEditValue(distance(a, b).toFixed(2));
+  };
+
+  const commitDrawEditSegment = () => {
+    const newLength = Number(drawEditValue);
+    if (drawEditingIndex === null || !(newLength > 0)) {
+      setDrawEditingIndex(null);
+      return;
+    }
+    const a = drawVertices[drawEditingIndex];
+    const bIndex = (drawEditingIndex + 1) % drawVertices.length;
+    const b = drawVertices[bIndex];
+    const currentLength = distance(a, b) || 1;
+    const dx = ((b.x - a.x) / currentLength) * newLength;
+    const dy = ((b.y - a.y) / currentLength) * newLength;
+    setDrawVertices((prev) => {
+      const updated = [...prev];
+      updated[bIndex] = { x: a.x + dx, y: a.y + dy };
+      return updated;
+    });
+    setDrawEditingIndex(null);
+  };
+
   const handleCreateNew = async () => {
     const spacingValues = [newField.plantSpacing, newField.rowSpacing].map(Number);
     if (!newField.name || spacingValues.some((v) => !(v > 0))) {
       setError("Please fill in a name and positive spacing values");
       return;
     }
-    if (!drawnVertices || drawnVertices.length < 3) {
+    if (!isDrawClosed || drawVertices.length < 3) {
       setError("Draw and close a boundary with at least 3 points");
       return;
     }
@@ -534,14 +736,15 @@ function ManageSubFieldsPanel({
       variety: newField.variety === "Custom" ? null : newField.variety,
       shapeType: "polygon",
       parentFieldId: parentField.id,
-      vertices: drawnVertices,
+      vertices: drawVertices,
       sowingStructure: newField.sowingStructure,
       plantSpacing: spacingValues[0],
       rowSpacing: spacingValues[1],
     });
     setIsCreatingSubField(false);
     if (created) {
-      setDrawnVertices(null);
+      setDrawVertices([]);
+      setIsDrawClosed(false);
       setNewField(emptyNewField);
       setError("");
     } else {
@@ -568,7 +771,7 @@ function ManageSubFieldsPanel({
       >
         <Typography variant="body2" color="text.secondary">
           Drag a sub-field to reposition it, use the icons below to copy or delete one, or draw a new one
-          further down.
+          on the boundary shown on the right.
         </Typography>
 
         <Box>
@@ -590,6 +793,8 @@ function ManageSubFieldsPanel({
               onClick={() => {
                 setIsEditingBoundary(true);
                 setSelectedId(null);
+                setDrawVertices([]);
+                setIsDrawClosed(false);
               }}
             >
               Edit outer boundary shape
@@ -744,7 +949,32 @@ function ManageSubFieldsPanel({
               onChange={(e) => updateFieldValue({ rowSpacing: e.target.value })}
             />
             {!selectedId && (
-              <FieldDrawingCanvas onFinish={setDrawnVertices} referenceVertices={parentField.vertices} />
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Click on the boundary preview to place the new sub-field's corners, then Close Shape.
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                  <Button size="small" onClick={handleDrawUndo} disabled={drawVertices.length === 0 || isDrawClosed}>
+                    Undo point
+                  </Button>
+                  <Button size="small" onClick={handleDrawClear}>
+                    Clear
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleDrawClose}
+                    disabled={drawVertices.length < 3 || isDrawClosed}
+                  >
+                    Close Shape
+                  </Button>
+                  {isDrawClosed && (
+                    <Button size="small" onClick={handleDrawEditAgain}>
+                      Edit again
+                    </Button>
+                  )}
+                </Box>
+              </Box>
             )}
           </>
         )}
@@ -836,6 +1066,16 @@ function ManageSubFieldsPanel({
             onMoved={handleMoved}
             isEditingBoundary={isEditingBoundary}
             onMovedBoundary={handleMovedBoundary}
+            isDrawing={!selectedId && !isEditingBoundary}
+            drawVertices={drawVertices}
+            isDrawClosed={isDrawClosed}
+            onDrawClick={handleDrawClick}
+            onDrawVertexDrag={handleDrawVertexDrag}
+            drawEditingIndex={drawEditingIndex}
+            drawEditValue={drawEditValue}
+            onDrawEditValueChange={setDrawEditValue}
+            onStartDrawEditSegment={startDrawEditSegment}
+            onCommitDrawEditSegment={commitDrawEditSegment}
           />
         </Box>
         {selectedId && activeEditTab === 1 && (
