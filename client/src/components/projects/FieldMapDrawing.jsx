@@ -137,13 +137,13 @@ function FieldMapDrawing({ onFinish, parentGeoVertices }) {
           {parentGeoVertices?.length >= 3 && (
             <Polygon
               positions={parentGeoVertices.map((v) => [v.lat, v.lng])}
-              pathOptions={{ color: "#8A7A5C", weight: 2, dashArray: "6 6", fillOpacity: 0 }}
+              pathOptions={{ color: "var(--color-muted)", weight: 2, dashArray: "6 6", fillOpacity: 0 }}
             />
           )}
           {vertices.length >= 2 && (
             <Polygon
               positions={vertices.map((v) => [v.lat, v.lng])}
-              pathOptions={{ color: "#1F4D3A", fillOpacity: isClosed ? 0.15 : 0 }}
+              pathOptions={{ color: "var(--color-primary)", fillOpacity: isClosed ? 0.15 : 0 }}
             />
           )}
           {segments.map(([a, b], i) => {

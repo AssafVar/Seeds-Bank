@@ -158,8 +158,8 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
     <>
       <polygon
         points={points}
-        fill={isSelected ? "rgba(214,84,58,0.2)" : dashed ? "none" : "rgba(31,77,58,0.15)"}
-        stroke={isSelected ? "#D6543A" : dashed ? "#8A7A5C" : "#1F4D3A"}
+        fill={isSelected ? "rgba(var(--color-secondary-rgb), 0.2)" : dashed ? "none" : "rgba(var(--color-primary-rgb), 0.15)"}
+        stroke={isSelected ? "var(--color-secondary)" : dashed ? "var(--color-muted)" : "var(--color-primary)"}
         strokeWidth={isSelected ? 3 : 2}
         strokeDasharray={!isSelected && dashed ? "6 6" : undefined}
         style={{ cursor: allowShapeDrag ? "move" : "pointer" }}
@@ -168,7 +168,7 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
       />
       {(field.plantPositions || []).map((p, i) => {
         const point = toPixel({ x: p.x + plantOffset.dx, y: p.y + plantOffset.dy });
-        return <circle key={i} cx={point.x} cy={point.y} r={2} fill="#1F4D3A" style={{ pointerEvents: "none" }} />;
+        return <circle key={i} cx={point.x} cy={point.y} r={2} fill="var(--color-primary)" style={{ pointerEvents: "none" }} />;
       })}
       {isSelected &&
         liveVertices.map((v, i) => {
@@ -180,7 +180,7 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
               cy={p.y}
               r={5}
               fill="#fff"
-              stroke="#1F4D3A"
+              stroke="var(--color-primary)"
               strokeWidth={2}
               style={{ cursor: "pointer" }}
               onMouseDown={handleVertexMouseDown(i)}
@@ -200,7 +200,7 @@ function DraggableSubFieldShape({ field, isSelected, onSelect, onMoved, toPixel,
               x={(pa.x + pb.x) / 2}
               y={(pa.y + pb.y) / 2 - 6}
               fontSize={11}
-              fill="#2B241C"
+              fill="var(--color-text-primary)"
               textAnchor="middle"
               style={{ cursor: "pointer", userSelect: "none" }}
               onMouseDown={(e) => e.stopPropagation()}
@@ -343,15 +343,15 @@ function SubFieldsOverview({
         isDrawClosed ? (
           <polygon
             points={drawVertices.map((v) => { const p = toPixel(v); return `${p.x},${p.y}`; }).join(" ")}
-            fill="rgba(31,77,58,0.15)"
-            stroke="#1F4D3A"
+            fill="rgba(var(--color-primary-rgb), 0.15)"
+            stroke="var(--color-primary)"
             strokeWidth={2}
           />
         ) : (
           <polyline
             points={drawVertices.map((v) => { const p = toPixel(v); return `${p.x},${p.y}`; }).join(" ")}
             fill="none"
-            stroke="#1F4D3A"
+            stroke="var(--color-primary)"
             strokeWidth={2}
           />
         )
@@ -369,7 +369,7 @@ function SubFieldsOverview({
               x={(pa.x + pb.x) / 2}
               y={(pa.y + pb.y) / 2 - 6}
               fontSize={11}
-              fill="#2B241C"
+              fill="var(--color-text-primary)"
               textAnchor="middle"
               style={{ cursor: "pointer", userSelect: "none" }}
               onMouseDown={(e) => e.stopPropagation()}
@@ -392,7 +392,7 @@ function SubFieldsOverview({
               cy={p.y}
               r={5}
               fill="#fff"
-              stroke="#1F4D3A"
+              stroke="var(--color-primary)"
               strokeWidth={2}
               style={{ cursor: "grab" }}
               onMouseDown={handleDrawVertexMouseDown(i)}

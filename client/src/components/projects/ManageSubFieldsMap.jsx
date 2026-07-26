@@ -165,7 +165,7 @@ function DraggableSubFieldPolygon({ field, isSelected, onSelect, onMoved, suppre
       <Polygon
         positions={liveVertices.map((v) => [v.lat, v.lng])}
         pathOptions={{
-          color: isSelected ? "#D6543A" : "#1F4D3A",
+          color: isSelected ? "var(--color-secondary)" : "var(--color-primary)",
           weight: isSelected ? 3 : 2,
           fillOpacity: 0.25,
         }}
@@ -233,7 +233,7 @@ function SubFieldPlants({ field, offset }) {
         key={i}
         center={[latLng.lat + dLat, latLng.lng + dLng]}
         radius={3}
-        pathOptions={{ color: "#1F4D3A", fillColor: "#1F4D3A", fillOpacity: 0.9, weight: 1 }}
+        pathOptions={{ color: "var(--color-primary)", fillColor: "var(--color-primary)", fillOpacity: 0.9, weight: 1 }}
         interactive={false}
       />
     );
@@ -846,7 +846,7 @@ function ManageSubFieldsMap({
 
             <Polygon
               positions={parentField.geoVertices.map((v) => [v.lat, v.lng])}
-              pathOptions={{ color: "#8A7A5C", weight: 2, dashArray: "6 6", fillOpacity: 0 }}
+              pathOptions={{ color: "var(--color-muted)", weight: 2, dashArray: "6 6", fillOpacity: 0 }}
             />
 
             {subFields.map((f) => (
@@ -863,7 +863,7 @@ function ManageSubFieldsMap({
             {drawVertices.length >= 2 && (
               <Polygon
                 positions={drawVertices.map((v) => [v.lat, v.lng])}
-                pathOptions={{ color: "#1F4D3A", fillOpacity: isDrawClosed ? 0.15 : 0 }}
+                pathOptions={{ color: "var(--color-primary)", fillOpacity: isDrawClosed ? 0.15 : 0 }}
               />
             )}
             {drawSegments.map(([a, b], i) => {

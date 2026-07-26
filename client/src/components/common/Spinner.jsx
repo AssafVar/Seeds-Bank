@@ -1,5 +1,5 @@
 import Box from "@mui/material/Box";
-import colors from "../../colors";
+import { alpha, useTheme } from "@mui/material/styles";
 
 // A rotating two-tone ring (vermillion fading into pine green) instead of
 // MUI's flat single-color default, so waiting states read as part of the
@@ -22,6 +22,7 @@ function ring(colorStart, colorEnd, size, thickness) {
 
 // The big, centered spinner for a section/page waiting on its initial fetch.
 export default function Spinner({ size = 40, minHeight = 120, sx, ...props }) {
+  const theme = useTheme();
   const thickness = Math.max(3, Math.round(size * 0.11));
   return (
     <Box
@@ -30,8 +31,8 @@ export default function Spinner({ size = 40, minHeight = 120, sx, ...props }) {
     >
       <Box
         sx={{
-          ...ring(colors.secondary, colors.primary, size, thickness),
-          filter: "drop-shadow(0 1px 3px rgba(31, 77, 58, 0.25))",
+          ...ring(theme.palette.secondary.main, theme.palette.primary.main, size, thickness),
+          filter: `drop-shadow(0 1px 3px ${alpha(theme.palette.primary.main, 0.25)})`,
         }}
       />
     </Box>

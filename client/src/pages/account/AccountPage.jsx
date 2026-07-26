@@ -6,6 +6,7 @@ import { Container } from "@mui/system";
 import { classes } from "../../styles/accountStyle.js";
 import AccountProfile from "../../components/account/AccountProfile";
 import AccountDelete from "../../components/account/AccountDelete";
+import AccountSettings from "../../components/account/AccountSettings";
 import authContext from "../../contexts/AuthContext";
 
 function AccountPage(props) {
@@ -34,6 +35,7 @@ function AccountPage(props) {
             {" "}
             {formType==="General" && <AccountGeneral />}
             {formType==="Profile" && <AccountProfile />}
+            {formType==="Settings" && <AccountSettings />}
             {formType==="Delete Account" && <AccountDelete />}
           </Box>
         </Grid>

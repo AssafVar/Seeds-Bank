@@ -20,7 +20,7 @@ export default function PlantCard({
   onDelete,
 }) {
   return (
-    <Card sx={{ width: "100%" }}>
+    <Card variant="outlined" sx={{ width: "100%" }}>
       <CardContent>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <TextField

@@ -1,9 +1,8 @@
 import React from "react";
 import { render } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { ThemeProvider } from "@mui/material/styles";
+import ThemeModeProvider from "../components/ThemeModeProvider";
 import authContext from "../contexts/AuthContext";
-import theme from "../theme";
 
 export const buildAuthValue = (overrides = {}) => ({
   activeUser: null,
@@ -26,11 +25,11 @@ export function renderWithProviders(
   function Wrapper({ children }) {
     return (
       <MemoryRouter initialEntries={[route]}>
-        <ThemeProvider theme={theme}>
+        <ThemeModeProvider>
           <authContext.Provider value={authValue}>
             {routePath ? <Routes><Route path={routePath} element={children} /></Routes> : children}
           </authContext.Provider>
-        </ThemeProvider>
+        </ThemeModeProvider>
       </MemoryRouter>
     );
   }
