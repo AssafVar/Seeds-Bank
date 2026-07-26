@@ -2,7 +2,7 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
-import colors from "../../colors";
+import { alpha, useTheme } from "@mui/material/styles";
 import { estimateMaterials } from "../../libs/materialsEstimate.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -15,6 +15,7 @@ const formatNumber = (n) => Math.round(n).toLocaleString();
 // on every render (not stored anywhere), so they move on their own as days
 // pass rather than needing the underlying field data to change.
 function FieldTimeline({ status, sowingDate, harvestDate, variety, areaM2, totalCapacity, varieties = [] }) {
+  const theme = useTheme();
   const today = new Date();
   const sown = sowingDate ? new Date(sowingDate) : null;
   const harvest = harvestDate ? new Date(harvestDate) : null;
@@ -70,7 +71,7 @@ function FieldTimeline({ status, sowingDate, harvestDate, variety, areaM2, total
             sx={{
               height: 20,
               borderRadius: 10,
-              bgcolor: `${colors.primaryLight}33`,
+              bgcolor: alpha(theme.palette.primary.light, 0.2),
               position: "relative",
               overflow: "hidden",
             }}
@@ -80,7 +81,7 @@ function FieldTimeline({ status, sowingDate, harvestDate, variety, areaM2, total
                 position: "absolute",
                 inset: 0,
                 width: `${progress}%`,
-                bgcolor: isOverdue ? colors.secondary : colors.primary,
+                bgcolor: isOverdue ? theme.palette.secondary.main : theme.palette.primary.main,
                 borderRadius: 10,
                 transition: "width 0.3s ease, background-color 0.3s ease",
               }}

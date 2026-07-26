@@ -24,7 +24,7 @@ function AccountDelete(props) {
   }
 
   return (
-    <Box style={classes.formBox}>
+    <Box style={{ ...classes.formBox, borderColor: "#D32F2F" }}>
       <Typography style={classes.boxHeadline}>
         Delete the account will delete all the account information.
       </Typography>

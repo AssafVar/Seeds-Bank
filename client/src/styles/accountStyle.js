@@ -12,7 +12,7 @@ export const classes = {
         border: "1px solid var(--color-divider)",
         marginBottom: "40px",
         padding: "30px",
-        borderRadius: "20px",
+        borderRadius: "16px",
     },
     formInput:{
         borderRadius: "10px",

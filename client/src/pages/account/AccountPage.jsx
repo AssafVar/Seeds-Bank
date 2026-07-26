@@ -1,12 +1,13 @@
 import React, {useContext, useState} from "react";
 import AccountHeaderList from "../../components/account/AccountHeaderList";
 import AccountGeneral from "../../components/account/AccountGeneral";
-import { Box, Grid, Typography } from "@mui/material";
+import { Box, Grid } from "@mui/material";
 import { Container } from "@mui/system";
-import { classes } from "../../styles/accountStyle.js";
 import AccountProfile from "../../components/account/AccountProfile";
 import AccountDelete from "../../components/account/AccountDelete";
+import AccountSettings from "../../components/account/AccountSettings";
 import authContext from "../../contexts/AuthContext";
+import PageHeadline from "../../components/headline/PageHeadline";
 
 function AccountPage(props) {
 
@@ -18,22 +19,18 @@ function AccountPage(props) {
 
   return (
     <Container>
-      <Typography variant="h3" style={classes.pageHeadline}>
-        {" "}
-        {activeUser.userName ? `${activeUser.userName}'s Account` : "My Account"}
-      </Typography>
-      <Grid container spacing={8}>
-        <Grid item xs={4}>
+      <PageHeadline title={activeUser.userName ? `${activeUser.userName}'s Account` : "My Account"} />
+      <Grid container spacing={{ xs: 3, sm: 6 }}>
+        <Grid item xs={12} sm={4}>
           <Box>
-            {" "}
             <AccountHeaderList onFormChange={onFormChange} formType={formType}/>
           </Box>
         </Grid>
-        <Grid item xs={8}>
+        <Grid item xs={12} sm={8}>
           <Box>
-            {" "}
             {formType==="General" && <AccountGeneral />}
             {formType==="Profile" && <AccountProfile />}
+            {formType==="Settings" && <AccountSettings />}
             {formType==="Delete Account" && <AccountDelete />}
           </Box>
         </Grid>

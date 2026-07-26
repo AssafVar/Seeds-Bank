@@ -31,12 +31,12 @@ function GridLines({ scale, gridStep }) {
   const lines = [];
   for (let x = 0; x <= CANVAS_WIDTH / scale; x += gridStep) {
     lines.push(
-      <line key={`v${x}`} x1={x * scale} y1={0} x2={x * scale} y2={CANVAS_HEIGHT} stroke="#E3D9C4" strokeWidth={1} />
+      <line key={`v${x}`} x1={x * scale} y1={0} x2={x * scale} y2={CANVAS_HEIGHT} stroke="var(--color-divider)" strokeWidth={1} />
     );
   }
   for (let y = 0; y <= CANVAS_HEIGHT / scale; y += gridStep) {
     lines.push(
-      <line key={`h${y}`} x1={0} y1={y * scale} x2={CANVAS_WIDTH} y2={y * scale} stroke="#E3D9C4" strokeWidth={1} />
+      <line key={`h${y}`} x1={0} y1={y * scale} x2={CANVAS_WIDTH} y2={y * scale} stroke="var(--color-divider)" strokeWidth={1} />
     );
   }
   return <>{lines}</>;
@@ -202,14 +202,14 @@ function FieldDrawingCanvas({ onFinish, referenceVertices }) {
           style={{ display: "block", cursor: isClosed ? "default" : "crosshair" }}
         >
           {fit ? (
-            <polygon points={referencePoints} fill="none" stroke="#1F4D3A" strokeDasharray="6 4" strokeWidth={1.5} />
+            <polygon points={referencePoints} fill="none" stroke="var(--color-primary)" strokeDasharray="6 4" strokeWidth={1.5} />
           ) : (
             <GridLines scale={scale} gridStep={gridStep} />
           )}
           {isClosed ? (
-            <polygon points={points} fill="rgba(31,77,58,0.15)" stroke="#1F4D3A" strokeWidth={2} />
+            <polygon points={points} fill="rgba(var(--color-primary-rgb), 0.15)" stroke="var(--color-primary)" strokeWidth={2} />
           ) : (
-            <polyline points={points} fill="none" stroke="#1F4D3A" strokeWidth={2} />
+            <polyline points={points} fill="none" stroke="var(--color-primary)" strokeWidth={2} />
           )}
           {!isClosed && vertices.length > 0 && mousePos && (
             <line
@@ -217,14 +217,14 @@ function FieldDrawingCanvas({ onFinish, referenceVertices }) {
               y1={toPixel(vertices[vertices.length - 1]).y}
               x2={toPixel(mousePos).x}
               y2={toPixel(mousePos).y}
-              stroke="#D6543A"
+              stroke="var(--color-secondary)"
               strokeDasharray="4 4"
               strokeWidth={1.5}
             />
           )}
           {vertices.map((v, i) => {
             const p = toPixel(v);
-            return <circle key={i} cx={p.x} cy={p.y} r={4} fill="#1F4D3A" />;
+            return <circle key={i} cx={p.x} cy={p.y} r={4} fill="var(--color-primary)" />;
           })}
           {segments.map(([a, b, index]) => {
             const pa = toPixel(a);
@@ -237,7 +237,7 @@ function FieldDrawingCanvas({ onFinish, referenceVertices }) {
                 x={midX}
                 y={midY - 6}
                 fontSize={12}
-                fill="#2B241C"
+                fill="var(--color-text-primary)"
                 textAnchor="middle"
                 style={{ cursor: "pointer", userSelect: "none" }}
                 onClick={(e) => {
@@ -254,7 +254,7 @@ function FieldDrawingCanvas({ onFinish, referenceVertices }) {
               x={toPixel(mousePos).x}
               y={toPixel(mousePos).y - 10}
               fontSize={12}
-              fill="#D6543A"
+              fill="var(--color-secondary)"
             >
               {distance(vertices[vertices.length - 1], mousePos).toFixed(2)}m
             </text>

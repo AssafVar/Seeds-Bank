@@ -6,6 +6,7 @@ export const style = {
     width: 400,
     bgcolor: 'background.paper',
     borderRadius: 2,
-    boxShadow: 24,
+    border: '1px solid var(--color-divider)',
+    boxShadow: 'none',
     p: 4,
   };

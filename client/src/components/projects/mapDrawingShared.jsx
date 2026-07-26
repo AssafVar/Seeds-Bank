@@ -83,7 +83,7 @@ export function localToLatLng(vertices, geoVertices) {
 
 export const vertexIcon = L.divIcon({
   className: "field-map-vertex-icon",
-  html: '<div style="width:14px;height:14px;border-radius:50%;background:#1F4D3A;border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,0.5);cursor:grab;"></div>',
+  html: '<div style="width:14px;height:14px;border-radius:50%;background:var(--color-primary);border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,0.5);cursor:grab;"></div>',
   iconSize: [14, 14],
   iconAnchor: [7, 7],
 });
@@ -91,7 +91,7 @@ export const vertexIcon = L.divIcon({
 export function labelIcon(text) {
   return L.divIcon({
     className: "field-map-segment-label",
-    html: `<div style="position:relative;left:-50%;top:-50%;background:rgba(255,255,255,0.9);border:1px solid #8A7A5C;border-radius:4px;padding:1px 5px;font-size:11px;color:#2B241C;white-space:nowrap;">${text}</div>`,
+    html: `<div style="position:relative;left:-50%;top:-50%;background:rgba(255,255,255,0.9);border:1px solid var(--color-muted);border-radius:4px;padding:1px 5px;font-size:11px;color:var(--color-text-primary);white-space:nowrap;">${text}</div>`,
     iconSize: [0, 0],
   });
 }

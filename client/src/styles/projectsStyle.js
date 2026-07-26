@@ -13,8 +13,8 @@ export const classes = {
   },
   projectListItem: {
     margin: "20px 5px 0 5px",
-    border: "black solid 1px",
-    borderRadius: "5px",
+    border: "1px solid var(--color-divider)",
+    borderRadius: "12px",
     padding: "20px 0 5px",
     textAlign: "center",
     cursor: "pointer",
