@@ -8,11 +8,6 @@ jest.mock("../../services/serverCalls", () => ({
   getWorkers: jest.fn(),
 }));
 
-// FieldDrawingCanvas's own drawing behavior is covered by its own test file;
-// here it's stubbed as a button that fires onFinish with a fixed shape.
-jest.mock("./FieldDrawingCanvas.jsx", () => ({ onFinish }) => (
-  <button onClick={() => onFinish([{ x: 2, y: 2 }, { x: 4, y: 2 }, { x: 4, y: 4 }])}>drawing-canvas-finish</button>
-));
 jest.mock("./FieldTimeline.jsx", () => ({ status }) => <div>field-timeline-{status}</div>);
 jest.mock("./FieldLaborTab.jsx", () => ({ fieldId }) => <div>field-labor-{fieldId}</div>);
 
@@ -92,11 +87,14 @@ afterEach(() => {
 });
 
 describe("ManageSubFieldsPanel", () => {
-  it("shows the add-new form with a drawing canvas when there are no sub-fields yet", () => {
+  it("shows the add-new form with drawing controls when there are no sub-fields yet", () => {
     render(<ManageSubFieldsPanel {...baseProps()} />);
 
     expect(screen.getByText("Add a new sub-field")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "drawing-canvas-finish" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Click on the boundary preview to place the new sub-field's corners, then Close Shape.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close Shape" })).toBeInTheDocument();
   });
 
   it("shows a validation error instead of creating a sub-field with no boundary drawn", async () => {
@@ -113,13 +111,24 @@ describe("ManageSubFieldsPanel", () => {
   });
 
   it("creates a new sub-field with the drawn local vertices", async () => {
+    // Same scale trick as dragParentField below (8px/m) - drawn pixel clicks
+    // round-trip to exact meter coordinates with no floating-point drift.
     const onCreate = jest.fn().mockResolvedValue({ ...subField, id: 2 });
-    render(<ManageSubFieldsPanel {...baseProps({ onCreate })} />);
+    const { container } = render(
+      <ManageSubFieldsPanel {...baseProps({ parentField: dragParentField, onCreate })} />
+    );
 
     userEvent.type(screen.getByLabelText("Field name"), "Tomato row");
     userEvent.type(screen.getByLabelText("Plant spacing (m)"), "0.3");
     userEvent.type(screen.getByLabelText("Row spacing (m)"), "0.5");
-    userEvent.click(screen.getByRole("button", { name: "drawing-canvas-finish" }));
+
+    // The boundary preview svg specifically - MUI's own icons (e.g. the
+    // variety Select's dropdown arrow) are also <svg> elements in this tree.
+    const svg = container.querySelector('svg[width="400"]');
+    fireEvent.click(svg, { clientX: 32, clientY: 32 }); // -> {x: 2, y: 2}
+    fireEvent.click(svg, { clientX: 48, clientY: 32 }); // -> {x: 4, y: 2}
+    fireEvent.click(svg, { clientX: 48, clientY: 48 }); // -> {x: 4, y: 4}
+    userEvent.click(screen.getByRole("button", { name: "Close Shape" }));
     userEvent.click(screen.getByRole("button", { name: "Add Sub-Field" }));
 
     await waitFor(() =>
