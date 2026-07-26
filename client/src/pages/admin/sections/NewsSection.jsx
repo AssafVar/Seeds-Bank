@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
+import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { classes } from "../../../styles/adminStyle.js";
 import CrudTable from "../../../components/admin/CrudTable.jsx";
 import FormDialog from "../../../components/admin/FormDialog.jsx";
 import SectionHeader from "../../../components/admin/SectionHeader.jsx";
@@ -105,18 +105,15 @@ function NewsSection() {
 
   if (isLoading) {
     return (
-      <Card variant="outlined">
-        <CardContent>
-          <Spinner />
-        </CardContent>
-      </Card>
+      <Box style={classes.sectionBox}>
+        <Spinner />
+      </Box>
     );
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <SectionHeader title="News posts" buttonLabel="New post" onAdd={handleAdd} />
+    <Box style={classes.sectionBox}>
+      <SectionHeader title="News posts" buttonLabel="New post" onAdd={handleAdd} />
         <CrudTable
           columns={columns}
           rows={posts}
@@ -147,8 +144,7 @@ function NewsSection() {
             onChange={(e) => setForm({ ...form, body: e.target.value })}
           />
         </FormDialog>
-      </CardContent>
-    </Card>
+    </Box>
   );
 }
 

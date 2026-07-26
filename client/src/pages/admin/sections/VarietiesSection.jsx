@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import TextField from "@mui/material/TextField";
+import { classes } from "../../../styles/adminStyle.js";
 import CrudTable from "../../../components/admin/CrudTable.jsx";
 import FormDialog from "../../../components/admin/FormDialog.jsx";
 import SectionHeader from "../../../components/admin/SectionHeader.jsx";
@@ -140,19 +139,16 @@ function VarietiesSection() {
 
   if (isLoading) {
     return (
-      <Card variant="outlined">
-        <CardContent>
-          <Spinner />
-        </CardContent>
-      </Card>
+      <Box style={classes.sectionBox}>
+        <Spinner />
+      </Box>
     );
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <SectionHeader
-          title="Vegetable varieties"
+    <Box style={classes.sectionBox}>
+      <SectionHeader
+        title="Vegetable varieties"
           description="Powers the variety dropdown and materials estimate everywhere in the app."
           buttonLabel="New variety"
           onAdd={handleAdd}
@@ -227,8 +223,7 @@ function VarietiesSection() {
             />
           </Box>
         </FormDialog>
-      </CardContent>
-    </Card>
+    </Box>
   );
 }
 

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { classes } from "../../../styles/adminStyle.js";
 import Spinner, { InlineSpinner } from "../../../components/common/Spinner.jsx";
 import { getSiteContent, updateSiteContent } from "../../../services/serverCalls";
 
@@ -51,18 +50,15 @@ function HomeContentSection() {
 
   if (isLoading) {
     return (
-      <Card variant="outlined">
-        <CardContent>
-          <Spinner />
-        </CardContent>
-      </Card>
+      <Box style={classes.sectionBox}>
+        <Spinner />
+      </Box>
     );
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
+    <Box style={classes.sectionBox}>
+      <Typography variant="h6" gutterBottom>
           Home page content
         </Typography>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -93,8 +89,7 @@ function HomeContentSection() {
             {saveMessage && <Typography variant="body2">{saveMessage}</Typography>}
           </Box>
         </Box>
-      </CardContent>
-    </Card>
+    </Box>
   );
 }
 
