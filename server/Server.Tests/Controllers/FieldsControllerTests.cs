@@ -31,12 +31,25 @@ public class FieldsControllerTests
     public async Task GetFields_returns_ok_with_the_project_s_fields()
     {
         var fieldService = new Mock<IFieldService>();
-        fieldService.Setup(s => s.GetByProjectAsync("p1")).ReturnsAsync(new List<FieldDto>());
+        fieldService.Setup(s => s.GetByProjectAsync("p1", 1, 12)).ReturnsAsync(new PagedResultDto<FieldDto>());
         var controller = MakeController(fieldService, new Mock<IFieldWorkLogService>());
 
         var result = await controller.GetFields("u1", "p1");
 
         Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetFields_forwards_page_and_pageSize_to_the_service()
+    {
+        var fieldService = new Mock<IFieldService>();
+        fieldService.Setup(s => s.GetByProjectAsync("p1", 3, 5)).ReturnsAsync(new PagedResultDto<FieldDto>());
+        var controller = MakeController(fieldService, new Mock<IFieldWorkLogService>());
+
+        var result = await controller.GetFields("u1", "p1", page: 3, pageSize: 5);
+
+        Assert.IsType<OkObjectResult>(result);
+        fieldService.Verify(s => s.GetByProjectAsync("p1", 3, 5), Times.Once);
     }
 
     [Fact]
@@ -59,6 +72,42 @@ public class FieldsControllerTests
         var controller = MakeController(fieldService, new Mock<IFieldWorkLogService>());
 
         var result = await controller.CreateField("u1", "p1", new FieldRequest { Name = "North plot", ShapeType = "rectangle" });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task RenameField_returns_ok_with_the_renamed_field()
+    {
+        var fieldService = new Mock<IFieldService>();
+        fieldService.Setup(s => s.RenameAsync("p1", 1, "North block")).ReturnsAsync(new FieldDto { Name = "North block" });
+        var controller = MakeController(fieldService, new Mock<IFieldWorkLogService>());
+
+        var result = await controller.RenameField("u1", "p1", 1, new RenameFieldRequest { Name = "North block" });
+
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task RenameField_returns_not_found_for_a_missing_field()
+    {
+        var fieldService = new Mock<IFieldService>();
+        fieldService.Setup(s => s.RenameAsync("p1", 999, It.IsAny<string>())).ReturnsAsync((FieldDto?)null);
+        var controller = MakeController(fieldService, new Mock<IFieldWorkLogService>());
+
+        var result = await controller.RenameField("u1", "p1", 999, new RenameFieldRequest { Name = "x" });
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task RenameField_returns_bad_request_when_the_service_rejects_the_name()
+    {
+        var fieldService = new Mock<IFieldService>();
+        fieldService.Setup(s => s.RenameAsync("p1", 1, "")).ThrowsAsync(new ArgumentException("Name cannot be empty."));
+        var controller = MakeController(fieldService, new Mock<IFieldWorkLogService>());
+
+        var result = await controller.RenameField("u1", "p1", 1, new RenameFieldRequest { Name = "" });
 
         Assert.IsType<BadRequestObjectResult>(result);
     }

@@ -130,9 +130,11 @@ export const deletePlant = async (user_id, plantIdToDelete) => {
   }
 };
 
-export const getFields = async (userId, projectId) => {
+export const getFields = async (userId, projectId, page = 1, pageSize = 12) => {
   try {
-    const results = await api.get(`/projects/${userId}/${projectId}/fields`);
+    const results = await api.get(`/projects/${userId}/${projectId}/fields`, {
+      params: { page, pageSize },
+    });
     return results.data;
   } catch (err) {
     console.log(err);
@@ -142,6 +144,15 @@ export const getFields = async (userId, projectId) => {
 export const createField = async (userId, projectId, field) => {
   try {
     const response = await api.post(`/projects/${userId}/${projectId}/fields`, field);
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const renameField = async (userId, projectId, fieldId, name) => {
+  try {
+    const response = await api.put(`/projects/${userId}/${projectId}/fields/${fieldId}/name`, { name });
     return response.data;
   } catch (err) {
     console.log(err);

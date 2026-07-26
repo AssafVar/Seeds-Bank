@@ -25,14 +25,37 @@ public class FieldService : IFieldService
         _db = db;
     }
 
-    public async Task<List<FieldDto>> GetByProjectAsync(string projectId)
+    // Sub-fields always ride along with their parent (the UI groups by
+    // ParentFieldId), so only top-level rows - containers and legacy
+    // standalone fields alike - are paged; a page's sub-fields are fetched
+    // separately by parent id and appended unpaged.
+    public async Task<PagedResultDto<FieldDto>> GetByProjectAsync(string projectId, int page, int pageSize)
     {
-        var fields = await _db.Fields.AsNoTracking()
-            .Where(f => f.ProjectId == projectId)
-            .OrderByDescending(f => f.CreatedAt)
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var topLevelQuery = _db.Fields.AsNoTracking()
+            .Where(f => f.ProjectId == projectId && f.ParentFieldId == null)
+            .OrderByDescending(f => f.CreatedAt);
+
+        var totalCount = await topLevelQuery.CountAsync();
+        var pageFields = await topLevelQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        return fields.Select(ToDto).ToList();
+        var pageIds = pageFields.Select(f => f.Id).ToList();
+        var subFields = await _db.Fields.AsNoTracking()
+            .Where(f => f.ProjectId == projectId && f.ParentFieldId != null && pageIds.Contains(f.ParentFieldId!.Value))
+            .ToListAsync();
+
+        return new PagedResultDto<FieldDto>
+        {
+            Items = pageFields.Concat(subFields).Select(ToDto).ToList(),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize,
+        };
     }
 
     public async Task<FieldDto> CreateAsync(string projectId, FieldRequest request)
@@ -223,6 +246,27 @@ public class FieldService : IFieldService
         field.GeoVerticesJson = isMapAnchored ? JsonSerializer.Serialize(request.GeoVertices) : null;
         await _db.SaveChangesAsync();
 
+        return ToDto(field);
+    }
+
+    // Unlike UpdatePropertiesAsync (planting data only a non-container field
+    // has), a name applies to every field - container or not - so this is
+    // the only edit a large/small field's own boundary row supports.
+    public async Task<FieldDto?> RenameAsync(string projectId, int fieldId, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Name cannot be empty.");
+        }
+
+        var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == fieldId && f.ProjectId == projectId);
+        if (field is null)
+        {
+            return null;
+        }
+
+        field.Name = name;
+        await _db.SaveChangesAsync();
         return ToDto(field);
     }
 

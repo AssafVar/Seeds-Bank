@@ -5,8 +5,6 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  Tab,
-  Tabs,
   TextField,
   Tooltip,
   Typography,
@@ -16,6 +14,7 @@ import {
 import { Box, Container } from "@mui/system";
 import Stack from "@mui/material/Stack";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   fetchCurrentProject,
   saveProject,
@@ -42,7 +41,7 @@ import {
 import DialogModal from "../dialog/DialogModal.jsx";
 import CrossPlantsModal from "../modals/CrossPlantsModal.jsx";
 import PlantCard from "./PlantCard.jsx";
-import FieldsSection from "./FieldsSection.jsx";
+import ProjectTabsBar from "./ProjectTabsBar.jsx";
 import VarietiesSection from "./VarietiesSection.jsx";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GrassIcon from "@mui/icons-material/Grass";
@@ -65,7 +64,10 @@ const rowHeadlines = [
   "generation",
 ];
 
-function ProjectItem({ projectId, handleReturn }) {
+function ProjectItem() {
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [projectHeaders, setProjectHeaders] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
   const [currentTarget, setCurrentTarget] = useState(null);
@@ -80,7 +82,7 @@ function ProjectItem({ projectId, handleReturn }) {
   const [sortBy, setSortBy] = useState("");
   const [plantIdToDelete, setPlantIdToDelete] = useState({});
   const [isOpenCrossModal, setIsOpenCrossModal] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(() => (searchParams.get("tab") === "2" ? 2 : 0));
 
   const { activeUser } = useContext(authContext);
   const inputRef = useRef(null);
@@ -174,6 +176,14 @@ function ProjectItem({ projectId, handleReturn }) {
     fetchProject();
   }, [fetchProject]);
 
+  const handleTabChange = (value) => {
+    if (value === 1) {
+      navigate(`/projects/${projectId}/fields`);
+    } else {
+      setActiveTab(value);
+    }
+  };
+
   return (
     <>
       {!projectHeaders ? (
@@ -185,12 +195,8 @@ function ProjectItem({ projectId, handleReturn }) {
           <Typography variant="h3" style={classes.pageHeadline}>
             project: {projectHeaders.project_name}
           </Typography>
-          <Button onClick={handleReturn} sx={{ mt: 1 }}>Return to the Project List</Button>
-          <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mt: 1, mb: 2 }}>
-            <Tab label="Plants" />
-            <Tab label="Fields" />
-            <Tab label="Varieties" />
-          </Tabs>
+          <Button onClick={() => navigate("/projects")} sx={{ mt: 1 }}>Return to the Project List</Button>
+          <ProjectTabsBar value={activeTab} onChange={handleTabChange} />
           {activeTab === 0 && (
           <>
           <Box
@@ -442,9 +448,6 @@ function ProjectItem({ projectId, handleReturn }) {
             </Button>
           </Box>
           </>
-          )}
-          {activeTab === 1 && (
-            <FieldsSection userId={activeUser.userId} projectId={projectId} />
           )}
           {activeTab === 2 && (
             <VarietiesSection userId={activeUser.userId} projectId={projectId} />

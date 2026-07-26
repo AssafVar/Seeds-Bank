@@ -1,4 +1,4 @@
-// Shared between FieldsSection's card list and ManageSubFieldsMap's
+// Shared between FieldsList's card list and ManageSubFieldsMap's
 // sub-field editor so both display the same labels/colors for a field's
 // grower-set lifecycle stage.
 export const STATUS_OPTIONS = [
