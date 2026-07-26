@@ -1,10 +1,9 @@
 import { useState } from "react";
 import Box from "@mui/material/Box";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
+import Grid from "@mui/material/Grid";
 import { Container } from "@mui/system";
 import PageHeadline from "../../components/headline/PageHeadline";
+import AdminSectionList from "../../components/admin/AdminSectionList.jsx";
 import HomeContentSection from "./sections/HomeContentSection.jsx";
 import GallerySection from "./sections/GallerySection.jsx";
 import NewsSection from "./sections/NewsSection.jsx";
@@ -26,23 +25,18 @@ function AdminPage() {
   return (
     <Container>
       <PageHeadline title="Admin" />
-      <Box sx={{ display: "flex", gap: 3, mt: 2, alignItems: "flex-start" }}>
-        <List sx={{ width: 220, flexShrink: 0, border: "1px solid", borderColor: "divider", borderRadius: 1, py: 0 }}>
-          {SECTIONS.map((section) => (
-            <ListItemButton
-              key={section.id}
-              selected={activeSection === section.id}
-              onClick={() => setActiveSection(section.id)}
-            >
-              <ListItemText primary={section.label} />
-            </ListItemButton>
-          ))}
-        </List>
-
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <ActiveSection />
-        </Box>
-      </Box>
+      <Grid container spacing={{ xs: 3, sm: 6 }}>
+        <Grid item xs={12} sm={4}>
+          <Box>
+            <AdminSectionList sections={SECTIONS} activeId={activeSection} onChange={setActiveSection} />
+          </Box>
+        </Grid>
+        <Grid item xs={12} sm={8}>
+          <Box>
+            <ActiveSection />
+          </Box>
+        </Grid>
+      </Grid>
     </Container>
   );
 }

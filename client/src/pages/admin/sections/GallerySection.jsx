@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { classes } from "../../../styles/adminStyle.js";
 import ConfirmDialog from "../../../components/admin/ConfirmDialog.jsx";
 import Spinner, { InlineSpinner } from "../../../components/common/Spinner.jsx";
 import {
@@ -61,20 +60,17 @@ function GallerySection() {
 
   if (isLoading) {
     return (
-      <Card variant="outlined">
-        <CardContent>
-          <Spinner />
-        </CardContent>
-      </Card>
+      <Box style={classes.sectionBox}>
+        <Spinner />
+      </Box>
     );
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Picture gallery
-        </Typography>
+    <Box style={classes.sectionBox}>
+      <Typography variant="h6" gutterBottom>
+        Picture gallery
+      </Typography>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
           <input
             type="file"
@@ -130,8 +126,7 @@ function GallerySection() {
             setConfirmImageId(null);
           }}
         />
-      </CardContent>
-    </Card>
+    </Box>
   );
 }
 

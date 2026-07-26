@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import TextField from "@mui/material/TextField";
+import { classes } from "../../../styles/adminStyle.js";
 import CrudTable from "../../../components/admin/CrudTable.jsx";
 import FormDialog from "../../../components/admin/FormDialog.jsx";
 import SectionHeader from "../../../components/admin/SectionHeader.jsx";
@@ -110,19 +109,16 @@ function WorkersSection() {
 
   if (isLoading) {
     return (
-      <Card variant="outlined">
-        <CardContent>
-          <Spinner />
-        </CardContent>
-      </Card>
+      <Box style={classes.sectionBox}>
+        <Spinner />
+      </Box>
     );
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <SectionHeader
-          title="Workers"
+    <Box style={classes.sectionBox}>
+      <SectionHeader
+        title="Workers"
           description="Shared roster used for logging hours/cost against a field's Labor tab."
           buttonLabel="New worker"
           onAdd={handleAdd}
@@ -165,8 +161,7 @@ function WorkersSection() {
             />
           </Box>
         </FormDialog>
-      </CardContent>
-    </Card>
+    </Box>
   );
 }
 
