@@ -14,18 +14,22 @@ jest.mock("../../services/serverCalls.js", () => ({
   saveProject: jest.fn(),
 }));
 
-// FieldsSection and VarietiesSection have their own dedicated test coverage
-// (FieldsSection pulls in leaflet-based map drawing widgets that are out of
-// scope for a unit test) - stub them here so this file can focus on
-// ProjectItem's own Plants-tab logic and tab-switching wiring.
-jest.mock("./FieldsSection.jsx", () => ({ userId, projectId }) => (
-  <div>Fields section for {userId}/{projectId}</div>
-));
+const mockNavigate = jest.fn();
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+}));
+
+// VarietiesSection has its own dedicated test coverage - stub it here so
+// this file can focus on ProjectItem's own Plants-tab logic and
+// tab-switching/routing wiring. The Fields tab no longer renders anything
+// inline (it navigates to its own route - see FieldsPage.test.jsx).
 jest.mock("./VarietiesSection.jsx", () => ({ userId, projectId }) => (
   <div>Varieties section for {userId}/{projectId}</div>
 ));
 
 const authValue = buildAuthValue({ activeUser: { userId: "u1" } });
+const renderOptions = { authValue, route: "/projects/p1", routePath: "/projects/:projectId" };
 
 const projectHeaders = { project_name: "Tomatoes", project_id: "p1" };
 
@@ -55,7 +59,7 @@ describe("ProjectItem", () => {
   it("shows a spinner while the project is loading, then renders its name", async () => {
     fetchCurrentProject.mockReturnValue(new Promise(() => {}));
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={jest.fn()} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
 
     expect(screen.queryByText(/project: Tomatoes/)).not.toBeInTheDocument();
   });
@@ -65,29 +69,29 @@ describe("ProjectItem", () => {
       data: { projectHeaders, projectDetails: [plant({ plant_id: "plant-1", line: "Line A" }), plant({ plant_id: "plant-2", line: "Line B" })] },
     });
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={jest.fn()} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
 
     expect(await screen.findByText("project: Tomatoes")).toBeInTheDocument();
+    expect(fetchCurrentProject).toHaveBeenCalledWith("u1", "p1");
     expect(await screen.findByDisplayValue("Line A")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Line B")).toBeInTheDocument();
   });
 
-  it("calls handleReturn when 'Return to the Project List' is clicked", async () => {
+  it("navigates to the project list when 'Return to the Project List' is clicked", async () => {
     fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [] } });
-    const handleReturn = jest.fn();
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={handleReturn} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
     await screen.findByText("project: Tomatoes");
 
     userEvent.click(screen.getByRole("button", { name: "Return to the Project List" }));
 
-    expect(handleReturn).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith("/projects");
   });
 
   it("updates a plant's line in place when its field is edited", async () => {
     fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [plant()] } });
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={jest.fn()} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
     const lineInput = await screen.findByDisplayValue("Line A");
 
     userEvent.type(lineInput, "1");
@@ -98,7 +102,7 @@ describe("ProjectItem", () => {
   it("adds a new row when 'Add new variety' is clicked", async () => {
     fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [plant()] } });
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={jest.fn()} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
     await screen.findByDisplayValue("Line A");
 
     userEvent.click(screen.getByRole("button", { name: "Add new variety" }));
@@ -110,7 +114,7 @@ describe("ProjectItem", () => {
     fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [plant()] } });
     saveProject.mockResolvedValue(true);
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={jest.fn()} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
     await screen.findByDisplayValue("Line A");
 
     userEvent.click(screen.getByRole("button", { name: "Save Project" }));
@@ -124,7 +128,7 @@ describe("ProjectItem", () => {
     fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [plant()] } });
     saveProject.mockResolvedValue(false);
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={jest.fn()} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
     await screen.findByDisplayValue("Line A");
 
     userEvent.click(screen.getByRole("button", { name: "Save Project" }));
@@ -137,7 +141,7 @@ describe("ProjectItem", () => {
       data: { projectHeaders, projectDetails: [plant({ plant_id: "plant-1", line: "Line A" }), plant({ plant_id: "plant-2", line: "Line B" })] },
     });
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={jest.fn()} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
     await screen.findByDisplayValue("Line A");
 
     userEvent.click(screen.getByRole("button", { name: "Cross Lines" }));
@@ -155,16 +159,24 @@ describe("ProjectItem", () => {
     await waitFor(() => expect(document.getElementById("generations-select")).toBeInTheDocument());
   });
 
-  it("switches to the Fields and Varieties tabs", async () => {
+  it("navigates to the Fields route and switches to the Varieties tab", async () => {
     fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [] } });
 
-    renderWithProviders(<ProjectItem projectId="p1" handleReturn={jest.fn()} />, { authValue });
+    renderWithProviders(<ProjectItem />, renderOptions);
     await screen.findByText("project: Tomatoes");
 
     userEvent.click(screen.getByRole("tab", { name: "Fields" }));
-    expect(screen.getByText("Fields section for u1/p1")).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith("/projects/p1/fields");
 
     userEvent.click(screen.getByRole("tab", { name: "Varieties" }));
     expect(screen.getByText("Varieties section for u1/p1")).toBeInTheDocument();
+  });
+
+  it("opens on the Varieties tab when the ?tab=2 search param is set", async () => {
+    fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [] } });
+
+    renderWithProviders(<ProjectItem />, { ...renderOptions, route: "/projects/p1?tab=2" });
+
+    expect(await screen.findByText("Varieties section for u1/p1")).toBeInTheDocument();
   });
 });

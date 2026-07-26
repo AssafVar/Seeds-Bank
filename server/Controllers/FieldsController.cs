@@ -20,11 +20,11 @@ public class FieldsController : OwnedResourceControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetFields(string userId, string projectId)
+    public async Task<IActionResult> GetFields(string userId, string projectId, [FromQuery] int page = 1, [FromQuery] int pageSize = 12)
     {
         if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
 
-        var fields = await _fieldService.GetByProjectAsync(projectId);
+        var fields = await _fieldService.GetByProjectAsync(projectId, page, pageSize);
         return Ok(fields);
     }
 
@@ -37,6 +37,22 @@ public class FieldsController : OwnedResourceControllerBase
         {
             var field = await _fieldService.CreateAsync(projectId, request);
             return Ok(field);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("{fieldId}/name")]
+    public async Task<IActionResult> RenameField(string userId, string projectId, int fieldId, RenameFieldRequest request)
+    {
+        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+
+        try
+        {
+            var field = await _fieldService.RenameAsync(projectId, fieldId, request.Name);
+            return field is null ? NotFound() : Ok(field);
         }
         catch (ArgumentException ex)
         {

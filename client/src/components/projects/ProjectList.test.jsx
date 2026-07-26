@@ -9,15 +9,11 @@ jest.mock("../../services/serverCalls.js", () => ({
   createNewProject: jest.fn(),
 }));
 
-// ProjectItem has its own extensive test coverage - stub it here so this
-// file can focus on ProjectList's own job: fetching/listing projects and
-// switching between the list and a selected project.
-jest.mock("./ProjectItem.jsx", () => ({ projectId, handleReturn }) => (
-  <div>
-    <span>Viewing project {projectId}</span>
-    <button onClick={handleReturn}>Return</button>
-  </div>
-));
+const mockNavigate = jest.fn();
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+}));
 
 const authValue = buildAuthValue({ activeUser: { userId: "u1" } });
 
@@ -60,18 +56,13 @@ describe("ProjectList", () => {
     await waitFor(() => expect(getUserProjectsList).toHaveBeenCalledTimes(2));
   });
 
-  it("switches to the selected project and back to the list", async () => {
+  it("navigates to the selected project's route", async () => {
     getUserProjectsList.mockResolvedValue({ data: projects });
 
     renderWithProviders(<ProjectList />, { authValue });
 
     userEvent.click((await screen.findAllByRole("button", { name: "Enter Project" }))[0]);
 
-    expect(screen.getByText("Viewing project p1")).toBeInTheDocument();
-    expect(screen.queryByText("Projects List")).not.toBeInTheDocument();
-
-    userEvent.click(screen.getByRole("button", { name: "Return" }));
-
-    expect(await screen.findByText("Projects List")).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith("/projects/p1");
   });
 });
