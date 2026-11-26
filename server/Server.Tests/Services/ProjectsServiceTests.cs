@@ -153,4 +153,17 @@ public class ProjectsServiceTests
 
         Assert.False(success);
     }
+
+    [Fact]
+    public async Task IsProjectOwnedAsync_is_true_only_for_the_owner_s_existing_project()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new ProjectsService(db);
+        await service.CreateProjectAsync("u1", new CreateProjectRequest { ProjectId = "p1", ProjectName = "Tomatoes", PlantType = "Vegetable" });
+        await service.CreateProjectAsync("u2", new CreateProjectRequest { ProjectId = "p2", ProjectName = "Peppers", PlantType = "Vegetable" });
+
+        Assert.True(await service.IsProjectOwnedAsync("u1", "p1"));
+        Assert.False(await service.IsProjectOwnedAsync("u1", "p2"));
+        Assert.False(await service.IsProjectOwnedAsync("u1", "missing"));
+    }
 }

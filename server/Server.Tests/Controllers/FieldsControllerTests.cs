@@ -8,11 +8,77 @@ namespace SeedsBank.Server.Tests.Controllers;
 
 public class FieldsControllerTests
 {
-    private static FieldsController MakeController(Mock<IFieldService> fieldService, Mock<IFieldWorkLogService> workLogService, string callerUserId = "u1")
+    // Unless a test passes its own projectsService, the caller owns every
+    // project, so tests that aren't about project ownership stay focused on
+    // the endpoint's own behavior.
+    private static FieldsController MakeController(Mock<IFieldService> fieldService, Mock<IFieldWorkLogService> workLogService, string callerUserId = "u1", Mock<IProjectsService>? projectsService = null)
     {
-        var controller = new FieldsController(fieldService.Object, workLogService.Object);
+        if (projectsService is null)
+        {
+            projectsService = new Mock<IProjectsService>();
+            projectsService.Setup(s => s.IsProjectOwnedAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        }
+
+        var controller = new FieldsController(fieldService.Object, workLogService.Object, projectsService.Object);
         ControllerTestHelpers.SetUser(controller, callerUserId);
         return controller;
+    }
+
+    // u1 is signed in and the route says u1, but project p-other belongs to
+    // someone else.
+    private static Mock<IProjectsService> ProjectNotOwnedByU1()
+    {
+        var projectsService = new Mock<IProjectsService>();
+        projectsService.Setup(s => s.IsProjectOwnedAsync("u1", "p-other")).ReturnsAsync(false);
+        return projectsService;
+    }
+
+    public static TheoryData<string> EveryEndpoint => new()
+    {
+        "GetFields", "CreateField", "RenameField", "UpdateFieldGeometry", "UpdateFieldProperties",
+        "DeleteField", "GetWorkLogs", "CreateWorkLog", "DeleteWorkLog",
+    };
+
+    private static Task<IActionResult> Call(FieldsController c, string endpoint, string projectId) => endpoint switch
+    {
+        "GetFields" => c.GetFields("u1", projectId),
+        "CreateField" => c.CreateField("u1", projectId, new FieldRequest()),
+        "RenameField" => c.RenameField("u1", projectId, 1, new RenameFieldRequest { Name = "x" }),
+        "UpdateFieldGeometry" => c.UpdateFieldGeometry("u1", projectId, 1, new UpdateFieldGeometryRequest()),
+        "UpdateFieldProperties" => c.UpdateFieldProperties("u1", projectId, 1, new UpdateFieldPropertiesRequest()),
+        "DeleteField" => c.DeleteField("u1", projectId, 1),
+        "GetWorkLogs" => c.GetWorkLogs("u1", projectId, 1),
+        "CreateWorkLog" => c.CreateWorkLog("u1", projectId, 1, new FieldWorkLogRequest()),
+        "DeleteWorkLog" => c.DeleteWorkLog("u1", projectId, 1, 1),
+        _ => throw new ArgumentOutOfRangeException(nameof(endpoint)),
+    };
+
+    [Theory]
+    [MemberData(nameof(EveryEndpoint))]
+    public async Task Every_endpoint_returns_not_found_for_another_user_s_project_and_touches_no_data(string endpoint)
+    {
+        var fieldService = new Mock<IFieldService>(MockBehavior.Strict);
+        var workLogService = new Mock<IFieldWorkLogService>(MockBehavior.Strict);
+        var controller = MakeController(fieldService, workLogService, projectsService: ProjectNotOwnedByU1());
+
+        var result = await Call(controller, endpoint, "p-other");
+
+        Assert.IsType<NotFoundResult>(result);
+        fieldService.VerifyNoOtherCalls();
+        workLogService.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryEndpoint))]
+    public async Task Every_endpoint_returns_forbidden_before_checking_the_project_when_the_route_userId_is_not_the_caller(string endpoint)
+    {
+        var projectsService = new Mock<IProjectsService>(MockBehavior.Strict);
+        var controller = MakeController(new Mock<IFieldService>(MockBehavior.Strict), new Mock<IFieldWorkLogService>(MockBehavior.Strict), callerUserId: "someone-else", projectsService: projectsService);
+
+        var result = await Call(controller, endpoint, "p1");
+
+        Assert.IsType<ForbidResult>(result);
+        projectsService.VerifyNoOtherCalls();
     }
 
     [Fact]
