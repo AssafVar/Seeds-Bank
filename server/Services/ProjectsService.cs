@@ -102,9 +102,7 @@ public class ProjectsService : IProjectsService
 
     public async Task<bool> DeletePlantAsync(string userId, string projectId, string plantId)
     {
-        var projectOwned = await _db.Projects
-            .AnyAsync(p => p.UserId == userId && p.ProjectId == projectId);
-        if (!projectOwned)
+        if (!await IsProjectOwnedAsync(userId, projectId))
         {
             return false;
         }
@@ -159,4 +157,7 @@ public class ProjectsService : IProjectsService
         SeedWeight = item.SeedWeight,
         Generation = item.Generation,
     };
+
+    public Task<bool> IsProjectOwnedAsync(string userId, string projectId) =>
+        _db.Projects.AnyAsync(p => p.UserId == userId && p.ProjectId == projectId);
 }

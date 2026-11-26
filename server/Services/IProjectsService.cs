@@ -9,4 +9,5 @@ public interface IProjectsService
     Task CreateProjectAsync(string userId, CreateProjectRequest request);
     Task<bool> UpdateProjectDetailsAsync(string userId, string projectId, List<ProjectItemDto> items);
     Task<bool> DeletePlantAsync(string userId, string projectId, string plantId);
+    Task<bool> IsProjectOwnedAsync(string userId, string projectId);
 }

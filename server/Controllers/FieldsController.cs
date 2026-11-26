@@ -12,17 +12,29 @@ public class FieldsController : OwnedResourceControllerBase
 {
     private readonly IFieldService _fieldService;
     private readonly IFieldWorkLogService _fieldWorkLogService;
+    private readonly IProjectsService _projectsService;
 
-    public FieldsController(IFieldService fieldService, IFieldWorkLogService fieldWorkLogService)
+    public FieldsController(IFieldService fieldService, IFieldWorkLogService fieldWorkLogService, IProjectsService projectsService)
     {
         _fieldService = fieldService;
         _fieldWorkLogService = fieldWorkLogService;
+        _projectsService = projectsService;
+    }
+
+    // The route's userId matching the caller isn't enough: the field and
+    // work-log services look rows up by projectId alone, so the project
+    // itself must belong to that user too. A project the caller doesn't
+    // own answers 404, the same as one that doesn't exist.
+    private async Task<IActionResult?> RejectUnlessOwnedProjectAsync(string userId, string projectId)
+    {
+        if (!IsCallerOwner(userId, out var forbidden)) return forbidden;
+        return await _projectsService.IsProjectOwnedAsync(userId, projectId) ? null : NotFound();
     }
 
     [HttpGet]
     public async Task<IActionResult> GetFields(string userId, string projectId, [FromQuery] int page = 1, [FromQuery] int pageSize = 12)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         var fields = await _fieldService.GetByProjectAsync(projectId, page, pageSize);
         return Ok(fields);
@@ -31,7 +43,7 @@ public class FieldsController : OwnedResourceControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateField(string userId, string projectId, FieldRequest request)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         try
         {
@@ -47,7 +59,7 @@ public class FieldsController : OwnedResourceControllerBase
     [HttpPut("{fieldId}/name")]
     public async Task<IActionResult> RenameField(string userId, string projectId, int fieldId, RenameFieldRequest request)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         try
         {
@@ -63,7 +75,7 @@ public class FieldsController : OwnedResourceControllerBase
     [HttpPut("{fieldId}/geometry")]
     public async Task<IActionResult> UpdateFieldGeometry(string userId, string projectId, int fieldId, UpdateFieldGeometryRequest request)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         try
         {
@@ -79,7 +91,7 @@ public class FieldsController : OwnedResourceControllerBase
     [HttpPut("{fieldId}/properties")]
     public async Task<IActionResult> UpdateFieldProperties(string userId, string projectId, int fieldId, UpdateFieldPropertiesRequest request)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         try
         {
@@ -95,7 +107,7 @@ public class FieldsController : OwnedResourceControllerBase
     [HttpDelete("{fieldId}")]
     public async Task<IActionResult> DeleteField(string userId, string projectId, int fieldId)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         var deleted = await _fieldService.DeleteAsync(projectId, fieldId);
         return deleted ? Ok() : NotFound();
@@ -104,7 +116,7 @@ public class FieldsController : OwnedResourceControllerBase
     [HttpGet("{fieldId}/work-logs")]
     public async Task<IActionResult> GetWorkLogs(string userId, string projectId, int fieldId)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         var logs = await _fieldWorkLogService.GetByFieldAsync(projectId, fieldId);
         return Ok(logs);
@@ -113,7 +125,7 @@ public class FieldsController : OwnedResourceControllerBase
     [HttpPost("{fieldId}/work-logs")]
     public async Task<IActionResult> CreateWorkLog(string userId, string projectId, int fieldId, FieldWorkLogRequest request)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         try
         {
@@ -129,7 +141,7 @@ public class FieldsController : OwnedResourceControllerBase
     [HttpDelete("{fieldId}/work-logs/{logId}")]
     public async Task<IActionResult> DeleteWorkLog(string userId, string projectId, int fieldId, int logId)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         var deleted = await _fieldWorkLogService.DeleteAsync(projectId, fieldId, logId);
         return deleted ? Ok() : NotFound();
