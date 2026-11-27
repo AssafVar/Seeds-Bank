@@ -1,11 +1,11 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, buildAuthValue } from "../../test-utils/renderWithProviders.jsx";
-import { fetchCurrentProject } from "../../services/serverCalls.js";
+import { getProjectOverview } from "../../services/serverCalls.js";
 import FieldsPage from "./FieldsPage.jsx";
 
 jest.mock("../../services/serverCalls.js", () => ({
-  fetchCurrentProject: jest.fn(),
+  getProjectOverview: jest.fn(),
 }));
 
 const mockNavigate = jest.fn();
@@ -32,7 +32,7 @@ describe("FieldsPage", () => {
   });
 
   it("shows a spinner while the project is loading", async () => {
-    fetchCurrentProject.mockReturnValue(new Promise(() => {}));
+    getProjectOverview.mockReturnValue(new Promise(() => {}));
 
     renderWithProviders(<FieldsPage />, renderOptions);
 
@@ -40,18 +40,18 @@ describe("FieldsPage", () => {
   });
 
   it("renders the project header, Fields tab active, and the fields list", async () => {
-    fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [] } });
+    getProjectOverview.mockResolvedValue({ projectHeaders, lines: [] });
 
     renderWithProviders(<FieldsPage />, renderOptions);
 
     expect(await screen.findByText("project: Tomatoes")).toBeInTheDocument();
-    expect(fetchCurrentProject).toHaveBeenCalledWith("u1", "p1");
+    expect(getProjectOverview).toHaveBeenCalledWith("u1", "p1");
     expect(screen.getByRole("tab", { name: "Fields", selected: true })).toBeInTheDocument();
     expect(screen.getByText("Fields list for u1/p1")).toBeInTheDocument();
   });
 
   it("navigates back to the project list", async () => {
-    fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [] } });
+    getProjectOverview.mockResolvedValue({ projectHeaders, lines: [] });
 
     renderWithProviders(<FieldsPage />, renderOptions);
     await screen.findByText("project: Tomatoes");
@@ -62,7 +62,7 @@ describe("FieldsPage", () => {
   });
 
   it("navigates to the Plants tab on the project route when Plants is clicked", async () => {
-    fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [] } });
+    getProjectOverview.mockResolvedValue({ projectHeaders, lines: [] });
 
     renderWithProviders(<FieldsPage />, renderOptions);
     await screen.findByText("project: Tomatoes");
@@ -73,7 +73,7 @@ describe("FieldsPage", () => {
   });
 
   it("navigates to the Varieties tab on the project route when Varieties is clicked", async () => {
-    fetchCurrentProject.mockResolvedValue({ data: { projectHeaders, projectDetails: [] } });
+    getProjectOverview.mockResolvedValue({ projectHeaders, lines: [] });
 
     renderWithProviders(<FieldsPage />, renderOptions);
     await screen.findByText("project: Tomatoes");

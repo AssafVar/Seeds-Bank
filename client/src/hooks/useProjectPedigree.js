@@ -62,6 +62,7 @@ export default function useProjectPedigree({ userId, projectId, pageSize = 25 })
   const [plantsByPopulation, setPlantsByPopulation] = useState({});
   const [drafts, setDrafts] = useState({});
   const [undoQueue, setUndoQueue] = useState([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Refs hold the latest values for async callbacks (no stale closures).
   const live = useRef({});
@@ -156,7 +157,15 @@ export default function useProjectPedigree({ userId, projectId, pageSize = 25 })
     return () => {
       cancelled = true;
     };
-  }, [userId, projectId]);
+  }, [userId, projectId, reloadKey]);
+
+  // A new page size (phone vs desktop, or the rows-per-page menu) reloads the open populations.
+  const lastPageSize = useRef(pageSize);
+  useEffect(() => {
+    if (lastPageSize.current === pageSize) return;
+    lastPageSize.current = pageSize;
+    live.current.expandedPopulationIds.forEach((id) => loadPlants(id, 1));
+  }, [pageSize, loadPlants]);
 
   // Counts follow filters and (debounced) search. Loaded pages follow them too.
   const firstFilterRun = useRef(true);
@@ -213,6 +222,23 @@ export default function useProjectPedigree({ userId, projectId, pageSize = 25 })
       return next;
     });
   }, []);
+
+  const expandAll = useCallback(
+    (visibleLines) => {
+      setExpandedLineIds(new Set(visibleLines.map((l) => l.id)));
+      const ids = visibleLines.flatMap((l) => l.populations ?? []).filter((p) => p.plantCount > 0).map((p) => p.id);
+      setExpandedPopulationIds(new Set(ids));
+      live.current.expandedPopulationIds = new Set(ids);
+      ids.forEach((id) => loadPlants(id, 1));
+    },
+    [loadPlants]
+  );
+  const collapseAll = useCallback(() => {
+    setExpandedLineIds(new Set());
+    setExpandedPopulationIds(new Set());
+    live.current.expandedPopulationIds = new Set();
+  }, []);
+  const retry = useCallback(() => setReloadKey((k) => k + 1), []);
 
   const expandPopulation = useCallback(
     (id) => {
@@ -327,11 +353,17 @@ export default function useProjectPedigree({ userId, projectId, pageSize = 25 })
           if (id !== undefined && id !== null && live.current.expandedPopulationIds.has(id)) loadPlants(id);
         });
         // Undo needs both old parents; a plant whose parent was removed cannot be restored.
-        if (oldMother && oldFather) {
-          pushUndo(`${plant.tag} is now ${plant.label} (was ${result.previousLabel}).`, async () => {
+        const undoMother = result.previousMotherPlantId ?? oldMother;
+        const undoFather = result.previousFatherPlantId ?? oldFather;
+        if (undoMother && undoFather) {
+          const message =
+            plant.label !== result.previousLabel
+              ? `${plant.tag} is now ${plant.label} (was ${result.previousLabel}).`
+              : `Updated the parents of ${plant.tag}.`;
+          pushUndo(message, async () => {
             await updatePlantParents(u, p, plantId, {
-              motherPlantId: oldMother,
-              fatherPlantId: oldFather,
+              motherPlantId: undoMother,
+              fatherPlantId: undoFather,
               lineId: result.previousLineId,
               startNewLine: false,
               version: plant.version, // version after the first write (old version + 1)
@@ -366,9 +398,13 @@ export default function useProjectPedigree({ userId, projectId, pageSize = 25 })
       const line = await apiCreateLine(u, p, body);
       setLines((prev) => replaceLine(prev, line));
       reloadOverview().catch(() => null);
+      pushUndo(`Created ${line.name}.`, async () => {
+        await apiDeleteLine(u, p, line.id);
+        await refreshAfterChange();
+      });
       return line;
     },
-    [reloadOverview]
+    [reloadOverview, pushUndo, refreshAfterChange]
   );
 
   const renameLine = useCallback(
@@ -449,6 +485,9 @@ export default function useProjectPedigree({ userId, projectId, pageSize = 25 })
     setDraft,
     clearDraft,
     reload: reloadOverview,
+    retry,
+    expandAll,
+    collapseAll,
     dismissUndo,
     runUndo,
     createPlants,

@@ -73,15 +73,6 @@ export const getTempDataAPI = async (lat, log) => {
   }
 };
 
-export const fetchCurrentProject = async (userId, projectId) => {
-  try {
-    const results = await api.get(`/projects/${userId}/${projectId}`);
-    return results;
-  } catch (err) {
-    console.log(err);
-  }
-};
-
 export const createNewProject = async (userId, projectName, plantType) => {
   const projectId = nanoid();
   try {
@@ -100,31 +91,6 @@ export const getUserProjectsList = async (userId) => {
   try {
     const results = await api.get(`/projects/${userId}`);
     return results;
-  } catch (err) {
-    console.log(err);
-  }
-};
-
-export const saveProject = async (projectHeaders, projectDetails) => {
-  const { project_id, user_id } = projectHeaders;
-  try {
-    const response = await api.post(
-      `projects/${user_id}/${project_id}`,
-      projectDetails
-    );
-    return response.status === 200 ? true : false;
-  } catch (err) {
-    console.log(err);
-  }
-};
-
-export const deletePlant = async (user_id, plantIdToDelete) => {
-  const { project_id, plant_id } = plantIdToDelete;
-  try {
-    const response = await api.delete(
-      `projects/${user_id}/${project_id}/${plant_id}`
-    );
-    return response;
   } catch (err) {
     console.log(err);
   }
@@ -197,7 +163,6 @@ export const updatePlantParents = async (userId, projectId, plantId, body) => {
   return response.data;
 };
 
-// Named differently from the legacy deletePlant above, which T-7 removes.
 export const deleteProjectPlant = async (userId, projectId, plantId, confirm = false) => {
   const response = await api.delete(
     `${projectPath(userId, projectId)}/plants/${encodeURIComponent(plantId)}`,

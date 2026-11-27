@@ -305,6 +305,50 @@ describe("useProjectPedigree", () => {
     expect(api.getProjectOverview.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
+  it("prefers previousMotherPlantId and previousFatherPlantId for the parents undo", async () => {
+    api.updatePlantParents.mockResolvedValue({
+      plant: plant({ label: "F3", version: 2 }), previousLabel: "F2", previousLineId: 1,
+      previousMotherPlantId: "old-m", previousFatherPlantId: "old-f", line: line(),
+    });
+    const { result } = setup();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(() => result.current.updateParents(plant({ mother: { plantId: null, tag: "gone", removed: true } }), { version: 1 }));
+    await act(() => result.current.runUndo());
+    expect(api.updatePlantParents).toHaveBeenLastCalledWith("u1", "pr1", "p1", expect.objectContaining({ motherPlantId: "old-m", fatherPlantId: "old-f", version: 2 }));
+  });
+
+  it("offers undo for a new empty line that deletes it again", async () => {
+    api.createLine.mockResolvedValue(line({ id: 7, name: "Fresh" }));
+    api.deleteLine.mockResolvedValue();
+    const { result } = setup();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(() => result.current.createLine({ name: "Fresh" }));
+    expect(result.current.undo.label).toBe("Created Fresh.");
+    await act(() => result.current.runUndo());
+    expect(api.deleteLine).toHaveBeenCalledWith("u1", "pr1", 7);
+  });
+
+  it("expandAll opens the given lines and loads their populations that have plants, collapseAll closes them", async () => {
+    const { result } = setup();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    api.getPlants.mockClear();
+    act(() => result.current.expandAll([line({ populations: [{ id: 10, plantCount: 2 }, { id: 11, plantCount: 0 }] })]));
+    expect(result.current.expandedLineIds.has(1)).toBe(true);
+    expect(result.current.expandedPopulationIds.has(10)).toBe(true);
+    expect(result.current.expandedPopulationIds.has(11)).toBe(false);
+    await waitFor(() => expect(api.getPlants).toHaveBeenCalledTimes(1));
+    act(() => result.current.collapseAll());
+    expect(result.current.expandedLineIds.size).toBe(0);
+  });
+
+  it("retry loads the overview again after a failure", async () => {
+    api.getProjectOverview.mockRejectedValueOnce(new Error("offline"));
+    const { result } = setup();
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+  });
+
   it("does not log to the console", async () => {
     const spy = jest.spyOn(console, "log").mockImplementation(() => {});
     api.getPlants.mockRejectedValue({ response: { status: 500, data: { message: "body" } } });
