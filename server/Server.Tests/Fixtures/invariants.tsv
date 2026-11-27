@@ -1,0 +1,18 @@
+-- name<TAB>query: each query returns a violation count; all must be 0.
+-- Must match BreedingMigrationSql.Invariants (a test checks it).
+inv_plant_has_population_and_tag	SELECT COUNT(*) FROM project_items WHERE population_id IS NULL OR tag IS NULL
+inv_plant_project_exists	SELECT COUNT(*) FROM project_items i WHERE NOT EXISTS (SELECT 1 FROM projects p WHERE p.project_id = i.project_id)
+inv_plant_population_same_project	SELECT COUNT(*) FROM project_items i JOIN populations p ON p.id = i.population_id WHERE p.project_id <> i.project_id
+inv_population_line_same_project	SELECT COUNT(*) FROM populations p JOIN `lines` l ON l.id = p.line_id WHERE l.project_id <> p.project_id
+inv_parent_same_project	SELECT COUNT(*) FROM project_items c JOIN project_items p ON p.plant_id IN (c.plant_mother_id, c.plant_father_id) WHERE p.project_id <> c.project_id
+inv_parent_exists_and_not_self	SELECT COUNT(*) FROM project_items c WHERE (c.plant_mother_id IS NOT NULL AND (c.plant_mother_id = c.plant_id OR NOT EXISTS (SELECT 1 FROM project_items p WHERE p.plant_id = c.plant_mother_id AND p.project_id = c.project_id))) OR (c.plant_father_id IS NOT NULL AND (c.plant_father_id = c.plant_id OR NOT EXISTS (SELECT 1 FROM project_items p WHERE p.plant_id = c.plant_father_id AND p.project_id = c.project_id)))
+inv_tag_unique_per_project	SELECT COUNT(*) FROM (SELECT project_id, tag FROM project_items GROUP BY project_id, tag HAVING COUNT(*) > 1) d
+inv_line_name_unique_per_project	SELECT COUNT(*) FROM (SELECT project_id, name FROM `lines` GROUP BY project_id, name HAVING COUNT(*) > 1) d
+inv_line_code_unique_per_project	SELECT COUNT(*) FROM (SELECT project_id, code FROM `lines` GROUP BY project_id, code HAVING COUNT(*) > 1) d
+inv_population_field_same_project	SELECT COUNT(*) FROM populations p JOIN fields f ON f.id = p.field_id WHERE f.project_id <> p.project_id
+inv_origin_source_same_project	SELECT COUNT(*) FROM line_origins o JOIN `lines` l ON l.id = o.line_id JOIN `lines` s ON s.id = o.source_line_id WHERE s.project_id <> l.project_id
+inv_successor_same_project	SELECT COUNT(*) FROM `lines` l JOIN `lines` s ON s.id = l.successor_line_id WHERE s.project_id <> l.project_id
+inv_one_founders_line_per_project	SELECT COUNT(*) FROM projects p WHERE (SELECT COUNT(*) FROM `lines` l WHERE l.project_id = p.project_id AND l.is_founders = 1) <> 1
+inv_no_blank_placeholder_values	SELECT COUNT(*) FROM project_items WHERE plant_mother_id REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR plant_father_id REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR fruit_color REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR fruit_weight REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR seed_color REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR seed_weight REGEXP '^[[:space:]]*(---)?[[:space:]]*$'
+inv_orphan_count_matches_backup_log	SELECT CASE WHEN COALESCE((SELECT row_count FROM breeding_migration_log WHERE step = 'orphans_removed'), -1) = COALESCE((SELECT row_count FROM breeding_migration_log WHERE step = 'backup_orphan_rows'), -2) THEN 0 ELSE 1 END
+inv_backup_table_exists	SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'project_items_backup_step1') THEN 0 ELSE 1 END

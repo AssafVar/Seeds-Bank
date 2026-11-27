@@ -196,6 +196,130 @@ namespace SeedsBank.Server.Migrations
                     b.ToTable("gallery_images");
                 });
 
+            modelBuilder.Entity("SeedsBank.Server.Models.Line", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("varchar(6)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsFounders")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_founders");
+
+                    b.Property<bool>("IsStable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_stable");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("NextSeq")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("next_seq");
+
+                    b.Property<string>("OriginNote")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("origin_note");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("project_id");
+
+                    b.Property<DateTime?>("StableMarkedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("stable_marked_at");
+
+                    b.Property<int?>("SuccessorLineId")
+                        .HasColumnType("int")
+                        .HasColumnName("successor_line_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SuccessorLineId");
+
+                    b.HasIndex("ProjectId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("lines");
+                });
+
+            modelBuilder.Entity("SeedsBank.Server.Models.LineOrigin", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("LineId")
+                        .HasColumnType("int")
+                        .HasColumnName("line_id");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)")
+                        .HasColumnName("role");
+
+                    b.Property<string>("SourceLabel")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("source_label");
+
+                    b.Property<int?>("SourceLineId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_line_id");
+
+                    b.Property<string>("SourceLineName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("source_line_name");
+
+                    b.Property<string>("SourcePlantTag")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("source_plant_tag");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LineId");
+
+                    b.HasIndex("SourceLineId");
+
+                    b.ToTable("line_origins");
+                });
+
             modelBuilder.Entity("SeedsBank.Server.Models.NewsPost", b =>
                 {
                     b.Property<int>("Id")
@@ -222,6 +346,61 @@ namespace SeedsBank.Server.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("news_posts");
+                });
+
+            modelBuilder.Entity("SeedsBank.Server.Models.Population", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("FieldId")
+                        .HasColumnType("int")
+                        .HasColumnName("field_id");
+
+                    b.Property<int?>("Generation")
+                        .HasColumnType("int")
+                        .HasColumnName("generation");
+
+                    b.Property<string>("Kind")
+                        .HasColumnType("char(1)")
+                        .HasColumnName("kind");
+
+                    b.Property<int>("LineId")
+                        .HasColumnType("int")
+                        .HasColumnName("line_id");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("Season")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("season");
+
+                    b.Property<short?>("Year")
+                        .HasColumnType("smallint")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FieldId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("LineId", "Kind", "Generation", "Season", "Year", "FieldId")
+                        .IsUnique();
+
+                    b.ToTable("populations");
                 });
 
             modelBuilder.Entity("SeedsBank.Server.Models.Project", b =>
@@ -261,59 +440,85 @@ namespace SeedsBank.Server.Migrations
             modelBuilder.Entity("SeedsBank.Server.Models.ProjectItem", b =>
                 {
                     b.Property<string>("PlantId")
+                        .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
                         .HasColumnName("plant_id");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<string>("FatherPlantId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("plant_father_id");
+
+                    b.Property<string>("FatherRemovedTag")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("father_removed_tag");
+
                     b.Property<string>("FruitColor")
-                        .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("fruit_color");
 
                     b.Property<string>("FruitWeight")
-                        .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("fruit_weight");
 
-                    b.Property<int>("Generation")
-                        .HasColumnType("int")
-                        .HasColumnName("generation");
-
-                    b.Property<string>("Line")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("line");
-
-                    b.Property<string>("PlantFatherId")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("plant_father_id");
-
-                    b.Property<string>("PlantMotherId")
-                        .IsRequired()
-                        .HasColumnType("longtext")
+                    b.Property<string>("MotherPlantId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
                         .HasColumnName("plant_mother_id");
+
+                    b.Property<string>("MotherRemovedTag")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("mother_removed_tag");
+
+                    b.Property<int>("PopulationId")
+                        .HasColumnType("int")
+                        .HasColumnName("population_id");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
                         .HasColumnName("project_id");
 
-                    b.Property<string>("ProjectName")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("project_name");
+                    b.Property<int>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("row_version");
 
                     b.Property<string>("SeedColor")
-                        .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("seed_color");
 
                     b.Property<string>("SeedWeight")
-                        .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("seed_weight");
 
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("tag");
+
                     b.HasKey("PlantId");
+
+                    b.HasIndex("FatherPlantId");
+
+                    b.HasIndex("MotherPlantId");
+
+                    b.HasIndex("PopulationId");
+
+                    b.HasIndex("ProjectId", "Tag")
+                        .IsUnique();
 
                     b.ToTable("project_items");
                 });
@@ -489,9 +694,101 @@ namespace SeedsBank.Server.Migrations
                     b.Navigation("Worker");
                 });
 
+            modelBuilder.Entity("SeedsBank.Server.Models.Line", b =>
+                {
+                    b.HasOne("SeedsBank.Server.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SeedsBank.Server.Models.Line", "Successor")
+                        .WithMany()
+                        .HasForeignKey("SuccessorLineId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Successor");
+                });
+
+            modelBuilder.Entity("SeedsBank.Server.Models.LineOrigin", b =>
+                {
+                    b.HasOne("SeedsBank.Server.Models.Line", "Line")
+                        .WithMany("Origins")
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SeedsBank.Server.Models.Line", "SourceLine")
+                        .WithMany()
+                        .HasForeignKey("SourceLineId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Line");
+
+                    b.Navigation("SourceLine");
+                });
+
+            modelBuilder.Entity("SeedsBank.Server.Models.Population", b =>
+                {
+                    b.HasOne("SeedsBank.Server.Models.Field", "Field")
+                        .WithMany()
+                        .HasForeignKey("FieldId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SeedsBank.Server.Models.Line", "Line")
+                        .WithMany("Populations")
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SeedsBank.Server.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Field");
+
+                    b.Navigation("Line");
+                });
+
+            modelBuilder.Entity("SeedsBank.Server.Models.ProjectItem", b =>
+                {
+                    b.HasOne("SeedsBank.Server.Models.ProjectItem", null)
+                        .WithMany()
+                        .HasForeignKey("FatherPlantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SeedsBank.Server.Models.ProjectItem", null)
+                        .WithMany()
+                        .HasForeignKey("MotherPlantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SeedsBank.Server.Models.Population", "Population")
+                        .WithMany()
+                        .HasForeignKey("PopulationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SeedsBank.Server.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Population");
+                });
+
             modelBuilder.Entity("SeedsBank.Server.Models.Field", b =>
                 {
                     b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("SeedsBank.Server.Models.Line", b =>
+                {
+                    b.Navigation("Origins");
+
+                    b.Navigation("Populations");
                 });
 #pragma warning restore 612, 618
         }

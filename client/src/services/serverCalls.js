@@ -73,15 +73,6 @@ export const getTempDataAPI = async (lat, log) => {
   }
 };
 
-export const fetchCurrentProject = async (userId, projectId) => {
-  try {
-    const results = await api.get(`/projects/${userId}/${projectId}`);
-    return results;
-  } catch (err) {
-    console.log(err);
-  }
-};
-
 export const createNewProject = async (userId, projectName, plantType) => {
   const projectId = nanoid();
   try {
@@ -105,29 +96,115 @@ export const getUserProjectsList = async (userId) => {
   }
 };
 
-export const saveProject = async (projectHeaders, projectDetails) => {
-  const { project_id, user_id } = projectHeaders;
-  try {
-    const response = await api.post(
-      `projects/${user_id}/${project_id}`,
-      projectDetails
-    );
-    return response.status === 200 ? true : false;
-  } catch (err) {
-    console.log(err);
-  }
+// ---- Breeding: lines, populations, plants (tech design section 5) ----
+// These calls rethrow so callers can show the server message with
+// extractErrorMessage and read response.data.field / .code. They never log
+// request or response bodies. Query values go through axios `params`; path
+// ids go through encodeURIComponent.
+const projectPath = (userId, projectId) =>
+  `/projects/${encodeURIComponent(userId)}/${encodeURIComponent(projectId)}`;
+
+const cleanParams = (params = {}) =>
+  Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  );
+
+export const getProjectOverview = async (userId, projectId) => {
+  const response = await api.get(projectPath(userId, projectId));
+  return response.data;
 };
 
-export const deletePlant = async (user_id, plantIdToDelete) => {
-  const { project_id, plant_id } = plantIdToDelete;
-  try {
-    const response = await api.delete(
-      `projects/${user_id}/${project_id}/${plant_id}`
-    );
-    return response;
-  } catch (err) {
-    console.log(err);
-  }
+export const getPlants = async (userId, projectId, params = {}) => {
+  const response = await api.get(`${projectPath(userId, projectId)}/plants`, {
+    params: cleanParams(params),
+  });
+  return response.data;
+};
+
+export const getPlantCounts = async (userId, projectId, params = {}) => {
+  const response = await api.get(`${projectPath(userId, projectId)}/plants/counts`, {
+    params: cleanParams(params),
+  });
+  return response.data;
+};
+
+export const getPlant = async (userId, projectId, plantId) => {
+  const response = await api.get(
+    `${projectPath(userId, projectId)}/plants/${encodeURIComponent(plantId)}`
+  );
+  return response.data;
+};
+
+export const previewPlacement = async (userId, projectId, params = {}) => {
+  const response = await api.get(`${projectPath(userId, projectId)}/plants/preview`, {
+    params: cleanParams(params),
+  });
+  return response.data;
+};
+
+export const createPlants = async (userId, projectId, body) => {
+  const response = await api.post(`${projectPath(userId, projectId)}/plants`, body);
+  return response.data;
+};
+
+export const updatePlantTraits = async (userId, projectId, plantId, body) => {
+  const response = await api.put(
+    `${projectPath(userId, projectId)}/plants/${encodeURIComponent(plantId)}`,
+    body
+  );
+  return response.data;
+};
+
+export const updatePlantParents = async (userId, projectId, plantId, body) => {
+  const response = await api.put(
+    `${projectPath(userId, projectId)}/plants/${encodeURIComponent(plantId)}/parents`,
+    body
+  );
+  return response.data;
+};
+
+export const deleteProjectPlant = async (userId, projectId, plantId, confirm = false) => {
+  const response = await api.delete(
+    `${projectPath(userId, projectId)}/plants/${encodeURIComponent(plantId)}`,
+    { params: confirm ? { confirm: true } : undefined }
+  );
+  return response.data;
+};
+
+export const createLine = async (userId, projectId, body) => {
+  const response = await api.post(`${projectPath(userId, projectId)}/lines`, body);
+  return response.data;
+};
+
+export const renameLine = async (userId, projectId, lineId, body) => {
+  const response = await api.post(
+    `${projectPath(userId, projectId)}/lines/${encodeURIComponent(lineId)}/rename`,
+    body
+  );
+  return response.data;
+};
+
+export const setLineStable = async (userId, projectId, lineId, isStable) => {
+  const response = await api.put(
+    `${projectPath(userId, projectId)}/lines/${encodeURIComponent(lineId)}/stable`,
+    { isStable }
+  );
+  return response.data;
+};
+
+export const deleteLine = async (userId, projectId, lineId) => {
+  await api.delete(`${projectPath(userId, projectId)}/lines/${encodeURIComponent(lineId)}`);
+};
+
+export const createPopulation = async (userId, projectId, body) => {
+  const response = await api.post(`${projectPath(userId, projectId)}/populations`, body);
+  return response.data;
+};
+
+export const deletePopulation = async (userId, projectId, populationId) => {
+  await api.delete(
+    `${projectPath(userId, projectId)}/populations/${encodeURIComponent(populationId)}`
+  );
 };
 
 export const getFields = async (userId, projectId, page = 1, pageSize = 12) => {

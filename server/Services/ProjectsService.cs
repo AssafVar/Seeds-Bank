@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SeedsBank.Server.Data;
 using SeedsBank.Server.DTOs;
 using SeedsBank.Server.Models;
+using SeedsBank.Server.Services.Pedigree;
 
 namespace SeedsBank.Server.Services;
 
@@ -10,13 +11,15 @@ public class ProjectsService : IProjectsService
 {
     private const string DateFormat = "yyyy-MM-dd";
     private readonly AppDbContext _db;
+    private readonly ILineService _lines;
 
-    public ProjectsService(AppDbContext db)
+    public ProjectsService(AppDbContext db, ILineService lines)
     {
         _db = db;
+        _lines = lines;
     }
 
-    public async Task<ProjectDetailResponse?> GetProjectAsync(string userId, string projectId)
+    public async Task<ProjectOverviewResponse?> GetProjectAsync(string userId, string projectId)
     {
         var project = await _db.Projects.AsNoTracking()
             .FirstOrDefaultAsync(p => p.UserId == userId && p.ProjectId == projectId);
@@ -26,14 +29,10 @@ public class ProjectsService : IProjectsService
             return null;
         }
 
-        var items = await _db.ProjectItems.AsNoTracking()
-            .Where(i => i.ProjectId == projectId)
-            .ToListAsync();
-
-        return new ProjectDetailResponse
+        return new ProjectOverviewResponse
         {
             ProjectHeaders = ToHeaderDto(project),
-            ProjectDetails = items.Select(ToItemDto).ToList(),
+            Lines = await _lines.GetOverviewAsync(projectId),
         };
     }
 
@@ -48,6 +47,10 @@ public class ProjectsService : IProjectsService
 
     public async Task CreateProjectAsync(string userId, CreateProjectRequest request)
     {
+        // The id is chosen by the client and unique across all users. A taken
+        // id gets one fixed answer that says nothing about whose it is.
+        if (await _db.Projects.AnyAsync(p => p.ProjectId == request.ProjectId)) throw ProjectIdTaken();
+
         var now = DateTime.UtcNow;
         _db.Projects.Add(new Project
         {
@@ -59,79 +62,29 @@ public class ProjectsService : IProjectsService
             LastUpdate = now,
         });
 
-        await _db.SaveChangesAsync();
+        // Every project has exactly one built-in Founders line (code P).
+        _db.Lines.Add(new Line
+        {
+            ProjectId = request.ProjectId,
+            Name = "Founders",
+            Code = "P",
+            IsFounders = true,
+        });
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Lost a race on the same id: the same answer, no SQL text.
+            _db.ChangeTracker.Clear();
+            throw ProjectIdTaken();
+        }
     }
 
-    public async Task<bool> UpdateProjectDetailsAsync(string userId, string projectId, List<ProjectItemDto> items)
-    {
-        var project = await _db.Projects
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.ProjectId == projectId);
-        if (project is null)
-        {
-            return false;
-        }
-
-        // Only accept rows that actually claim to belong to this project, so a
-        // caller can't use a plant_id borrowed from someone else's project to
-        // overwrite it via a project they legitimately own.
-        var ownItems = items.Where(i => i.ProjectId == projectId).ToList();
-        var plantIds = ownItems.Select(i => i.PlantId).ToList();
-        var existing = await _db.ProjectItems
-            .Where(i => plantIds.Contains(i.PlantId) && i.ProjectId == projectId)
-            .ToDictionaryAsync(i => i.PlantId);
-
-        foreach (var item in ownItems)
-        {
-            if (existing.TryGetValue(item.PlantId, out var entity))
-            {
-                ApplyItem(entity, item);
-            }
-            else
-            {
-                var newEntity = new ProjectItem { PlantId = item.PlantId };
-                ApplyItem(newEntity, item);
-                _db.ProjectItems.Add(newEntity);
-            }
-        }
-
-        project.LastUpdate = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-        return true;
-    }
-
-    public async Task<bool> DeletePlantAsync(string userId, string projectId, string plantId)
-    {
-        if (!await IsProjectOwnedAsync(userId, projectId))
-        {
-            return false;
-        }
-
-        var entity = await _db.ProjectItems
-            .FirstOrDefaultAsync(i => i.PlantId == plantId && i.ProjectId == projectId);
-        if (entity is null)
-        {
-            return false;
-        }
-
-        _db.ProjectItems.Remove(entity);
-        await _db.SaveChangesAsync();
-        return true;
-    }
-
-    private static void ApplyItem(ProjectItem entity, ProjectItemDto dto)
-    {
-        entity.Line = dto.Line;
-        entity.ProjectName = dto.ProjectName;
-        entity.ProjectId = dto.ProjectId;
-        entity.FruitColor = dto.FruitColor;
-        entity.FruitWeight = dto.FruitWeight;
-        entity.SeedColor = dto.SeedColor;
-        entity.SeedWeight = dto.SeedWeight;
-        entity.PlantFatherId = dto.PlantFatherId;
-        entity.PlantMotherId = dto.PlantMotherId;
-        entity.Generation = dto.Generation;
-    }
+    private static PedigreeException ProjectIdTaken() =>
+        PedigreeException.Conflict("projectId", PedigreeCodes.ProjectIdTaken, "That project id is already in use. Try again.");
 
     private static ProjectHeaderDto ToHeaderDto(Project project) => new()
     {
@@ -141,21 +94,6 @@ public class ProjectsService : IProjectsService
         PlantType = project.PlantType,
         StartDate = project.StartDate.ToString(DateFormat, CultureInfo.InvariantCulture),
         LastUpdate = project.LastUpdate.ToString(DateFormat, CultureInfo.InvariantCulture),
-    };
-
-    private static ProjectItemDto ToItemDto(ProjectItem item) => new()
-    {
-        Line = item.Line,
-        ProjectName = item.ProjectName,
-        ProjectId = item.ProjectId,
-        PlantId = item.PlantId,
-        PlantFatherId = item.PlantFatherId,
-        PlantMotherId = item.PlantMotherId,
-        FruitColor = item.FruitColor,
-        FruitWeight = item.FruitWeight,
-        SeedColor = item.SeedColor,
-        SeedWeight = item.SeedWeight,
-        Generation = item.Generation,
     };
 
     public Task<bool> IsProjectOwnedAsync(string userId, string projectId) =>

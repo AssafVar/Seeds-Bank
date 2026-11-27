@@ -28,6 +28,10 @@ const buildTheme = (colors) =>
         dark: colors.primaryDark,
         contrastText: "#FFFFFF",
       },
+      // Darker than MUI's defaults so chips and icons in these colours reach
+      // 4.5:1 on every palette's paper colour. Palette primaries are untouched.
+      info: { main: "#0B5C99", contrastText: "#FFFFFF" },
+      warning: { main: "#A04800", contrastText: "#FFFFFF" },
       background: {
         default: colors.background,
         paper: colors.paper,
@@ -42,6 +46,37 @@ const buildTheme = (colors) =>
       borderRadius: 8,
     },
     components: {
+      // One visible keyboard focus ring everywhere: 2px primary, 2px offset.
+      MuiButtonBase: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&.Mui-focusVisible, &:focus-visible": {
+              outline: `2px solid ${theme.palette.primary.main}`,
+              outlineOffset: 2,
+            },
+          }),
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&.Mui-focusVisible, &:focus-visible": {
+              outline: `2px solid ${theme.palette.primary.main}`,
+              outlineOffset: 2,
+            },
+          }),
+        },
+      },
+      MuiLink: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            "&.Mui-focusVisible, &:focus-visible": {
+              outline: `2px solid ${theme.palette.primary.main}`,
+              outlineOffset: 2,
+            },
+          }),
+        },
+      },
       // "Whisper flat": elevation comes from a hairline border in the
       // theme's own divider color, never a drop shadow - the one exception
       // is a floating surface with no backdrop scrim of its own (menus,

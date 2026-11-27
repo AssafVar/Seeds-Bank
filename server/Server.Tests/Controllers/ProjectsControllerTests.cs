@@ -8,8 +8,9 @@ namespace SeedsBank.Server.Tests.Controllers;
 
 public class ProjectsControllerTests
 {
-    private static ProjectsController MakeController(Mock<IProjectsService> service, string callerUserId = "u1")
+    private static ProjectsController MakeController(Mock<IProjectsService> service, string callerUserId = "u1", bool ownsProject = true)
     {
+        service.Setup(s => s.IsProjectOwnedAsync("u1", It.IsAny<string>())).ReturnsAsync(ownsProject);
         var controller = new ProjectsController(service.Object);
         ControllerTestHelpers.SetUser(controller, callerUserId);
         return controller;
@@ -28,22 +29,30 @@ public class ProjectsControllerTests
     }
 
     [Fact]
-    public async Task GetProject_returns_ok_when_found()
+    public async Task GetProject_returns_ok_with_lines_and_projectHeaders()
     {
         var service = new Mock<IProjectsService>();
-        service.Setup(s => s.GetProjectAsync("u1", "p1")).ReturnsAsync(new ProjectDetailResponse());
+        var overview = new ProjectOverviewResponse
+        {
+            ProjectHeaders = new ProjectHeaderDto { ProjectId = "p1", ProjectName = "Tomatoes" },
+            Lines = new List<LineDto> { new() { Id = 1, Name = "Founders", Code = "P", IsFounders = true } },
+        };
+        service.Setup(s => s.GetProjectAsync("u1", "p1")).ReturnsAsync(overview);
         var controller = MakeController(service);
 
         var result = await controller.GetProject("u1", "p1");
 
-        Assert.IsType<OkObjectResult>(result);
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<ProjectOverviewResponse>(ok.Value);
+        Assert.Equal("Tomatoes", body.ProjectHeaders!.ProjectName);
+        Assert.Single(body.Lines);
     }
 
     [Fact]
     public async Task GetProject_returns_not_found_when_missing()
     {
         var service = new Mock<IProjectsService>();
-        service.Setup(s => s.GetProjectAsync("u1", "p1")).ReturnsAsync((ProjectDetailResponse?)null);
+        service.Setup(s => s.GetProjectAsync("u1", "p1")).ReturnsAsync((ProjectOverviewResponse?)null);
         var controller = MakeController(service);
 
         var result = await controller.GetProject("u1", "p1");
@@ -51,29 +60,31 @@ public class ProjectsControllerTests
         Assert.IsType<NotFoundResult>(result);
     }
 
+    // The old "UpdateProject returns ok / not found" tests (test plan 5.4
+    // says keep) cannot stay: the whole-list save is a 410 now. They become
+    // the two legacy-route tests below.
     [Fact]
-    public async Task UpdateProject_returns_ok_when_the_project_is_updated()
+    public async Task LegacySave_returns_410_with_a_message_for_the_owner()
     {
         var service = new Mock<IProjectsService>();
-        service.Setup(s => s.UpdateProjectDetailsAsync("u1", "p1", It.IsAny<List<ProjectItemDto>>())).ReturnsAsync(true);
         var controller = MakeController(service);
 
-        var result = await controller.UpdateProject("u1", "p1", new List<ProjectItemDto>());
+        var result = await controller.LegacySave("u1", "p1");
 
-        Assert.IsType<OkObjectResult>(result);
+        var gone = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(410, gone.StatusCode);
+        Assert.Equal("This page is out of date. Reload and try again.", gone.Value!.GetType().GetProperty("message")!.GetValue(gone.Value));
     }
 
     [Fact]
-    public async Task UpdateProject_returns_not_found_when_the_project_does_not_exist()
+    public async Task LegacySave_returns_not_found_when_the_project_does_not_exist()
     {
         var service = new Mock<IProjectsService>();
-        service.Setup(s => s.UpdateProjectDetailsAsync("u1", "p1", It.IsAny<List<ProjectItemDto>>())).ReturnsAsync(false);
-        var controller = MakeController(service);
+        var controller = MakeController(service, ownsProject: false);
 
-        var result = await controller.UpdateProject("u1", "p1", new List<ProjectItemDto>());
+        var result = await controller.LegacySave("u1", "p1");
 
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        Assert.NotNull(notFound.Value);
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
@@ -99,30 +110,5 @@ public class ProjectsControllerTests
 
         Assert.IsType<OkResult>(result);
         service.Verify(s => s.CreateProjectAsync("u1", request), Times.Once);
-    }
-
-    [Fact]
-    public async Task DeletePlant_returns_ok_when_deleted()
-    {
-        var service = new Mock<IProjectsService>();
-        service.Setup(s => s.DeletePlantAsync("u1", "p1", "plant-1")).ReturnsAsync(true);
-        var controller = MakeController(service);
-
-        var result = await controller.DeletePlant("u1", "p1", "plant-1");
-
-        Assert.IsType<OkObjectResult>(result);
-    }
-
-    [Fact]
-    public async Task DeletePlant_returns_not_found_when_the_plant_is_missing()
-    {
-        var service = new Mock<IProjectsService>();
-        service.Setup(s => s.DeletePlantAsync("u1", "p1", "missing")).ReturnsAsync(false);
-        var controller = MakeController(service);
-
-        var result = await controller.DeletePlant("u1", "p1", "missing");
-
-        var notFound = Assert.IsType<NotFoundObjectResult>(result);
-        Assert.NotNull(notFound.Value);
     }
 }

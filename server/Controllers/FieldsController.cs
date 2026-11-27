@@ -12,23 +12,12 @@ public class FieldsController : OwnedResourceControllerBase
 {
     private readonly IFieldService _fieldService;
     private readonly IFieldWorkLogService _fieldWorkLogService;
-    private readonly IProjectsService _projectsService;
 
     public FieldsController(IFieldService fieldService, IFieldWorkLogService fieldWorkLogService, IProjectsService projectsService)
+        : base(projectsService)
     {
         _fieldService = fieldService;
         _fieldWorkLogService = fieldWorkLogService;
-        _projectsService = projectsService;
-    }
-
-    // The route's userId matching the caller isn't enough: the field and
-    // work-log services look rows up by projectId alone, so the project
-    // itself must belong to that user too. A project the caller doesn't
-    // own answers 404, the same as one that doesn't exist.
-    private async Task<IActionResult?> RejectUnlessOwnedProjectAsync(string userId, string projectId)
-    {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden;
-        return await _projectsService.IsProjectOwnedAsync(userId, projectId) ? null : NotFound();
     }
 
     [HttpGet]

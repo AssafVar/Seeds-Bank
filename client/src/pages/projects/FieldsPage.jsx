@@ -3,8 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Container } from "@mui/system";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
+import Alert from "@mui/material/Alert";
 import authContext from "../../contexts/AuthContext.js";
-import { fetchCurrentProject } from "../../services/serverCalls.js";
+import { getProjectOverview } from "../../services/serverCalls.js";
 import { classes } from "../../styles/projectsStyle.js";
 import ProjectTabsBar from "../../components/projects/ProjectTabsBar.jsx";
 import FieldsList from "../../components/projects/FieldsList.jsx";
@@ -15,10 +16,15 @@ function FieldsPage() {
   const navigate = useNavigate();
   const { activeUser } = useContext(authContext);
   const [projectHeaders, setProjectHeaders] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const fetchProject = useCallback(async () => {
-    const response = await fetchCurrentProject(activeUser.userId, projectId);
-    setProjectHeaders(response.data.projectHeaders);
+    try {
+      const overview = await getProjectOverview(activeUser.userId, projectId);
+      setProjectHeaders(overview.projectHeaders);
+    } catch (err) {
+      setLoadFailed(true);
+    }
   }, [activeUser, projectId]);
 
   useEffect(() => {
@@ -33,7 +39,11 @@ function FieldsPage() {
 
   return (
     <Container>
-      {!projectHeaders ? (
+      {loadFailed ? (
+        <Alert severity="error" sx={{ mt: 3 }} action={<Button color="inherit" onClick={() => navigate("/projects")}>Projects</Button>}>
+          You do not have access to this project.
+        </Alert>
+      ) : !projectHeaders ? (
         <Spinner size={48} minHeight={200} />
       ) : (
         <>
