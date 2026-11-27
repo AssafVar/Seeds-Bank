@@ -217,7 +217,32 @@ public class PlantService : IPlantService
                 plan.Line is null ? await TakenCodesAsync(projectId) : Array.Empty<string>());
 
             var taken = await TakenTagsAsync(projectId, line.Code);
-            var seq = line.NextSeq;
+
+            // Generated tags on an existing line: reserve the whole number
+            // range with one atomic UPDATE inside the transaction. Concurrent
+            // creates then queue on the line's row lock instead of failing an
+            // optimistic check. (The in-memory provider has neither
+            // transactions nor ExecuteUpdate, so tests take the tracked
+            // fallback below.)
+            var atomic = _db.Database.IsRelational() && plan.Line is not null && customTag is null;
+            await using var transaction = atomic ? await _db.Database.BeginTransactionAsync() : null;
+            int seq;
+            if (atomic)
+            {
+                var lineId = plan.Line!.Id;
+                var count = request.Count;
+                await _db.Lines.Where(l => l.ProjectId == projectId && l.Id == lineId)
+                    .ExecuteUpdateAsync(u => u.SetProperty(l => l.NextSeq, l => l.NextSeq + count));
+                var after = await _db.Lines.AsNoTracking()
+                    .Where(l => l.ProjectId == projectId && l.Id == lineId)
+                    .Select(l => l.NextSeq).SingleAsync();
+                seq = after - count;
+            }
+            else
+            {
+                seq = line.NextSeq;
+            }
+            var reservedEnd = seq + request.Count;
             var now = DateTime.UtcNow;
             var created = new List<ProjectItem>(request.Count);
             for (var n = 0; n < request.Count; n++)
@@ -252,10 +277,24 @@ public class PlantService : IPlantService
                 });
             }
 
-            if (customTag is null) line.NextSeq = seq;
+            if (customTag is null && !atomic) line.NextSeq = seq;
             _db.ProjectItems.AddRange(created);
             await TouchProjectAsync(projectId, now);
             await _db.SaveChangesAsync();
+
+            if (atomic)
+            {
+                // Skipped numbers (custom tags that look generated) used more
+                // than the reserved range: move the counter past them.
+                if (seq > reservedEnd)
+                {
+                    var lineId = line.Id;
+                    var end = seq;
+                    await _db.Lines.Where(l => l.ProjectId == projectId && l.Id == lineId && l.NextSeq < end)
+                        .ExecuteUpdateAsync(u => u.SetProperty(l => l.NextSeq, end));
+                }
+                await transaction!.CommitAsync();
+            }
 
             // Built from what was just written: no re-read of the new plants and
             // no lookup of parents or children (a new plant has none).

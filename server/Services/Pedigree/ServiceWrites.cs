@@ -19,7 +19,7 @@ internal static class ServiceWrites
             {
                 return await body();
             }
-            catch (DbUpdateException) // includes DbUpdateConcurrencyException
+            catch (Exception ex) when (ex is DbUpdateException or System.Data.Common.DbException) // includes concurrency, lock wait timeout, deadlock
             {
                 db.ChangeTracker.Clear();
                 if (attempt >= attempts) throw onExhausted();

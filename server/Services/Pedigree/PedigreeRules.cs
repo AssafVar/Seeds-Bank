@@ -171,7 +171,7 @@ public static class PedigreeRules
 
         if (!sameLine || req.StartNewLine)
         {
-            var name = ResolveNewLineName(req.NewLineName, motherLine, fatherLine, isSelf, lines);
+            var name = ResolveNewLineName(req.NewLineName, mother, father, isSelf, lines);
             return new PlacementResult(null, true, name, kind, 1, isSelf, !sameLine && siblings.Length == 0, origins, choices);
         }
 
@@ -213,28 +213,46 @@ public static class PedigreeRules
         new OriginSeed(Models.LineOrigin.RoleFather, fatherLine.Id, fatherLine.Name, father.Label, father.Tag),
     };
 
+    // An explicit name that is taken is a 409. A missing name gets a default
+    // built from the parents' tags ("A x B", "A selfed"), cleaned to the line
+    // name rules, cut to the length cap and made unique with " 2", " 3"...
+    // so a default never conflicts (preview included).
     private static string ResolveNewLineName(
-        string? requested, LineInfo motherLine, LineInfo fatherLine, bool isSelf,
+        string? requested, ParentInfo mother, ParentInfo father, bool isSelf,
         IReadOnlyDictionary<int, LineInfo> lines)
     {
-        string name;
-        if (string.IsNullOrWhiteSpace(requested))
+        var taken = new HashSet<string>(lines.Values.Select(l => l.Name), StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(requested))
         {
-            name = isSelf ? $"{motherLine.Name} selfed" : $"{motherLine.Name} x {fatherLine.Name}";
-            if (name.Length > InputRules.MaxLineNameLength) name = name[..InputRules.MaxLineNameLength].TrimEnd();
-        }
-        else
-        {
-            name = InputRules.ValidateLineName(requested);
+            var name = InputRules.ValidateLineName(requested);
+            if (taken.Contains(name))
+            {
+                throw PedigreeException.Conflict(PedigreeFields.LineName, PedigreeCodes.LineNameTaken,
+                    $"A line named {name} already exists in this project.");
+            }
+            return name;
         }
 
-        if (lines.Values.Any(l => string.Equals(l.Name, name, StringComparison.OrdinalIgnoreCase)))
+        var baseName = Clean(isSelf ? $"{mother.Tag} selfed" : $"{mother.Tag} x {father.Tag}");
+        var candidate = baseName;
+        for (var n = 2; taken.Contains(candidate); n++)
         {
-            throw PedigreeException.Conflict(PedigreeFields.LineName, PedigreeCodes.LineNameTaken,
-                $"A line named {name} already exists in this project.");
+            var suffix = " " + n;
+            var head = baseName.Length + suffix.Length > InputRules.MaxLineNameLength
+                ? baseName[..(InputRules.MaxLineNameLength - suffix.Length)].TrimEnd()
+                : baseName;
+            candidate = head + suffix;
         }
+        return candidate;
+    }
 
-        return name;
+    private static string Clean(string text)
+    {
+        var chars = text.Select(c => char.IsLetterOrDigit(c) || c == ' ' || c == '-' ? c : '-').ToArray();
+        var cleaned = new string(chars).Trim();
+        if (cleaned.Length > InputRules.MaxLineNameLength) cleaned = cleaned[..InputRules.MaxLineNameLength].TrimEnd();
+        return cleaned.Length == 0 ? "New line" : cleaned;
     }
 
     private static IReadOnlyList<LineChoice> BuildChoices(

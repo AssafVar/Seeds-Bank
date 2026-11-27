@@ -180,7 +180,7 @@ public class PedigreeRulesTests
         Assert.True(r.ForcedNewLine);
         Assert.Equal(1, r.Generation);
         Assert.Equal('F', r.Kind);
-        Assert.Equal("Roma-A x Beta", r.NewLineName);
+        Assert.Equal("M x F", r.NewLineName); // default is built from the parents' tags (F7)
         Assert.Equal(2, r.Origins.Count);
         Assert.Equal(4, r.Origins[1].SourceLineId);
     }
@@ -192,7 +192,7 @@ public class PedigreeRulesTests
         Assert.True(r.StartsNewLine);
         Assert.True(r.ForcedNewLine);
         Assert.Equal(1, r.Generation);
-        Assert.Equal("Founders x Roma-A", r.NewLineName);
+        Assert.Equal("M x F", r.NewLineName);
     }
 
     [Fact]
@@ -219,7 +219,7 @@ public class PedigreeRulesTests
     public void Self_default_name_when_omitted()
     {
         var p = Parent("m", 1, 0, 'P');
-        Assert.Equal("Founders selfed", PedigreeRules.Place(Req(p, p), Lines()).NewLineName);
+        Assert.Equal("M selfed", PedigreeRules.Place(Req(p, p), Lines()).NewLineName);
     }
 
     [Fact]
