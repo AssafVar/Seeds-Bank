@@ -62,6 +62,33 @@ describe("PlantsGroupedTable", () => {
     expect(headings).toEqual(["Roma-A", "Founders"]);
   });
 
+  it("does not show the generation caption on the Founders population", () => {
+    const founders = foundersLine({ plantCount: 2, populations: [population({ id: 90, label: "P", plantCount: 2 })] });
+    renderWithProviders(<PlantsGroupedTable {...open([founders])} />);
+
+    expect(screen.queryByText("Generation worked out from the parents")).not.toBeInTheDocument();
+  });
+
+  it("points the chevrons at the content they open (aria-controls)", () => {
+    renderWithProviders(<PlantsGroupedTable {...open([line()])} />);
+
+    const id = screen.getByRole("button", { name: /^Collapse Roma-A/ }).getAttribute("aria-controls");
+    expect(id).toBe("line-1-body");
+    expect(document.getElementById(id)).not.toBeNull();
+  });
+
+  it("gives the generation chip its own space so the tag is not squeezed", () => {
+    renderWithProviders(<PlantsGroupedTable {...open([line()], { 10: { items: [plant({ tag: "RA-F3-0001234" })], page: 1, totalCount: 1, status: "ready" } })} />);
+
+    expect(screen.getByText("RA-F3-0001234")).toHaveAttribute("title", "RA-F3-0001234");
+  });
+
+  it("shows the generation caption for a normal line", () => {
+    renderWithProviders(<PlantsGroupedTable {...open([line()])} />);
+
+    expect(screen.getByText("Generation worked out from the parents")).toBeInTheDocument();
+  });
+
   it("gives the chevron aria-expanded and labels the kebab with the plant tag", () => {
     const props = open([line()], { 10: { items: [plant()], page: 1, totalCount: 1, status: "ready" } });
     renderWithProviders(<PlantsGroupedTable {...props} />);

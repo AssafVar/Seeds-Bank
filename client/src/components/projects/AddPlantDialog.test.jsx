@@ -133,13 +133,20 @@ describe("AddPlantDialog", () => {
   it("asks for both parents when only one is picked, and does not save", async () => {
     const { onCreate } = setup();
     await pick("Mother", "RA-F2-004");
-    await waitFor(() => expect(screen.getByLabelText(/^Tag/)).not.toHaveValue(""));
-    userEvent.type(screen.getByLabelText(/^Tag/), "{selectall}RA-X-1");
+    userEvent.type(screen.getByLabelText(/^Tag/), "RA-X-1");
 
     userEvent.click(screen.getByRole("button", { name: "Add plant" }));
 
     expect(await screen.findByText("Pick both parents, or leave both empty for a founder.")).toBeInTheDocument();
     expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it("shows the one-parent error at once and hides the founder line and tag", async () => {
+    setup({ preset: { mother: { plantId: "m1", tag: "RA-F2-004" } } });
+
+    expect(await screen.findByText("Pick both parents, or leave both empty for a founder.")).toBeInTheDocument();
+    expect(screen.queryByText(/Founders · P/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^Tag/)).toHaveValue("");
   });
 
   it("shows the server's descendant error under the Mother field and keeps the dialog open", async () => {

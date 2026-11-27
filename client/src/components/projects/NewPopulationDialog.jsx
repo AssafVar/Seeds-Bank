@@ -35,7 +35,7 @@ export default function NewPopulationDialog({ line, userId, projectId, onClose, 
   };
 
   return (
-    <FormDialog open title={`New population in ${line.name}`} titleId="new-population-title" onClose={onClose}>
+    <FormDialog open title={`New population in ${line.name}`} titleId="new-population-title" onClose={onClose} focusSelector="[role=button][aria-haspopup=listbox], [role=combobox]">
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
         {formError && <Alert severity="error">{formError}</Alert>}
         <SeasonPlaceFields {...place} fields={fields} errors={errors} onChange={(p) => setPlace((prev) => ({ ...prev, ...p }))} />

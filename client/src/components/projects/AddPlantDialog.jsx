@@ -17,6 +17,7 @@ import Typography from "@mui/material/Typography";
 import { previewPlacement } from "../../services/serverCalls";
 import { LINE_NAME_PATTERN, TAG_PATTERN, TRAIT_KEYS, currentSeasonAndYear, errorInfo, suggestLineName } from "../../libs/pedigree";
 import DialogModal from "../dialog/DialogModal.jsx";
+import FieldError from "./FieldError.jsx";
 import FormDialog from "./FormDialog.jsx";
 import ParentPicker from "./ParentPicker.jsx";
 import SeasonPlaceFields, { useProjectFields } from "./SeasonPlaceFields.jsx";
@@ -82,7 +83,12 @@ export default function AddPlantDialog({ mode = "add", preset = {}, userId, proj
 
   // The server works out line, generation, tag suggestion and population.
   useEffect(() => {
-    if (oneParent) return undefined;
+    if (oneParent) {
+      // No placement can be worked out with one parent: drop the founder tag and preview.
+      if (!tagTouchedRef.current) setTag("");
+      setPreview(null);
+      return undefined;
+    }
     let cancelled = false;
     const startNew = choice === "new";
     const timer = setTimeout(async () => {
@@ -117,6 +123,9 @@ export default function AddPlantDialog({ mode = "add", preset = {}, userId, proj
     };
   }, [userId, projectId, mother, father, choice, newLineName, place, preset.populationId, oneParent, refreshKey]);
 
+  const oneParentMessage = "Pick both parents, or leave both empty for a founder.";
+  const motherError = errors.mother ?? (oneParent && !mother ? oneParentMessage : undefined);
+  const fatherError = errors.father ?? (oneParent && !father ? oneParentMessage : undefined);
   const forcedNew = hasParents && preview?.forcedNewLine;
   const selectedChoice = choice ?? (preview ? (preview.startsNewLine ? "new" : `line:${preview.line?.id}`) : "");
   const startsNew = hasParents && selectedChoice === "new";
@@ -248,7 +257,7 @@ export default function AddPlantDialog({ mode = "add", preset = {}, userId, proj
                 value={mother}
                 onChange={changeMother}
                 lineNames={lineNames}
-                error={errors.mother}
+                error={motherError}
                 autoFocus={mode === "cross"}
               />
               <ParentPicker
@@ -258,7 +267,7 @@ export default function AddPlantDialog({ mode = "add", preset = {}, userId, proj
                 value={father}
                 onChange={changeFather}
                 lineNames={lineNames}
-                error={errors.father}
+                error={fatherError}
                 disabled={self}
               />
               {mode !== "cross" && (
@@ -284,9 +293,9 @@ export default function AddPlantDialog({ mode = "add", preset = {}, userId, proj
                 ))}
               </RadioGroup>
               {forcedNew && <FormHelperText>These parents come from different lines, so this starts a new line.</FormHelperText>}
-              {errors.line && <FormHelperText aria-live="polite">{errors.line}</FormHelperText>}
+              {errors.line && <FormHelperText aria-live="polite"><FieldError>{errors.line}</FieldError></FormHelperText>}
             </FormControl>
-          ) : (
+          ) : oneParent ? null : (
             <Typography variant="body2">
               <strong>Line</strong>: Founders · P
             </Typography>
@@ -299,7 +308,7 @@ export default function AddPlantDialog({ mode = "add", preset = {}, userId, proj
               onChange={(e) => setNewLineName(e.target.value)}
               error={Boolean(errors.lineName)}
               helperText={
-                errors.lineName ||
+                errors.lineName ? <FieldError>{errors.lineName}</FieldError> :
                 `Line names are unique in this project. Letters, numbers, dashes and spaces.${newLineName.length >= 32 ? ` ${newLineName.length}/40` : ""}`
               }
               inputProps={{ maxLength: 40 }}
@@ -317,7 +326,7 @@ export default function AddPlantDialog({ mode = "add", preset = {}, userId, proj
               setErrors((p) => ({ ...p, tag: undefined }));
             }}
             error={Boolean(errors.tag)}
-            helperText={errors.tag || `Tags never change after saving.${tagNearLimit ? ` ${tag.length}/24` : ""}`}
+            helperText={errors.tag ? <FieldError>{errors.tag}</FieldError> : `Tags never change after saving.${tagNearLimit ? ` ${tag.length}/24` : ""}`}
             inputProps={{ maxLength: 24 }}
             FormHelperTextProps={{ "aria-live": "polite" }}
             required

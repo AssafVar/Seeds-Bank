@@ -72,7 +72,7 @@ describe("ProjectItem", () => {
     expect(await screen.findByRole("heading", { level: 4, name: "Spring 2026 · North field" })).toBeInTheDocument();
     expect(await screen.findByText("RA-F3-001")).toBeInTheDocument();
     expect(screen.getByText("Roma VF × San Marzano")).toBeInTheDocument();
-    expect(screen.getByText("2 plants in 2 lines")).toBeInTheDocument();
+    expect(screen.getByText("2 plants in 1 line")).toBeInTheDocument();
   });
 
   it("navigates to the project list when 'Return to the Project List' is clicked", async () => {
@@ -172,6 +172,7 @@ describe("ProjectItem", () => {
     expect(screen.getByRole("button", { name: "Add founder plants" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cross plants" })).toBeDisabled();
     expect(screen.queryByLabelText("Search tag or trait")).not.toBeInTheDocument();
+    expect(screen.getByText("No plants yet")).toBeInTheDocument();
   });
 
   it.each([[403], [404]])("shows the no-access message for a %i without echoing the body", async (status) => {
@@ -194,6 +195,8 @@ describe("ProjectItem", () => {
 
     renderWithProviders(<ProjectItem />, renderOptions);
     expect(await screen.findByText("Could not load plants. Check your connection and try again.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Plants" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Return to the Project List" })).toBeInTheDocument();
 
     userEvent.click(screen.getByRole("button", { name: "Retry" }));
 

@@ -3,7 +3,7 @@ import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import FieldError from "./FieldError.jsx";
 import { getPlants } from "../../services/serverCalls";
 
 const SEARCH_DELAY_MS = 250;
@@ -102,10 +102,7 @@ export default function ParentPicker({
           error={Boolean(error)}
           helperText={
             error ? (
-              <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-                <ErrorOutlineIcon fontSize="inherit" />
-                {error}
-              </Box>
+              <FieldError>{error}</FieldError>
             ) : (
               helperText || undefined
             )

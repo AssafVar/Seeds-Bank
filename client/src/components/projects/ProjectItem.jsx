@@ -49,9 +49,14 @@ function ProjectItem() {
     const noAccess = loadError?.kind === "no-access";
     return (
       <Container>
+        <Typography variant="h3" style={classes.pageHeadline}>
+          Project
+        </Typography>
+        <Button onClick={() => navigate("/projects")} sx={{ mt: 1, minHeight: 44 }}>Return to the Project List</Button>
+        <ProjectTabsBar value={activeTab} onChange={handleTabChange} />
         <Alert
           severity="error"
-          sx={{ mt: 3 }}
+          sx={{ mt: 1 }}
           action={
             noAccess ? (
               <Button color="inherit" onClick={() => navigate("/projects")} sx={{ minHeight: 44 }}>
@@ -75,7 +80,7 @@ function ProjectItem() {
       <Typography variant="h3" style={classes.pageHeadline}>
         project: {headers?.project_name}
       </Typography>
-      <Button onClick={() => navigate("/projects")} sx={{ mt: 1 }}>Return to the Project List</Button>
+      <Button onClick={() => navigate("/projects")} sx={{ mt: 1, minHeight: 44 }}>Return to the Project List</Button>
       <ProjectTabsBar value={activeTab} onChange={handleTabChange} />
       {activeTab === 0 && (
         <PlantsTab

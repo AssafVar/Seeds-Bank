@@ -11,6 +11,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { LINE_NAME_PATTERN, errorInfo, pluralPlants } from "../../libs/pedigree";
 import DialogModal from "../dialog/DialogModal.jsx";
+import FieldError from "./FieldError.jsx";
 import FormDialog from "./FormDialog.jsx";
 
 const latestLabel = (line) => (line.populations ?? []).find((p) => p.isLatestGeneration)?.label ?? line.populations?.[0]?.label ?? "";
@@ -60,11 +61,12 @@ export default function ContinueLineDialog({ line, existingNames = [], onClose, 
 
   return (
     <>
-      <FormDialog open title={`Continue ${line.name} as a new line`} titleId="continue-line-title" onClose={requestClose}>
+      <FormDialog open title={`Continue ${line.name} as a new line`} titleId="continue-line-title" onClose={requestClose} focusSelector="input[name=newLineName]">
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
           {formError && <Alert severity="error">{formError}</Alert>}
           <TextField
             label="New line name"
+            name="newLineName"
             value={name}
             autoFocus
             required
@@ -74,8 +76,8 @@ export default function ContinueLineDialog({ line, existingNames = [], onClose, 
             }}
             error={Boolean(error) || (duplicate && Boolean(trimmed))}
             helperText={
-              error ||
-              (duplicate && trimmed ? `A line named ${trimmed} already exists in this project.` : "Line names are unique in this project. Letters, numbers, dashes and spaces.")
+              error ? <FieldError>{error}</FieldError> :
+              (duplicate && trimmed ? <FieldError>{`A line named ${trimmed} already exists in this project.`}</FieldError> : "Line names are unique in this project. Letters, numbers, dashes and spaces.")
             }
             inputProps={{ maxLength: 40 }}
             FormHelperTextProps={{ "aria-live": "polite" }}

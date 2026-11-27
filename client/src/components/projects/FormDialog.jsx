@@ -8,13 +8,15 @@ import ModalCloseButton from "../common/ModalCloseButton.jsx";
 
 // Shared shell for the plant and line dialogs: full-screen on phones,
 // 560px on desktop, close button, focus trapped by MUI.
-export default function FormDialog({ open, title, titleId, onClose, children, maxWidth = "sm" }) {
+// `focusSelector` names the element to focus once the dialog has finished opening.
+export default function FormDialog({ open, title, titleId, onClose, children, maxWidth = "sm", focusSelector }) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
   return (
     <Dialog
       open={open}
       onClose={onClose}
+      TransitionProps={{ onEntered: (node) => focusSelector && node?.querySelector(focusSelector)?.focus() }}
       fullScreen={fullScreen}
       fullWidth
       maxWidth={maxWidth}

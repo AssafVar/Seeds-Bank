@@ -24,11 +24,11 @@ export function GenerationChip({ label, kept = false, size = "small" }) {
 export function ParentRemovedChip({ onClick }) {
   return (
     <Chip
-      size="small"
       color="warning"
       variant="outlined"
       icon={<LinkOffIcon />}
       label="Parent removed"
+      sx={{ height: 40, maxWidth: "none", flexShrink: 0, "& .MuiChip-label": { overflow: "visible", textOverflow: "clip" } }}
       onClick={onClick}
       aria-label={onClick ? "Parent removed, edit parents" : "Parent removed"}
     />

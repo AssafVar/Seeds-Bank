@@ -28,6 +28,8 @@ const COLUMNS = 8;
 const HEADERS = ["Tag", "Mother", "Father", "Fruit color", "Fruit wt (g)", "Seed color", "Seed wt (mg)"];
 const TRAIT_COLUMNS = ["fruitColor", "fruitWeight", "seedColor", "seedWeight"];
 const POPULATION_LIMIT = 5;
+// Tag gets room for real tags; the generation chip never squeezes it.
+const COLUMN_WIDTHS = [210, 150, 150, 100, 90, 100, 90, 150];
 export const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 function ParentCell({ parent, role, onOpen, onEditParents }) {
@@ -101,12 +103,14 @@ function PlantRow({ plant, onAction, onSaveTrait }) {
   const hasParents = Boolean(plant.mother || plant.father);
   return (
     <TableRow hover>
-      <TableCell component="th" scope="row" sx={{ pl: 8, fontWeight: 600 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography component="span" noWrap title={plant.tag} sx={{ fontWeight: 600, maxWidth: 140 }}>
+      <TableCell component="th" scope="row" sx={{ pl: 6, fontWeight: 600 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+          <Typography component="span" noWrap title={plant.tag} sx={{ fontWeight: 600, minWidth: 0, flex: "1 1 auto" }}>
             {plant.tag}
           </Typography>
-          <GenerationChip label={plant.label} kept={Boolean(plant.mother?.removed || plant.father?.removed)} />
+          <Box sx={{ flexShrink: 0 }}>
+            <GenerationChip label={plant.label} kept={Boolean(plant.mother?.removed || plant.father?.removed)} />
+          </Box>
         </Box>
       </TableCell>
       <TableCell>
@@ -173,29 +177,33 @@ export default function PlantsGroupedTable({
   return (
     <Paper variant="outlined" sx={{ borderRadius: 4, overflow: "hidden" }}>
       <TableContainer sx={{ maxHeight: "calc(100vh - 320px)", minHeight: 160 }}>
-        <Table stickyHeader size="small" aria-label="Plants grouped by line and population" sx={{ minWidth: 900, tableLayout: "fixed" }}>
+        <Table stickyHeader size="small" aria-label="Plants grouped by line and population" sx={{ minWidth: 1030, tableLayout: "fixed" }}>
+          <colgroup>
+            {COLUMN_WIDTHS.map((w, i) => (
+              <col key={i} style={{ width: w }} />
+            ))}
+          </colgroup>
           <TableHead>
             <TableRow>
               {HEADERS.map((h, i) => (
-                <TableCell key={h} sx={{ pl: i === 0 ? 8 : undefined, fontWeight: 700 }}>
+                <TableCell key={h} sx={{ pl: i === 0 ? 6 : undefined, fontWeight: 700 }}>
                   {h}
                 </TableCell>
               ))}
-              <TableCell sx={{ width: 150 }}>
+              <TableCell>
                 <Box component="span" sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
                   Actions
                 </Box>
               </TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
-            {lines.map((line) => {
+          {lines.map((line) => {
               const lineOpen = expandedLineIds.has(line.id);
               const populations = showAll.has(line.id) ? line.populations : line.populations.slice(0, POPULATION_LIMIT);
               const hidden = line.populations.length - populations.length;
               const lineMatches = searching ? line.populations.reduce((n, p) => n + (counts.byPopulation[p.id] ?? 0), 0) : undefined;
               return (
-                <React.Fragment key={line.id}>
+                <TableBody key={line.id} id={lineOpen ? `line-${line.id}-body` : undefined}>
                   {fullRow(
                     `line-${line.id}`,
                     <LineHeader line={line} expanded={lineOpen} matchCount={lineMatches} onToggle={() => onToggleLine(line.id)} onAction={onAction} />,
@@ -215,7 +223,7 @@ export default function PlantsGroupedTable({
                           {popOpen && population.plantCount === 0 &&
                             fullRow(
                               `empty-${population.id}`,
-                              <Box sx={{ pl: 8, py: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                              <Box sx={{ pl: 6, py: 1, display: "flex", alignItems: "center", gap: 1 }}>
                                 <Typography variant="body2">No plants yet.</Typography>
                                 <Button size="small" onClick={() => onAction({ type: "add-plant-to-population", line, population })} sx={{ minHeight: 44 }}>
                                   Add plant
@@ -258,10 +266,9 @@ export default function PlantsGroupedTable({
                         {`Show ${hidden} older ${hidden === 1 ? "population" : "populations"}`}
                       </Button>
                     )}
-                </React.Fragment>
+                </TableBody>
               );
             })}
-          </TableBody>
         </Table>
       </TableContainer>
     </Paper>

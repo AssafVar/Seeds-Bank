@@ -5,6 +5,7 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import TextField from "@mui/material/TextField";
 import { LINE_NAME_PATTERN, errorInfo } from "../../libs/pedigree";
+import FieldError from "./FieldError.jsx";
 import FormDialog from "./FormDialog.jsx";
 
 // "Create first line": an empty line with an optional origin note.
@@ -39,11 +40,12 @@ export default function CreateLineDialog({ existingNames = [], onClose, onSubmit
   };
 
   return (
-    <FormDialog open title="Create first line" titleId="create-line-title" onClose={onClose}>
+    <FormDialog open title="Create first line" titleId="create-line-title" onClose={onClose} focusSelector="input[name=lineName]">
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
         {formError && <Alert severity="error">{formError}</Alert>}
         <TextField
           label="Line name"
+          name="lineName"
           value={name}
           autoFocus
           required
@@ -52,7 +54,7 @@ export default function CreateLineDialog({ existingNames = [], onClose, onSubmit
             setNameError("");
           }}
           error={Boolean(nameError)}
-          helperText={nameError || "Line names are unique in this project. Letters, numbers, dashes and spaces."}
+          helperText={nameError ? <FieldError>{nameError}</FieldError> : "Line names are unique in this project. Letters, numbers, dashes and spaces."}
           inputProps={{ maxLength: 40 }}
           FormHelperTextProps={{ "aria-live": "polite" }}
         />

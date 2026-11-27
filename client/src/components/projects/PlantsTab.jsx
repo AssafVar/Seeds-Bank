@@ -211,9 +211,13 @@ export default function PlantsTab({ pedigree: p, userId, projectId, pageSize, on
     lines.flatMap((l) => l.populations ?? []).find((pop) => pop.id === plant.populationId)?.name ?? "";
 
   const openAdd = (mode, preset = {}) => setDialog({ type: "add", mode, preset });
-  const summary = filters.latestOnly
-    ? `Showing latest generation only (${pluralPlants(counts.total)})`
-    : `${pluralPlants(totalPlants)} in ${lines.length} ${lines.length === 1 ? "line" : "lines"}`;
+  // The empty Founders line is not counted as a line.
+  const countedLines = lines.filter((l) => !(l.isFounders && l.plantCount === 0)).length;
+  const summary = isEmptyProject
+    ? "No plants yet"
+    : filters.latestOnly
+      ? `Showing latest generation only (${pluralPlants(counts.total)})`
+      : `${pluralPlants(totalPlants)} in ${countedLines} ${countedLines === 1 ? "line" : "lines"}`;
 
   const groupProps = {
     lines: shown,
@@ -286,7 +290,7 @@ export default function PlantsTab({ pedigree: p, userId, projectId, pageSize, on
         <EmptyProject onCreateLine={() => setDialog({ type: "create-line" })} onAddFounders={() => openAdd("founder")} />
       ) : (
         <>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: { xs: "nowrap", md: "wrap" }, overflowX: { xs: "auto", md: "visible" }, scrollSnapType: "x proximity", pb: 0.5, mb: 1 }} role="group" aria-label="Line">
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "nowrap", width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", overflowX: "auto", scrollSnapType: "x proximity", py: 0.5, mb: 1 }} role="group" aria-label="Line">
             <Typography variant="body2" color="text.secondary" sx={{ display: { xs: "none", md: "block" } }}>
               Line
             </Typography>

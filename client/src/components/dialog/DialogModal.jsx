@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
@@ -23,9 +23,11 @@ export default function DialogModal({
   onCancel,
   onConfirm,
 }) {
+  const cancelRef = useRef(null);
   return (
     <Dialog
       open={isOpen}
+      TransitionProps={{ onEntered: () => focusCancel && cancelRef.current?.focus() }}
       onClose={busy ? undefined : onCancel}
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-body"
@@ -44,7 +46,7 @@ export default function DialogModal({
         {children}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-        <Button onClick={onCancel} disabled={busy} autoFocus={focusCancel} sx={{ minHeight: 44 }}>
+        <Button ref={cancelRef} onClick={onCancel} disabled={busy} autoFocus={focusCancel} sx={{ minHeight: 44 }}>
           {cancelLabel}
         </Button>
         <Button

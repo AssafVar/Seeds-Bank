@@ -88,17 +88,18 @@ export default function PlantsGroupedList({
         const hidden = line.populations.length - populations.length;
         const lineMatches = searching ? line.populations.reduce((n, p) => n + (counts.byPopulation[p.id] ?? 0), 0) : undefined;
         return (
-          <Paper key={line.id} variant="outlined" sx={{ mb: 2, borderRadius: 3, overflow: "hidden" }}>
+          <Paper key={line.id} variant="outlined" sx={{ mb: 2, borderRadius: 3, overflow: "clip", minWidth: 0 }}>
             <Box sx={{ position: "sticky", top: 0, zIndex: 2, bgcolor: "background.paper", backgroundImage: (theme) => `linear-gradient(${alpha(theme.palette.primary.main, 0.08)}, ${alpha(theme.palette.primary.main, 0.08)})` }}>
               <LineHeader line={line} expanded={lineOpen} matchCount={lineMatches} onToggle={() => onToggleLine(line.id)} onAction={onAction} />
             </Box>
-            {lineOpen &&
-              populations.map((population) => {
+            {lineOpen && (
+              <Box id={`line-${line.id}-body`}>
+              {populations.map((population) => {
                 const popOpen = expandedPopulationIds.has(population.id);
                 const state = plantsByPopulation[population.id];
                 const loaded = state?.items?.length ?? 0;
                 return (
-                  <Box key={population.id} sx={{ borderTop: 1, borderColor: "divider" }}>
+                  <Box key={population.id} id={popOpen ? `pop-${population.id}-body` : undefined} sx={{ borderTop: 1, borderColor: "divider" }}>
                     <PopulationHeader line={line} population={population} expanded={popOpen} onToggle={() => onTogglePopulation(population.id)} onAction={onAction} />
                     {popOpen && population.plantCount === 0 && (
                       <Box sx={{ pl: 2, pb: 1, display: "flex", alignItems: "center", gap: 1 }}>
@@ -124,6 +125,8 @@ export default function PlantsGroupedList({
                   </Box>
                 );
               })}
+              </Box>
+            )}
             {lineOpen && hidden > 0 && (
               <Button sx={{ ml: 2, minHeight: 44 }} onClick={() => setShowAll((prev) => new Set(prev).add(line.id))}>
                 {`Show ${hidden} older ${hidden === 1 ? "population" : "populations"}`}
