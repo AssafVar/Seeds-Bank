@@ -31,10 +31,10 @@ export const themes = {
   sunset: {
     label: "Sunset",
     colors: {
-      primary: "#E85D2B",
+      primary: "#B94318",
       primaryLight: "#FF8C5A",
       primaryDark: "#A83E18",
-      primaryRgb: "232, 93, 43",
+      primaryRgb: "185, 67, 24",
       secondary: "#0E7C74",
       secondaryLight: "#3FA69C",
       secondaryDark: "#08544E",
@@ -88,10 +88,10 @@ export const themes = {
   meadow: {
     label: "Meadow",
     colors: {
-      primary: "#3E8E22",
+      primary: "#2F7A18",
       primaryLight: "#71BC50",
       primaryDark: "#245B10",
-      primaryRgb: "62, 142, 34",
+      primaryRgb: "47, 122, 24",
       secondary: "#6A2FD9",
       secondaryLight: "#9569EC",
       secondaryDark: "#481FA0",
