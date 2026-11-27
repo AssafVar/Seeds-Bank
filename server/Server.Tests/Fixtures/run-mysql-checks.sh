@@ -49,7 +49,7 @@ invariants() {
     check "$name" 0 "$(one "$query")"
   done < <(grep -v '^--' "$HERE/invariants.tsv")
 }
-dump_schema() { docker exec -e MYSQL_PWD="$PW" "$NAME" mysqldump -uroot --no-data --skip-comments --skip-add-drop-table "$DB" 2>/dev/null | sed 's/AUTO_INCREMENT=[0-9]* //'; }
+dump_schema() { docker exec -e MYSQL_PWD="$PW" "$NAME" mysqldump -uroot --no-data --skip-comments --skip-add-drop-table "$DB" 2>/dev/null | sed 's/AUTO_INCREMENT=[0-9]* //' | grep -v '^/\*![0-9]* .*\*/;$'; }
 
 echo "== start mysql:8.0.34 on port $PORT"
 docker run -d --name "$NAME" -e MYSQL_ROOT_PASSWORD="$PW" -e MYSQL_DATABASE="$DB" -p "127.0.0.1:$PORT:3306" mysql:8.0.34 >/dev/null
@@ -94,13 +94,16 @@ check generation_kept 0 "$(one "SELECT COUNT(*) FROM project_items i JOIN popula
 check traits_preserved 0 "$(one "SELECT COUNT(*) FROM project_items i JOIN project_items_backup_step1 b ON b.plant_id=i.plant_id WHERE NOT (i.fruit_weight <=> IF(b.fruit_weight REGEXP '^[[:space:]]*(---)?[[:space:]]*\$', NULL, b.fruit_weight))")"
 check next_seq_is_count_plus_1 0 "$(one "SELECT COUNT(*) FROM \`lines\` l WHERE l.next_seq <> 1 + (SELECT COUNT(*) FROM project_items i JOIN populations p ON p.id=i.population_id WHERE p.line_id=l.id)")"
 check population_count_ge_distinct_line_generation 1 "$(one "SELECT (SELECT COUNT(*) FROM populations) >= (SELECT COUNT(*) FROM (SELECT DISTINCT i.project_id, l.id, p.generation FROM project_items i JOIN populations p ON p.id=i.population_id JOIN \`lines\` l ON l.id=p.line_id) d)")"
-echo "  info  lines=$(one 'SELECT COUNT(*) FROM `lines`') populations=$(one 'SELECT COUNT(*) FROM populations') codes=$(one "SELECT GROUP_CONCAT(code ORDER BY code) FROM lines WHERE project_id='proj-a'")"
+echo "  info  lines=$(one 'SELECT COUNT(*) FROM `lines`') populations=$(one 'SELECT COUNT(*) FROM populations') codes=$(one "SELECT GROUP_CONCAT(code ORDER BY code) FROM \`lines\` WHERE project_id='proj-a'")"
 invariants
 echo "== idempotency: run the backfill SQL a second time"
 STATE() { echo "$(one "SELECT CONCAT(COUNT(*),'/',SUM(next_seq)) FROM \`lines\`")/$(one 'SELECT COUNT(*) FROM populations')/$(one 'SELECT COUNT(*) FROM project_items WHERE tag IS NOT NULL')/$(one "SELECT MD5(GROUP_CONCAT(plant_id, tag ORDER BY plant_id)) FROM project_items")"; }
 BEFORE="$(STATE)"
-(cd "$SERVER_DIR" && dotnet ef migrations script "$MA" "$MB" >"$HERE/.m-b.sql" 2>/dev/null)
-grep -v '__EFMigrationsHistory' "$HERE/.m-b.sql" | sql
+# Build first (quietly) so the script output holds SQL only, then drop every
+# whole statement that touches the migrations history (they span lines).
+(cd "$SERVER_DIR" && dotnet build >/dev/null 2>&1)
+(cd "$SERVER_DIR" && dotnet ef migrations script --no-build "$MA" "$MB" >"$HERE/.m-b.sql" 2>/dev/null)
+awk '/__EFMigrationsHistory/{s=1} { if(!s) print; if(s && /;[ \t]*$/) s=0 }' "$HERE/.m-b.sql" | sql
 rm -f "$HERE/.m-b.sql"
 check rerun_changes_nothing "$BEFORE" "$(STATE)"
 invariants
@@ -133,7 +136,7 @@ one "INSERT INTO project_items (plant_id, project_id, tag, population_id, plant_
 OTHER_BEFORE="$(one "SELECT (SELECT COUNT(*) FROM project_items WHERE project_id<>'proj-b') + (SELECT COUNT(*) FROM \`lines\` WHERE project_id<>'proj-b') + (SELECT COUNT(*) FROM populations WHERE project_id<>'proj-b')")"
 DELETE_ERR="$(docker exec -i -e MYSQL_PWD="$PW" "$NAME" mysql -uroot -N -B "$DB" -e "DELETE FROM projects WHERE project_id='proj-b'" 2>&1 | sed -n 's/^ERROR \([0-9]*\).*/\1/p')"
 check ProjectDelete_RemovesPlantsPopulationsLinesOrigins_OnMySql_no_error "" "$DELETE_ERR"
-check ProjectDelete_RemovesPlantsPopulationsLinesOrigins_OnMySql 0 "$(one "SELECT (SELECT COUNT(*) FROM project_items WHERE project_id='proj-b') + (SELECT COUNT(*) FROM \`lines\` WHERE project_id='proj-b') + (SELECT COUNT(*) FROM populations WHERE project_id='proj-b') + (SELECT COUNT(*) FROM fields WHERE project_id='proj-b') * 0 + (SELECT COUNT(*) FROM line_origins o WHERE NOT EXISTS (SELECT 1 FROM \`lines\` l WHERE l.id=o.line_id))")"
+check ProjectDelete_RemovesPlantsPopulationsLinesOrigins_OnMySql 0 "$(one "SELECT (SELECT COUNT(*) FROM project_items WHERE project_id='proj-b') + (SELECT COUNT(*) FROM \`lines\` WHERE project_id='proj-b') + (SELECT COUNT(*) FROM populations WHERE project_id='proj-b') + (SELECT COUNT(*) FROM fields WHERE project_id='proj-b') + (SELECT COUNT(*) FROM line_origins o WHERE NOT EXISTS (SELECT 1 FROM \`lines\` l WHERE l.id=o.line_id))")"
 check ProjectDelete_leaves_other_projects_alone "$OTHER_BEFORE" "$(one "SELECT (SELECT COUNT(*) FROM project_items WHERE project_id<>'proj-b') + (SELECT COUNT(*) FROM \`lines\` WHERE project_id<>'proj-b') + (SELECT COUNT(*) FROM populations WHERE project_id<>'proj-b')")"
 
 echo "== Down to $START, then Up again (round trip)"

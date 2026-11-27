@@ -14,8 +14,8 @@ namespace SeedsBank.Server.Migrations
         {
             // 1. Safety copy of every plant, taken once. IF NOT EXISTS means a
             // re-run after users created plants never overwrites it. It holds
-            // every user's pedigree outside the app's access rules, so the dated
-            // migration DropBreedingBackupStep1 removes it. Down does NOT drop it.
+            // every user's pedigree outside the app's access rules, so a separate
+            // migration added after 2026-12-27 removes it. Down does NOT drop it.
             migrationBuilder.Sql("CREATE TABLE IF NOT EXISTS project_items_backup_step1 AS SELECT * FROM project_items;");
 
             // Counts only, never row data. One row per step; M-B adds the orphan count.
@@ -572,6 +572,29 @@ namespace SeedsBank.Server.Migrations
                 oldNullable: true)
                 .Annotation("MySql:CharSet", "utf8mb4")
                 .OldAnnotation("MySql:CharSet", "utf8mb4");
+
+            // Put the legacy columns back exactly as legacy-schema.sql has
+            // them: no DEFAULT on generation, no explicit charset/collation
+            // (they follow the table), and the original column order (M-C's
+            // Down re-adds line, generation and project_name at the end).
+            foreach (var sql in LegacyColumnRestore)
+            {
+                migrationBuilder.Sql(sql);
+            }
         }
+
+        private static readonly string[] LegacyColumnRestore =
+        {
+            "ALTER TABLE `project_items` MODIFY `project_id` longtext NOT NULL AFTER `plant_id`;",
+            "ALTER TABLE `project_items` MODIFY `project_name` longtext NOT NULL AFTER `project_id`;",
+            "ALTER TABLE `project_items` MODIFY `line` longtext NOT NULL AFTER `project_name`;",
+            "ALTER TABLE `project_items` MODIFY `plant_father_id` longtext NOT NULL AFTER `line`;",
+            "ALTER TABLE `project_items` MODIFY `plant_mother_id` longtext NOT NULL AFTER `plant_father_id`;",
+            "ALTER TABLE `project_items` MODIFY `fruit_color` longtext NOT NULL AFTER `plant_mother_id`;",
+            "ALTER TABLE `project_items` MODIFY `fruit_weight` longtext NOT NULL AFTER `fruit_color`;",
+            "ALTER TABLE `project_items` MODIFY `seed_color` longtext NOT NULL AFTER `fruit_weight`;",
+            "ALTER TABLE `project_items` MODIFY `seed_weight` longtext NOT NULL AFTER `seed_color`;",
+            "ALTER TABLE `project_items` MODIFY `generation` int NOT NULL AFTER `seed_weight`;",
+        };
     }
 }
