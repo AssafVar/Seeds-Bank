@@ -32,7 +32,7 @@ import UndoSnackbar from "./UndoSnackbar.jsx";
 const LINE_LIMIT = 20;
 const BIG_PROJECT = 100;
 const TRAITS = ["fruitColor", "fruitWeight", "seedColor", "seedWeight"];
-const srOnly = { position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" };
+const srOnly = { position: "absolute", width: "1px", height: "1px", overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" };
 
 const FilterChip = ({ selected, label, onClick }) => (
   <Chip
