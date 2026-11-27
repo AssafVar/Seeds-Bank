@@ -10,7 +10,7 @@ namespace SeedsBank.Server.Services;
 public class PlantService : IPlantService
 {
     private const int MaxCount = 500;
-    private const int TagRetries = 3;
+    private const int TagRetries = 6;
 
     private readonly AppDbContext _db;
     private readonly ILineService _lines;
@@ -257,7 +257,31 @@ public class PlantService : IPlantService
             await TouchProjectAsync(projectId, now);
             await _db.SaveChangesAsync();
 
-            var plants = await LoadDtosAsync(projectId, created.Select(c => c.PlantId).ToList());
+            // Built from what was just written: no re-read of the new plants and
+            // no lookup of parents or children (a new plant has none).
+            ParentRefDto? ParentRef(ParentInfo? parent) =>
+                parent is null ? null : new ParentRefDto { PlantId = parent.PlantId, Tag = parent.Tag, Removed = false };
+            var plants = created.Select(c => new PlantDto
+            {
+                PlantId = c.PlantId,
+                Tag = c.Tag,
+                ProjectId = projectId,
+                LineId = line.Id,
+                PopulationId = population.Id,
+                Kind = population.Kind?.ToString(),
+                Generation = population.Generation ?? 0,
+                Label = LabelOf(population),
+                Mother = ParentRef(plan.Mother),
+                Father = ParentRef(plan.Father),
+                IsSelf = plan.Mother is not null && plan.Mother.PlantId == plan.Father?.PlantId,
+                FruitColor = c.FruitColor,
+                FruitWeight = c.FruitWeight,
+                SeedColor = c.SeedColor,
+                SeedWeight = c.SeedWeight,
+                ChildCount = 0,
+                Version = c.RowVersion,
+                CreatedAt = c.CreatedAt,
+            }).ToList();
             return new CreatePlantsResponse
             {
                 Plants = plants,
@@ -735,11 +759,16 @@ public class PlantService : IPlantService
                 .ToDictionaryAsync(i => i.PlantId, i => i.Tag);
 
         var ids = items.Select(i => i.PlantId).ToList();
-        var childRows = await _db.ProjectItems.AsNoTracking()
-            .Where(i => i.ProjectId == projectId
-                && (ids.Contains(i.MotherPlantId!) || ids.Contains(i.FatherPlantId!)))
-            .Select(i => new { i.MotherPlantId, i.FatherPlantId })
+        // Two simple queries, one per parent index, instead of one OR.
+        var byMother = await _db.ProjectItems.AsNoTracking()
+            .Where(i => i.ProjectId == projectId && ids.Contains(i.MotherPlantId!))
+            .Select(i => new { i.PlantId, i.MotherPlantId, i.FatherPlantId })
             .ToListAsync();
+        var byFather = await _db.ProjectItems.AsNoTracking()
+            .Where(i => i.ProjectId == projectId && ids.Contains(i.FatherPlantId!))
+            .Select(i => new { i.PlantId, i.MotherPlantId, i.FatherPlantId })
+            .ToListAsync();
+        var childRows = byMother.Concat(byFather).DistinctBy(r => r.PlantId).ToList();
         var childCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var row in childRows)
         {

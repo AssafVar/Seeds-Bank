@@ -34,6 +34,7 @@ public static class PedigreeCodes
     public const string LineHasSuccessor = "line_has_successor";
     public const string PopulationNotEmpty = "population_not_empty";
     public const string PopulationExists = "population_exists";
+    public const string ProjectIdTaken = "project_id_taken";
 }
 
 // Which request field an error belongs to (the client puts the message under

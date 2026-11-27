@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SeedsBank.Server.Data;
 using SeedsBank.Server.DTOs;
 using SeedsBank.Server.Models;
+using SeedsBank.Server.Services.Pedigree;
 
 namespace SeedsBank.Server.Services;
 
@@ -46,6 +47,10 @@ public class ProjectsService : IProjectsService
 
     public async Task CreateProjectAsync(string userId, CreateProjectRequest request)
     {
+        // The id is chosen by the client and unique across all users. A taken
+        // id gets one fixed answer that says nothing about whose it is.
+        if (await _db.Projects.AnyAsync(p => p.ProjectId == request.ProjectId)) throw ProjectIdTaken();
+
         var now = DateTime.UtcNow;
         _db.Projects.Add(new Project
         {
@@ -66,8 +71,20 @@ public class ProjectsService : IProjectsService
             IsFounders = true,
         });
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Lost a race on the same id: the same answer, no SQL text.
+            _db.ChangeTracker.Clear();
+            throw ProjectIdTaken();
+        }
     }
+
+    private static PedigreeException ProjectIdTaken() =>
+        PedigreeException.Conflict("projectId", PedigreeCodes.ProjectIdTaken, "That project id is already in use. Try again.");
 
     private static ProjectHeaderDto ToHeaderDto(Project project) => new()
     {

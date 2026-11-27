@@ -23,6 +23,10 @@ internal static class ServiceWrites
             {
                 db.ChangeTracker.Clear();
                 if (attempt >= attempts) throw onExhausted();
+
+                // Jittered backoff so writers that collided do not collide
+                // again; bounded (about 0.7 s over six attempts).
+                await Task.Delay(Random.Shared.Next(5, 20 * attempt + 10));
             }
             catch
             {
@@ -68,9 +72,10 @@ internal static class LineInfoLoader
             .Select(o => new { o.LineId, o.Role, o.SourceLineId })
             .ToListAsync();
 
-        var linesWithPlants = (await db.ProjectItems.AsNoTracking()
-                .Where(i => i.ProjectId == projectId)
-                .Select(i => i.Population.LineId)
+        // EXISTS on the population_id index, not a scan of every plant.
+        var linesWithPlants = (await db.Populations.AsNoTracking()
+                .Where(p => p.ProjectId == projectId && db.ProjectItems.Any(i => i.PopulationId == p.Id))
+                .Select(p => p.LineId)
                 .Distinct()
                 .ToListAsync())
             .ToHashSet();

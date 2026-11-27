@@ -136,7 +136,7 @@ public class PedigreeConcurrencyTests
         {
             Assert.DoesNotContain(leak, ex.Message);
         }
-        Assert.Equal(3, failing.Saves); // retried three times
+        Assert.Equal(6, failing.Saves); // retried up to six times, with backoff
         Assert.False(failing.ChangeTracker.Entries().Any(), "nothing is left half-tracked");
     }
 

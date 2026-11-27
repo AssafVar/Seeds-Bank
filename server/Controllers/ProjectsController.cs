@@ -50,7 +50,10 @@ public class ProjectsController : OwnedResourceControllerBase
     {
         if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
 
-        await _projectsService.CreateProjectAsync(userId, request);
-        return Ok();
+        return await GuardedAsync(async () =>
+        {
+            await _projectsService.CreateProjectAsync(userId, request);
+            return Ok();
+        });
     }
 }

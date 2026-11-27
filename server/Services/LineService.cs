@@ -20,15 +20,36 @@ public class LineService : ILineService
 
     // ---- reads ----
 
-    public async Task<List<LineDto>> GetOverviewAsync(string projectId)
+    public Task<List<LineDto>> GetOverviewAsync(string projectId) => BuildAsync(projectId, null);
+
+    // One line (with what its verdict needs: its populations and those of the
+    // lines it was branched from) without loading the rest of the project.
+    public async Task<LineDto?> GetLineAsync(string projectId, int lineId) =>
+        (await BuildAsync(projectId, lineId)).FirstOrDefault(l => l.Id == lineId);
+
+    private async Task<List<LineDto>> BuildAsync(string projectId, int? onlyLineId)
     {
         var lines = await _db.Lines.AsNoTracking()
             .Where(l => l.ProjectId == projectId)
             .OrderBy(l => l.Id)
             .ToListAsync();
-        var populations = await _db.Populations.AsNoTracking()
-            .Where(p => p.ProjectId == projectId)
+        var origins = await _db.LineOrigins.AsNoTracking()
+            .Where(o => o.Line.ProjectId == projectId)
             .ToListAsync();
+
+        var forkedFrom = origins
+            .Where(o => o.Role == LineOrigin.RoleForkedFrom && o.SourceLineId != null)
+            .GroupBy(o => o.LineId)
+            .ToDictionary(g => g.Key, g => g.First().SourceLineId!.Value);
+
+        // Which lines' populations and plants are needed: all of them for the
+        // overview, otherwise the line and its branch ancestors.
+        List<int>? neededLines = onlyLineId is { } only ? ChainOf(only, forkedFrom).ToList() : null;
+
+        var populationQuery = _db.Populations.AsNoTracking().Where(p => p.ProjectId == projectId);
+        if (neededLines is not null) populationQuery = populationQuery.Where(p => neededLines.Contains(p.LineId));
+        var populations = await populationQuery.ToListAsync();
+        var populationIds = populations.Select(p => p.Id).ToList();
 
         // Only this project's fields: a field of another project can never
         // supply a name, whatever a row points at.
@@ -37,18 +58,16 @@ public class LineService : ILineService
             .Select(f => new { f.Id, f.Name })
             .ToDictionaryAsync(f => f.Id, f => f.Name);
 
-        var plantCounts = await _db.ProjectItems.AsNoTracking()
-            .Where(i => i.ProjectId == projectId)
+        var countQuery = _db.ProjectItems.AsNoTracking().Where(i => i.ProjectId == projectId);
+        if (neededLines is not null) countQuery = countQuery.Where(i => populationIds.Contains(i.PopulationId));
+        var plantCounts = await countQuery
             .GroupBy(i => i.PopulationId)
             .Select(g => new { PopulationId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.PopulationId, g => g.Count);
 
-        var origins = await _db.LineOrigins.AsNoTracking()
-            .Where(o => o.Line.ProjectId == projectId)
-            .ToListAsync();
-
-        var traitRows = await _db.ProjectItems.AsNoTracking()
-            .Where(i => i.ProjectId == projectId && !i.Population.Line.IsFounders)
+        var traitQuery = _db.ProjectItems.AsNoTracking().Where(i => i.ProjectId == projectId && !i.Population.Line.IsFounders);
+        if (neededLines is not null) traitQuery = traitQuery.Where(i => populationIds.Contains(i.PopulationId));
+        var traitRows = await traitQuery
             .Select(i => new { i.PopulationId, i.FruitColor, i.FruitWeight, i.SeedColor, i.SeedWeight })
             .ToListAsync();
         var traitsByPopulation = traitRows
@@ -59,17 +78,13 @@ public class LineService : ILineService
 
         var originsByLine = origins.ToLookup(o => o.LineId);
         var populationsByLine = populations.ToLookup(p => p.LineId);
-        var forkedFrom = origins
-            .Where(o => o.Role == LineOrigin.RoleForkedFrom && o.SourceLineId != null)
-            .GroupBy(o => o.LineId)
-            .ToDictionary(g => g.Key, g => g.First().SourceLineId!.Value);
         var forksOf = forkedFrom
             .GroupBy(kv => kv.Value)
             .ToDictionary(g => g.Key, g => g.Select(kv => kv.Key).OrderBy(x => x).ToList());
         var linesById = lines.ToDictionary(l => l.Id);
 
-        var result = new List<LineDto>(lines.Count);
-        foreach (var line in lines)
+        var result = new List<LineDto>();
+        foreach (var line in lines.Where(l => onlyLineId is null || l.Id == onlyLineId))
         {
             var own = populationsByLine[line.Id].ToList();
             var maxGeneration = own.Where(p => p.Generation != null).Select(p => p.Generation!.Value).DefaultIfEmpty(-1).Max();
@@ -125,9 +140,6 @@ public class LineService : ILineService
 
         return result;
     }
-
-    public async Task<LineDto?> GetLineAsync(string projectId, int lineId) =>
-        (await GetOverviewAsync(projectId)).FirstOrDefault(l => l.Id == lineId);
 
     // The line and the lines it was branched from (cycle-safe).
     private static IEnumerable<int> ChainOf(int lineId, IReadOnlyDictionary<int, int> forkedFrom)
