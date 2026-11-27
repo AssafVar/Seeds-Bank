@@ -54,6 +54,20 @@ public abstract class OwnedResourceControllerBase : ControllerBase
         return await _projectsService.IsProjectOwnedAsync(userId, projectId) ? null : NotFound();
     }
 
+    // Runs an action body and turns a PedigreeException into its
+    // { message, field, code } answer. Nothing else is caught here.
+    protected async Task<IActionResult> GuardedAsync(Func<Task<IActionResult>> body)
+    {
+        try
+        {
+            return await body();
+        }
+        catch (PedigreeException ex)
+        {
+            return PedigreeError(ex);
+        }
+    }
+
     // Pedigree rule violations: { message, field, code } with the exception's
     // status (400, or 409 for conflicts). Nothing else leaves the server.
     protected IActionResult PedigreeError(PedigreeException ex) =>

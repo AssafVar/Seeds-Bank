@@ -66,6 +66,8 @@ builder.Services.Configure<PedigreeOptions>(builder.Configuration.GetSection(Ped
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProjectsService, ProjectsService>();
+builder.Services.AddScoped<ILineService, LineService>();
+builder.Services.AddScoped<IPlantService, PlantService>();
 builder.Services.AddScoped<ISiteContentService, SiteContentService>();
 builder.Services.AddScoped<INewsService, NewsService>();
 builder.Services.AddScoped<IFieldService, FieldService>();
@@ -86,22 +88,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-app.UseExceptionHandler(errorApp =>
-{
-    errorApp.Run(async context =>
-    {
-        var feature = context.Features.Get<IExceptionHandlerFeature>();
-        if (feature is not null)
-        {
-            context.RequestServices.GetRequiredService<ILogger<Program>>()
-                .LogError(feature.Error, "Unhandled exception on {Path}", context.Request.Path);
-        }
-
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        await context.Response.WriteAsJsonAsync(new { message = "An unexpected error occurred." });
-    });
-});
+app.UseExceptionHandler(errorApp => errorApp.Run(GlobalExceptionHandler.HandleAsync));
 
 if (app.Environment.IsDevelopment())
 {

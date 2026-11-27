@@ -15,7 +15,7 @@
 --   items_after         = 43
 --   projects            = 4
 --   lines               = see run-mysql-checks.sh (it prints the count)
---   unknown_parent_marks (mother/father_removed_tag = '(unknown)') = 6
+--   unknown_parent_marks (mother/father_removed_tag = '(unknown)') = 5
 
 INSERT INTO users (userId, email, password, userName) VALUES
  ('user-1', 'one@example.invalid', 'x', 'One'),

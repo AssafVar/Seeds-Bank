@@ -26,6 +26,14 @@ public static class PedigreeCodes
     public const string LineNameTaken = "line_name_taken";
     public const string HasChildren = "has_children";
     public const string VersionConflict = "version_conflict";
+
+    // Added with the services (step 1, second batch).
+    public const string WriteConflict = "write_conflict";
+    public const string FoundersLine = "founders_line";
+    public const string LineNotEmpty = "line_not_empty";
+    public const string LineHasSuccessor = "line_has_successor";
+    public const string PopulationNotEmpty = "population_not_empty";
+    public const string PopulationExists = "population_exists";
 }
 
 // Which request field an error belongs to (the client puts the message under

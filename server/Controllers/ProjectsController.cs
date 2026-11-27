@@ -12,7 +12,7 @@ public class ProjectsController : OwnedResourceControllerBase
 {
     private readonly IProjectsService _projectsService;
 
-    public ProjectsController(IProjectsService projectsService)
+    public ProjectsController(IProjectsService projectsService) : base(projectsService)
     {
         _projectsService = projectsService;
     }
@@ -20,21 +20,20 @@ public class ProjectsController : OwnedResourceControllerBase
     [HttpGet("{userId}/{projectId}")]
     public async Task<IActionResult> GetProject(string userId, string projectId)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
         var result = await _projectsService.GetProjectAsync(userId, projectId);
         return result is null ? NotFound() : Ok(result);
     }
 
+    // The old whole-list save. Gone: a stale client must reload. It binds no
+    // body and writes nothing, but is still authorized like every other route.
     [HttpPost("{userId}/{projectId}")]
-    public async Task<IActionResult> UpdateProject(string userId, string projectId, [FromBody] List<ProjectItemDto> projectDetails)
+    public async Task<IActionResult> LegacySave(string userId, string projectId)
     {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
+        if (await RejectUnlessOwnedProjectAsync(userId, projectId) is { } rejected) return rejected;
 
-        var updated = await _projectsService.UpdateProjectDetailsAsync(userId, projectId, projectDetails);
-        return updated
-            ? Ok(new { message = "Database updated successfully" })
-            : NotFound(new { message = "Project not found" });
+        return StatusCode(StatusCodes.Status410Gone, new { message = "This page is out of date. Reload and try again." });
     }
 
     [HttpGet("{userId}")]
@@ -53,16 +52,5 @@ public class ProjectsController : OwnedResourceControllerBase
 
         await _projectsService.CreateProjectAsync(userId, request);
         return Ok();
-    }
-
-    [HttpDelete("{userId}/{projectId}/{plantId}")]
-    public async Task<IActionResult> DeletePlant(string userId, string projectId, string plantId)
-    {
-        if (!IsCallerOwner(userId, out var forbidden)) return forbidden!;
-
-        var deleted = await _projectsService.DeletePlantAsync(userId, projectId, plantId);
-        return deleted
-            ? Ok("Database updated successfully")
-            : NotFound(new { message = "Plant not found" });
     }
 }

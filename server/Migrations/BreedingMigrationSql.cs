@@ -76,9 +76,9 @@ namespace SeedsBank.Server.Migrations
 
             // 4. Founders: one line per project, including projects with no plants.
             list.Add("""
-                INSERT INTO lines (project_id, name, code, is_founders, is_stable, next_seq, created_at)
+                INSERT INTO `lines` (project_id, name, code, is_founders, is_stable, next_seq, created_at)
                 SELECT p.project_id, 'Founders', 'P', 1, 0, 1, UTC_TIMESTAMP(6) FROM projects p
-                WHERE NOT EXISTS (SELECT 1 FROM lines l WHERE l.project_id = p.project_id AND l.is_founders = 1);
+                WHERE NOT EXISTS (SELECT 1 FROM `lines` l WHERE l.project_id = p.project_id AND l.is_founders = 1);
                 """);
 
             // 5a. Plants still to place (population_id IS NULL): kind, bucket, trimmed line name.
@@ -126,7 +126,7 @@ namespace SeedsBank.Server.Migrations
             // made unique per project by a numeric suffix (the Founders code P
             // counts as taken). Mirrors LineCodes.From.
             list.Add("""
-                INSERT INTO lines (project_id, name, code, is_founders, is_stable, next_seq, created_at)
+                INSERT INTO `lines` (project_id, name, code, is_founders, is_stable, next_seq, created_at)
                 SELECT c.project_id, c.final_name,
                     CASE WHEN c.n = 1 THEN c.base_code
                          ELSE CONCAT(LEFT(c.base_code, 6 - CHAR_LENGTH(CAST(c.n AS CHAR))), c.n) END,
@@ -150,24 +150,24 @@ namespace SeedsBank.Server.Migrations
                         ) w
                     ) b
                 ) c
-                WHERE NOT EXISTS (SELECT 1 FROM lines l WHERE l.project_id = c.project_id AND l.name = c.final_name);
+                WHERE NOT EXISTS (SELECT 1 FROM `lines` l WHERE l.project_id = c.project_id AND l.name = c.final_name);
                 """);
 
             // 5d. Each plant's line.
             list.Add("""
                 UPDATE tmp_breeding_plants t
-                JOIN lines l ON l.project_id = t.project_id AND l.is_founders = 1
+                JOIN `lines` l ON l.project_id = t.project_id AND l.is_founders = 1
                 SET t.line_id = l.id WHERE t.bucket = 'founders';
                 """);
             list.Add("""
                 UPDATE tmp_breeding_plants t
-                JOIN lines l ON l.project_id = t.project_id AND l.name = '(unnamed)'
+                JOIN `lines` l ON l.project_id = t.project_id AND l.name = '(unnamed)'
                 SET t.line_id = l.id WHERE t.bucket = 'unnamed';
                 """);
             list.Add("""
                 UPDATE tmp_breeding_plants t
                 JOIN tmp_breeding_line_names n ON n.project_id = t.project_id AND n.lkey = t.lname
-                JOIN lines l ON l.project_id = n.project_id AND l.name = n.final_name
+                JOIN `lines` l ON l.project_id = n.project_id AND l.name = n.final_name
                 SET t.line_id = l.id WHERE t.bucket = 'named';
                 """);
 
@@ -190,7 +190,7 @@ namespace SeedsBank.Server.Migrations
                 SELECT t.plant_id,
                     (l.next_seq - 1) + ROW_NUMBER() OVER (PARTITION BY t.project_id, t.line_id ORDER BY t.generation, t.plant_id) AS seq
                 FROM tmp_breeding_plants t
-                JOIN lines l ON l.id = t.line_id AND l.project_id = t.project_id;
+                JOIN `lines` l ON l.id = t.line_id AND l.project_id = t.project_id;
                 """);
 
             // 8b. Plant to population, and its tag {code}-{label}-{seq:000}
@@ -199,7 +199,7 @@ namespace SeedsBank.Server.Migrations
                 UPDATE project_items i
                 JOIN tmp_breeding_plants t ON t.plant_id = i.plant_id AND t.project_id = i.project_id
                 JOIN tmp_breeding_seq s ON s.plant_id = t.plant_id
-                JOIN lines l ON l.id = t.line_id AND l.project_id = t.project_id
+                JOIN `lines` l ON l.id = t.line_id AND l.project_id = t.project_id
                 JOIN populations pop ON pop.line_id = t.line_id AND pop.kind = t.kind AND pop.generation = t.generation
                     AND pop.season IS NULL AND pop.year IS NULL AND pop.field_id IS NULL
                 SET i.population_id = pop.id,
@@ -211,7 +211,7 @@ namespace SeedsBank.Server.Migrations
 
             // 8c. The counter never goes down.
             list.Add("""
-                UPDATE lines l
+                UPDATE `lines` l
                 JOIN (SELECT t.line_id, MAX(s.seq) AS max_seq
                       FROM tmp_breeding_plants t JOIN tmp_breeding_seq s ON s.plant_id = t.plant_id
                       GROUP BY t.line_id) m ON m.line_id = l.id
@@ -230,7 +230,7 @@ namespace SeedsBank.Server.Migrations
             """
             UPDATE project_items i
             JOIN populations p ON p.id = i.population_id AND p.project_id = i.project_id
-            JOIN lines l ON l.id = p.line_id AND l.project_id = i.project_id
+            JOIN `lines` l ON l.id = p.line_id AND l.project_id = i.project_id
             JOIN projects pr ON pr.project_id = i.project_id
             SET i.line = IF(l.is_founders = 1 OR l.name = '(unnamed)', '---', l.name),
                 i.generation = COALESCE(p.generation, 0),
@@ -251,7 +251,7 @@ namespace SeedsBank.Server.Migrations
             "UPDATE project_items SET population_id = NULL, tag = NULL, mother_removed_tag = NULL, father_removed_tag = NULL;",
             "DELETE FROM line_origins;",
             "DELETE FROM populations;",
-            "DELETE FROM lines;",
+            "DELETE FROM `lines`;",
         };
 
         // Invariants: each query returns a violation count, all must be 0. Used
@@ -265,7 +265,7 @@ namespace SeedsBank.Server.Migrations
             ("inv_plant_population_same_project",
              "SELECT COUNT(*) FROM project_items i JOIN populations p ON p.id = i.population_id WHERE p.project_id <> i.project_id"),
             ("inv_population_line_same_project",
-             "SELECT COUNT(*) FROM populations p JOIN lines l ON l.id = p.line_id WHERE l.project_id <> p.project_id"),
+             "SELECT COUNT(*) FROM populations p JOIN `lines` l ON l.id = p.line_id WHERE l.project_id <> p.project_id"),
             ("inv_parent_same_project",
              "SELECT COUNT(*) FROM project_items c JOIN project_items p ON p.plant_id IN (c.plant_mother_id, c.plant_father_id) WHERE p.project_id <> c.project_id"),
             ("inv_parent_exists_and_not_self",
@@ -273,17 +273,17 @@ namespace SeedsBank.Server.Migrations
             ("inv_tag_unique_per_project",
              "SELECT COUNT(*) FROM (SELECT project_id, tag FROM project_items GROUP BY project_id, tag HAVING COUNT(*) > 1) d"),
             ("inv_line_name_unique_per_project",
-             "SELECT COUNT(*) FROM (SELECT project_id, name FROM lines GROUP BY project_id, name HAVING COUNT(*) > 1) d"),
+             "SELECT COUNT(*) FROM (SELECT project_id, name FROM `lines` GROUP BY project_id, name HAVING COUNT(*) > 1) d"),
             ("inv_line_code_unique_per_project",
-             "SELECT COUNT(*) FROM (SELECT project_id, code FROM lines GROUP BY project_id, code HAVING COUNT(*) > 1) d"),
+             "SELECT COUNT(*) FROM (SELECT project_id, code FROM `lines` GROUP BY project_id, code HAVING COUNT(*) > 1) d"),
             ("inv_population_field_same_project",
              "SELECT COUNT(*) FROM populations p JOIN fields f ON f.id = p.field_id WHERE f.project_id <> p.project_id"),
             ("inv_origin_source_same_project",
-             "SELECT COUNT(*) FROM line_origins o JOIN lines l ON l.id = o.line_id JOIN lines s ON s.id = o.source_line_id WHERE s.project_id <> l.project_id"),
+             "SELECT COUNT(*) FROM line_origins o JOIN `lines` l ON l.id = o.line_id JOIN `lines` s ON s.id = o.source_line_id WHERE s.project_id <> l.project_id"),
             ("inv_successor_same_project",
-             "SELECT COUNT(*) FROM lines l JOIN lines s ON s.id = l.successor_line_id WHERE s.project_id <> l.project_id"),
+             "SELECT COUNT(*) FROM `lines` l JOIN `lines` s ON s.id = l.successor_line_id WHERE s.project_id <> l.project_id"),
             ("inv_one_founders_line_per_project",
-             "SELECT COUNT(*) FROM projects p WHERE (SELECT COUNT(*) FROM lines l WHERE l.project_id = p.project_id AND l.is_founders = 1) <> 1"),
+             "SELECT COUNT(*) FROM projects p WHERE (SELECT COUNT(*) FROM `lines` l WHERE l.project_id = p.project_id AND l.is_founders = 1) <> 1"),
             ("inv_no_blank_placeholder_values",
              "SELECT COUNT(*) FROM project_items WHERE plant_mother_id REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR plant_father_id REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR fruit_color REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR fruit_weight REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR seed_color REGEXP '^[[:space:]]*(---)?[[:space:]]*$' OR seed_weight REGEXP '^[[:space:]]*(---)?[[:space:]]*$'"),
             ("inv_orphan_count_matches_backup_log",
