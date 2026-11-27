@@ -153,7 +153,8 @@ public class PedigreeConcurrencyTests
         await TestServices.Rejects(() => s.Plants.CreateAsync(p, new CreatePlantsRequest
             { MotherPlantId = a.PlantId, FatherPlantId = b.PlantId, NewLineName = "Roma A", Tag = "x y" }), "invalid_tag");
         var first = await s.CrossAsync(p, a, b, "Roma A");
-        await TestServices.Rejects(() => s.CrossAsync(p, a, b, "roma a"), "line_name_taken");
+        await TestServices.Rejects(() => s.Plants.CreateAsync(p, new CreatePlantsRequest
+            { MotherPlantId = a.PlantId, FatherPlantId = b.PlantId, StartNewLine = true, NewLineName = "roma a" }), "line_name_taken");
         await s.FounderAsync(p); // an unrelated save afterwards
 
         Assert.Equal(2, await s.Db.Lines.CountAsync());

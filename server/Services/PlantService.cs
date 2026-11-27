@@ -473,6 +473,10 @@ public class PlantService : IPlantService
     {
         var projectId = scope.ProjectId;
 
+        // A name that was sent is checked even when the plan ends up joining a
+        // sibling line and does not use it.
+        if (!string.IsNullOrWhiteSpace(input.NewLineName)) InputRules.ValidateLineName(input.NewLineName);
+
         // Every id is looked up with the project: a foreign id and an unknown
         // id give the same answer.
         var field = input.FieldId is null ? null : await scope.RequireFieldAsync(input.FieldId);
@@ -482,9 +486,11 @@ public class PlantService : IPlantService
         var mother = await ResolveParentAsync(scope, input.MotherId);
         var father = await ResolveParentAsync(scope, input.FatherId);
 
+        var siblings = await FindSiblingsAsync(projectId, mother, father, lines, input.EditingPlantId);
+
         var placement = PedigreeRules.Place(
             new PlacementRequest(input.MotherId, input.FatherId, mother, father, input.LineId, input.StartNewLine,
-                input.NewLineName, input.EditingPlantId, input.EditingInFounders),
+                input.NewLineName, input.EditingPlantId, input.EditingInFounders, siblings),
             lines);
 
         Line? line = null;
@@ -533,6 +539,47 @@ public class PlantService : IPlantService
             FieldId = fieldId,
             FieldName = fieldName,
         };
+    }
+
+    // Lines that already hold this cross (design section 2, "Sibling lines").
+    // Project-scoped queries only; a same-line pair needs none of this.
+    private async Task<IReadOnlyList<SiblingCandidate>> FindSiblingsAsync(
+        string projectId, ParentInfo? mother, ParentInfo? father, Dictionary<int, LineInfo> lines, string? editingPlantId)
+    {
+        if (mother is null || father is null) return Array.Empty<SiblingCandidate>();
+        if (!lines.TryGetValue(mother.LineId, out var motherLine) || !lines.TryGetValue(father.LineId, out var fatherLine))
+        {
+            return Array.Empty<SiblingCandidate>();
+        }
+        if (!motherLine.IsFounders && !fatherLine.IsFounders && mother.LineId == father.LineId) return Array.Empty<SiblingCandidate>();
+
+        var key = PairKey.Of(
+            SiblingLines.KeyOf(motherLine.IsFounders, mother.LineId, mother.Label, mother.Tag),
+            SiblingLines.KeyOf(fatherLine.IsFounders, father.LineId, father.Label, father.Tag),
+            mother.PlantId == father.PlantId);
+
+        var origins = (await _db.LineOrigins.AsNoTracking()
+                .Where(o => o.Line.ProjectId == projectId && o.Role != LineOrigin.RoleForkedFrom)
+                .Select(o => new { o.LineId, o.Role, o.SourceLineId, o.SourceLabel, o.SourcePlantTag })
+                .ToListAsync())
+            .Select(o => new SiblingOriginRow(o.LineId, o.Role, o.SourceLineId, o.SourceLabel, o.SourcePlantTag));
+
+        var populations = await _db.Populations.AsNoTracking()
+            .Where(p => p.ProjectId == projectId && p.Kind != null && p.Generation != null)
+            .Select(p => new { p.Id, p.LineId, Kind = p.Kind!.Value, Generation = p.Generation!.Value })
+            .ToDictionaryAsync(p => p.Id);
+        var plants = (await _db.ProjectItems.AsNoTracking()
+                .Where(i => i.ProjectId == projectId)
+                .Select(i => new { i.PlantId, i.Tag, i.PopulationId, i.MotherPlantId, i.FatherPlantId })
+                .ToListAsync())
+            .Where(i => populations.ContainsKey(i.PopulationId))
+            .Select(i =>
+            {
+                var p = populations[i.PopulationId];
+                return new SiblingPlantRow(i.PlantId, i.Tag, p.LineId, p.Generation, TagFormatter.Label(p.Kind, p.Generation), i.MotherPlantId, i.FatherPlantId);
+            });
+
+        return SiblingLines.Find(key, lines, origins, plants, editingPlantId);
     }
 
     private async Task<ParentInfo?> ResolveParentAsync(ProjectScope scope, string? plantId)

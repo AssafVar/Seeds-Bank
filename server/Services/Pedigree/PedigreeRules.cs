@@ -24,7 +24,10 @@ public sealed record PlacementRequest(
     string? NewLineName,
     // Edit only: the plant whose parents change.
     string? EditingPlantId = null,
-    bool EditingPlantInFounders = false);
+    bool EditingPlantInFounders = false,
+    // Lines that already hold this cross (SiblingLines.Find), oldest first.
+    // Ignored for a same-line pair.
+    IReadOnlyList<SiblingCandidate>? Siblings = null);
 
 public sealed record OriginSeed(string Role, int? SourceLineId, string SourceLineName, string SourceLabel, string? SourcePlantTag);
 
@@ -124,7 +127,13 @@ public static class PedigreeRules
         var chainLine = father.Generation > mother.Generation ? fatherLine : motherLine;
         var endOfChain = sameLine ? LineGroups.EndOfChain(chainLine.Id, lines) : null;
 
-        var choices = BuildChoices(sameLine, endOfChain, groups, motherLine, lines);
+        var siblings = sameLine
+            ? Array.Empty<SiblingCandidate>()
+            : (req.Siblings ?? Array.Empty<SiblingCandidate>())
+                .Where(c => lines.TryGetValue(c.LineId, out var l) && !l.IsFounders)
+                .OrderBy(c => c.LineId).ToArray();
+
+        var choices = BuildChoices(sameLine, endOfChain, groups, motherLine, lines, siblings);
         var origins = OriginsFor(mother, father, motherLine, fatherLine);
 
         if (req.LineId is { } explicitId)
@@ -134,6 +143,12 @@ public static class PedigreeRules
             if (!target.IsFounders && sameLine && groups[target.Id] == groups[motherLine.Id])
             {
                 return new PlacementResult(target.Id, false, null, kind, maxGeneration + 1, isSelf, false,
+                    Array.Empty<OriginSeed>(), choices);
+            }
+
+            if (siblings.FirstOrDefault(c => c.LineId == target.Id) is { } sibling)
+            {
+                return new PlacementResult(target.Id, false, null, kind, sibling.Generation, isSelf, false,
                     Array.Empty<OriginSeed>(), choices);
             }
 
@@ -147,10 +162,17 @@ public static class PedigreeRules
                 "That line is not one of the parents' lines.");
         }
 
+        if (!sameLine && !req.StartNewLine && siblings.Length > 0)
+        {
+            // The same cross again: the oldest sibling line, at its generation.
+            return new PlacementResult(siblings[0].LineId, false, null, kind, siblings[0].Generation, isSelf, false,
+                Array.Empty<OriginSeed>(), choices);
+        }
+
         if (!sameLine || req.StartNewLine)
         {
             var name = ResolveNewLineName(req.NewLineName, motherLine, fatherLine, isSelf, lines);
-            return new PlacementResult(null, true, name, kind, 1, isSelf, !sameLine, origins, choices);
+            return new PlacementResult(null, true, name, kind, 1, isSelf, !sameLine && siblings.Length == 0, origins, choices);
         }
 
         return new PlacementResult(endOfChain!.Id, false, null, kind, maxGeneration + 1, isSelf, false,
@@ -217,11 +239,13 @@ public static class PedigreeRules
 
     private static IReadOnlyList<LineChoice> BuildChoices(
         bool sameLine, LineInfo? endOfChain, IReadOnlyDictionary<int, int> groups,
-        LineInfo motherLine, IReadOnlyDictionary<int, LineInfo> lines)
+        LineInfo motherLine, IReadOnlyDictionary<int, LineInfo> lines, IReadOnlyList<SiblingCandidate> siblings)
     {
         if (!sameLine || endOfChain is null)
         {
-            return new[] { new LineChoice(null, string.Empty, true) };
+            var list = siblings.Select(c => new LineChoice(c.LineId, lines[c.LineId].Name, false)).ToList();
+            list.Add(new LineChoice(null, string.Empty, true));
+            return list;
         }
 
         var choices = new List<LineChoice> { new(endOfChain.Id, endOfChain.Name, false) };

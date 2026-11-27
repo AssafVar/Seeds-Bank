@@ -276,7 +276,9 @@ public class PlantServiceTests
         var b = await s.FounderAsync(p);
         await s.CrossAsync(p, a, b, "Roma A");
 
-        await TestServices.Rejects(() => s.CrossAsync(p, a, b, "roma a"), "line_name_taken", 409);
+        // The same cross again joins its sibling line; only a deliberate new line meets the name rule.
+        await TestServices.Rejects(() => s.Plants.CreateAsync(p, new CreatePlantsRequest
+            { MotherPlantId = a.PlantId, FatherPlantId = b.PlantId, StartNewLine = true, NewLineName = "roma a" }), "line_name_taken", 409);
         Assert.Equal(3, await s.Db.ProjectItems.CountAsync());
     }
 

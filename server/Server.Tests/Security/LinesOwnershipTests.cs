@@ -27,7 +27,7 @@ public class LinesOwnershipTests
         var bLine = (await t.S.Plants.CreateAsync(TwoUsers.ProjectB,
             new CreatePlantsRequest { MotherPlantId = t.B1.PlantId, FatherPlantId = t.B2.PlantId, NewLineName = "Line B" })).Line;
         var other = (await t.S.Plants.CreateAsync(TwoUsers.ProjectB,
-            new CreatePlantsRequest { MotherPlantId = t.B2.PlantId, FatherPlantId = t.B1.PlantId, NewLineName = "Other B" })).Line;
+            new CreatePlantsRequest { MotherPlantId = t.B1.PlantId, FatherPlantId = t.B1.PlantId, NewLineName = "Other B" })).Line; // a self: B2 x B1 would now join "Line B" (sibling rule)
         var lines = await t.S.Db.Lines.CountAsync();
 
         // A population of A, one of B's other line, and one that does not exist: the same 400.
