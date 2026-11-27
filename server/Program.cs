@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SeedsBank.Server.Data;
 using SeedsBank.Server.Services;
+using SeedsBank.Server.Services.Pedigree;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,9 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireClaim("isAdmin", "true"));
 });
+
+// Quotas and ancestor-walk caps for the breeding feature (section "Pedigree").
+builder.Services.Configure<PedigreeOptions>(builder.Configuration.GetSection(PedigreeOptions.SectionName));
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProjectsService, ProjectsService>();
