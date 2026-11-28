@@ -90,3 +90,15 @@ describe("breeding serverCalls", () => {
     spy.mockRestore();
   });
 });
+
+describe("extractErrorMessage", () => {
+  it("shows the too-many-attempts message on a 429, whatever the body", () => {
+    const message = "Too many attempts, try again in a minute.";
+    expect(calls.extractErrorMessage({ response: { status: 429, data: { message } } })).toBe(message);
+    expect(calls.extractErrorMessage({ response: { status: 429, data: "<html>Too Many Requests</html>" } })).toBe(message);
+  });
+
+  it("still reads the usual error shapes", () => {
+    expect(calls.extractErrorMessage({ response: { status: 409, data: { message: "taken" } } })).toBe("taken");
+  });
+});

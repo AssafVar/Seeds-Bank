@@ -5,7 +5,6 @@ import HomePage from "./HomePage.jsx";
 
 jest.mock("../../services/serverCalls", () => ({
   getSiteContent: jest.fn(),
-  SERVER_BASE_URL: "http://localhost:8080",
 }));
 
 describe("HomePage", () => {
