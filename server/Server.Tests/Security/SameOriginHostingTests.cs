@@ -151,7 +151,7 @@ public class SameOriginHostingTests : IAsyncLifetime
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("strict-origin-when-cross-origin", response.Headers.GetValues("Referrer-Policy").Single());
         Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
-        Assert.Equal(SecurityHeadersMiddleware.ContentSecurityPolicy, response.Headers.GetValues("Content-Security-Policy").Single());
+        Assert.Equal(SecurityHeadersMiddleware.BuildContentSecurityPolicy(null), response.Headers.GetValues("Content-Security-Policy").Single());
         Assert.Equal("same-origin", response.Headers.GetValues("Cross-Origin-Opener-Policy").Single());
         Assert.Equal(SecurityHeadersMiddleware.PermissionsPolicy, response.Headers.GetValues("Permissions-Policy").Single());
     }
@@ -159,8 +159,21 @@ public class SameOriginHostingTests : IAsyncLifetime
     [Fact]
     public void Csp_HasNoBlobAndNoDataFonts()
     {
-        Assert.DoesNotContain("blob:", SecurityHeadersMiddleware.ContentSecurityPolicy);
-        Assert.Contains("font-src 'self';", SecurityHeadersMiddleware.ContentSecurityPolicy);
+        Assert.DoesNotContain("blob:", SecurityHeadersMiddleware.BuildContentSecurityPolicy(null));
+        Assert.Contains("font-src 'self';", SecurityHeadersMiddleware.BuildContentSecurityPolicy(null));
+    }
+
+    [Fact]
+    public async Task Csp_AllowsImagesFromTheStorageOrigin_AndNothingElseNew()
+    {
+        await StartAsync(withIndex: true, forwarded: false,
+            new() { ["Storage:PublicOrigin"] = "https://files.example.test" });
+
+        var csp = (await _client.GetAsync("/")).Headers.GetValues("Content-Security-Policy").Single();
+
+        var imgSrc = csp.Split(';').Select(d => d.Trim()).Single(d => d.StartsWith("img-src "));
+        Assert.EndsWith(" https://files.example.test", imgSrc);
+        Assert.Equal(1, csp.Split("files.example.test").Length - 1);
     }
 
     [Theory]

@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SeedsBank.Server.Data;
+using SeedsBank.Server.Email;
 using SeedsBank.Server.Hosting;
 using SeedsBank.Server.Services;
 using SeedsBank.Server.Services.Pedigree;
+using SeedsBank.Server.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +59,8 @@ builder.Services.AddScoped<IVegetableVarietyService, VegetableVarietyService>();
 builder.Services.AddScoped<IWorkerService, WorkerService>();
 builder.Services.AddScoped<IFieldWorkLogService, FieldWorkLogService>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddFileStorage(builder.Configuration);
+builder.Services.AddEmail(builder.Configuration);
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -79,6 +83,7 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     using var scope = app.Services.CreateScope();
     await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
 }
+await app.CreateBucketIfMissingAsync();
 
 // Proxy headers first, so everything below sees the real scheme and client IP.
 app.UseSameOriginHostingPreAuth();

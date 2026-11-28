@@ -2,8 +2,6 @@ bin/
 obj/
 appsettings.*.local.json
 *.user
-wwwroot/uploads/gallery/*
-!wwwroot/uploads/gallery/.gitkeep
-
+# The built React app is copied here (the Docker image does this); gallery files live in object storage.
 wwwroot/*
-!wwwroot/uploads
+!wwwroot/.gitkeep

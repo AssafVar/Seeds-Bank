@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using SeedsBank.Server.Storage;
 
 namespace SeedsBank.Server.Hosting;
 
@@ -36,6 +37,8 @@ public static class HostingExtensions
             services.Configure<HttpsRedirectionOptions>(o => o.HttpsPort = 443);
         }
 
+        // Read by the security headers (img-src); the storage client itself is registered by AddFileStorage.
+        services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.AddOptions<RateLimitOptions>()
             .Bind(configuration.GetSection(RateLimitOptions.SectionName))
             .ValidateDataAnnotations()

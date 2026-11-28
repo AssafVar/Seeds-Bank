@@ -9,12 +9,79 @@ public class StartupChecksTests
     private const string GoodKey = "0123456789abcdef0123456789abcdef";
     private const string Conn = "Host=localhost;Database=x;Username=u;Password=p";
 
-    private static IConfiguration Config(string? jwtKey, string? connection)
+    private static IConfiguration Config(string? jwtKey, string? connection, Dictionary<string, string?>? overrides = null)
     {
-        var values = new Dictionary<string, string?>();
+        var values = new Dictionary<string, string?>
+        {
+            ["Storage:ServiceUrl"] = "https://account.r2.cloudflarestorage.com",
+            ["Storage:Bucket"] = "seeds-bank",
+            ["Storage:AccessKey"] = "key",
+            ["Storage:SecretKey"] = "secret",
+        };
         if (jwtKey is not null) values["Jwt:Key"] = jwtKey;
         if (connection is not null) values["ConnectionStrings:Default"] = connection;
+        foreach (var (key, value) in overrides ?? new()) values[key] = value;
         return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+    }
+
+    private static InvalidOperationException Rejects(Dictionary<string, string?> overrides, bool isDevelopment = false) =>
+        Assert.Throws<InvalidOperationException>(() => StartupChecks.Validate(Config(GoodKey, Conn, overrides), isDevelopment));
+
+    [Theory]
+    [InlineData("Storage:ServiceUrl")]
+    [InlineData("Storage:Bucket")]
+    [InlineData("Storage:AccessKey")]
+    [InlineData("Storage:SecretKey")]
+    public void Missing_storage_setting_is_rejected_by_name(string name)
+    {
+        var ex = Rejects(new() { [name] = "" }, isDevelopment: true);
+        Assert.Contains(name, ex.Message);
+    }
+
+    [Fact]
+    public void Plain_http_storage_is_allowed_in_development_only()
+    {
+        var local = new Dictionary<string, string?> { ["Storage:ServiceUrl"] = "http://localhost:9100" };
+        StartupChecks.Validate(Config(GoodKey, Conn, local), isDevelopment: true);
+
+        Assert.Contains("https", Rejects(local).Message);
+    }
+
+    [Theory]
+    [InlineData("not a url")]
+    [InlineData("ftp://files.example.test")]
+    public void Storage_service_url_must_be_http_or_https(string url)
+    {
+        Assert.Contains("Storage:ServiceUrl", Rejects(new() { ["Storage:ServiceUrl"] = url }, isDevelopment: true).Message);
+    }
+
+    [Theory]
+    [InlineData("https://files.example.test")]
+    [InlineData("http://localhost:9100")]
+    public void Storage_public_origin_accepts_a_bare_origin(string origin)
+    {
+        StartupChecks.Validate(Config(GoodKey, Conn, new() { ["Storage:PublicOrigin"] = origin }), isDevelopment: false);
+    }
+
+    [Theory]
+    [InlineData("https://files.example.test/")]
+    [InlineData("https://files.example.test/bucket")]
+    [InlineData("https://files.example.test; script-src *")]
+    [InlineData("files.example.test")]
+    [InlineData("javascript:alert(1)")]
+    public void Storage_public_origin_that_is_not_a_bare_origin_is_rejected(string origin)
+    {
+        Assert.Contains("Storage:PublicOrigin", Rejects(new() { ["Storage:PublicOrigin"] = origin }).Message);
+    }
+
+    [Fact]
+    public void Email_host_without_a_sender_is_rejected()
+    {
+        Assert.Contains("Email:From", Rejects(new() { ["Email:Host"] = "smtp.resend.com" }).Message);
+
+        StartupChecks.Validate(
+            Config(GoodKey, Conn, new() { ["Email:Host"] = "smtp.resend.com", ["Email:From"] = "noreply@example.test" }),
+            isDevelopment: false);
     }
 
     [Fact]

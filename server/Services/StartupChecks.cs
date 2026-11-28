@@ -41,5 +41,54 @@ public static class StartupChecks
             throw new InvalidOperationException(
                 "ConnectionStrings:Default is not set. Set it to a Postgres connection string (ConnectionStrings__Default).");
         }
+
+        ValidateStorage(configuration, isDevelopment);
+        ValidateEmail(configuration);
     }
+
+    private static void ValidateStorage(IConfiguration configuration, bool isDevelopment)
+    {
+        var missing = new[] { "ServiceUrl", "Bucket", "AccessKey", "SecretKey" }
+            .Where(name => string.IsNullOrWhiteSpace(configuration[$"Storage:{name}"]))
+            .Select(name => $"Storage:{name}")
+            .ToList();
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"File storage is not configured: set {string.Join(", ", missing)} (for example Storage__Bucket).");
+        }
+
+        if (!Uri.TryCreate(configuration["Storage:ServiceUrl"], UriKind.Absolute, out var serviceUrl)
+            || serviceUrl.Scheme is not ("http" or "https"))
+        {
+            throw new InvalidOperationException("Storage:ServiceUrl must be an absolute http(s) URL.");
+        }
+        if (!isDevelopment && serviceUrl.Scheme != "https")
+        {
+            throw new InvalidOperationException("Storage:ServiceUrl must use https outside Development.");
+        }
+
+        // It goes into the Content-Security-Policy header, so it must be a bare origin.
+        var publicOrigin = configuration["Storage:PublicOrigin"];
+        if (!string.IsNullOrWhiteSpace(publicOrigin) && !IsOrigin(publicOrigin))
+        {
+            throw new InvalidOperationException(
+                "Storage:PublicOrigin must be an origin such as https://files.example.com (scheme and host, no path).");
+        }
+    }
+
+    private static void ValidateEmail(IConfiguration configuration)
+    {
+        if (string.IsNullOrWhiteSpace(configuration["Email:Host"])) return;
+        if (string.IsNullOrWhiteSpace(configuration["Email:From"]))
+        {
+            throw new InvalidOperationException("Email:Host is set but Email:From is not: set the sender address.");
+        }
+    }
+
+    private static bool IsOrigin(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && uri.Scheme is "http" or "https"
+        && uri.GetLeftPart(UriPartial.Authority) == value.TrimEnd('/')
+        && !value.EndsWith('/');
 }

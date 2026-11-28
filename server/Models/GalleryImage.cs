@@ -10,6 +10,7 @@ public class GalleryImage
     [Column("id")]
     public int Id { get; set; }
 
+    // The object's key in file storage (e.g. "gallery/<guid>.jpg"), not a path on disk.
     [Column("file_path")]
     public string FilePath { get; set; } = null!;
 
