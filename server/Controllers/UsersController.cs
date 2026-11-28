@@ -34,6 +34,7 @@ public class UsersController : ControllerBase
 
     [HttpPost("login")]
     [EnableRateLimiting(HostingExtensions.LoginPolicy)]
+    [ServiceFilter(typeof(LoginThrottleFilter))]
     public async Task<IActionResult> Login(LoginRequest request)
     {
         var result = await _authService.LoginAsync(request);
