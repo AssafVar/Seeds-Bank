@@ -2,9 +2,9 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SeedsBank.Server.Data;
 
 #nullable disable
@@ -12,115 +12,116 @@ using SeedsBank.Server.Data;
 namespace SeedsBank.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261126232423_FinalizeBreedingSchema")]
-    partial class FinalizeBreedingSchema
+    [Migration("20261128150952_InitialPostgres")]
+    partial class InitialPostgres
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
-                .HasAnnotation("Relational:MaxIdentifierLength", 64);
+                .HasAnnotation("ProductVersion", "10.0.15")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("SeedsBank.Server.Models.Field", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<string>("GeoVerticesJson")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("geo_vertices_json");
 
                     b.Property<DateTime?>("HarvestDate")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("harvest_date");
 
                     b.Property<double?>("LandLength")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("land_length");
 
                     b.Property<double?>("LandWidth")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("land_width");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("name");
 
                     b.Property<string>("Notes")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("notes");
 
                     b.Property<double?>("OriginLat")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("origin_lat");
 
                     b.Property<double?>("OriginLng")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("origin_lng");
 
                     b.Property<int?>("ParentFieldId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("parent_field_id");
 
                     b.Property<double?>("PlantSpacing")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("plant_spacing");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("project_id");
 
                     b.Property<double?>("RowSpacing")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("row_spacing");
 
                     b.Property<string>("ShapeType")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("shape_type");
 
                     b.Property<DateTime?>("SowingDate")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("sowing_date");
 
                     b.Property<string>("SowingStructure")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("sowing_structure");
 
                     b.Property<string>("Status")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("status");
 
                     b.Property<string>("Variety")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("variety");
 
                     b.Property<string>("VerticesJson")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("vertices_json");
 
                     b.Property<double?>("YieldAmount")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("yield_amount");
 
                     b.Property<string>("YieldUnit")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("yield_unit");
 
                     b.HasKey("Id");
@@ -134,33 +135,33 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<int>("FieldId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("field_id");
 
                     b.Property<double>("HourlyRateAtEntry")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("hourly_rate_at_entry");
 
                     b.Property<double>("HoursWorked")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("hours_worked");
 
                     b.Property<DateTime>("WorkDate")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("work_date");
 
                     b.Property<int>("WorkerId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("worker_id");
 
                     b.HasKey("Id");
@@ -176,22 +177,22 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Caption")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("caption");
 
                     b.Property<string>("FilePath")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("file_path");
 
                     b.Property<DateTime>("UploadedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("uploaded_at");
 
                     b.HasKey("Id");
@@ -203,62 +204,62 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(6)
-                        .HasColumnType("varchar(6)")
+                        .HasColumnType("citext")
                         .HasColumnName("code");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<bool>("IsFounders")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("is_founders");
 
                     b.Property<bool>("IsStable")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("is_stable");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)")
+                        .HasColumnType("citext")
                         .HasColumnName("name");
 
                     b.Property<int>("NextSeq")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasDefaultValue(1)
                         .HasColumnName("next_seq");
 
                     b.Property<string>("OriginNote")
                         .HasMaxLength(200)
-                        .HasColumnType("varchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("origin_note");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("project_id");
 
                     b.Property<DateTime?>("StableMarkedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("stable_marked_at");
 
                     b.Property<int?>("SuccessorLineId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("successor_line_id");
 
                     b.HasKey("Id");
@@ -278,40 +279,40 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("LineId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("line_id");
 
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(12)
-                        .HasColumnType("varchar(12)")
+                        .HasColumnType("character varying(12)")
                         .HasColumnName("role");
 
                     b.Property<string>("SourceLabel")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("varchar(10)")
+                        .HasColumnType("character varying(10)")
                         .HasColumnName("source_label");
 
                     b.Property<int?>("SourceLineId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("source_line_id");
 
                     b.Property<string>("SourceLineName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)")
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("source_line_name");
 
                     b.Property<string>("SourcePlantTag")
                         .HasMaxLength(40)
-                        .HasColumnType("varchar(40)")
+                        .HasColumnType("character varying(40)")
                         .HasColumnName("source_plant_tag");
 
                     b.HasKey("Id");
@@ -327,23 +328,23 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("body");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("title");
 
                     b.HasKey("Id");
@@ -355,39 +356,39 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<int?>("FieldId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("field_id");
 
                     b.Property<int?>("Generation")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("generation");
 
-                    b.Property<string>("Kind")
-                        .HasColumnType("char(1)")
+                    b.Property<char?>("Kind")
+                        .HasColumnType("character(1)")
                         .HasColumnName("kind");
 
                     b.Property<int>("LineId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("line_id");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("project_id");
 
                     b.Property<string>("Season")
                         .HasMaxLength(10)
-                        .HasColumnType("varchar(10)")
+                        .HasColumnType("character varying(10)")
                         .HasColumnName("season");
 
                     b.Property<short?>("Year")
@@ -409,30 +410,30 @@ namespace SeedsBank.Server.Migrations
             modelBuilder.Entity("SeedsBank.Server.Models.Project", b =>
                 {
                     b.Property<string>("ProjectId")
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("project_id");
 
                     b.Property<DateTime>("LastUpdate")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("last_update");
 
                     b.Property<string>("PlantType")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("plant_type");
 
                     b.Property<string>("ProjectName")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("project_name");
 
                     b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("start_date");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("user_id");
 
                     b.HasKey("ProjectId");
@@ -444,72 +445,72 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<string>("PlantId")
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("plant_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                        .HasDefaultValueSql("now() at time zone 'utc'");
 
                     b.Property<string>("FatherPlantId")
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("plant_father_id");
 
                     b.Property<string>("FatherRemovedTag")
                         .HasMaxLength(40)
-                        .HasColumnType("varchar(40)")
+                        .HasColumnType("character varying(40)")
                         .HasColumnName("father_removed_tag");
 
                     b.Property<string>("FruitColor")
-                        .HasColumnType("longtext")
+                        .HasColumnType("citext")
                         .HasColumnName("fruit_color");
 
                     b.Property<string>("FruitWeight")
-                        .HasColumnType("longtext")
+                        .HasColumnType("citext")
                         .HasColumnName("fruit_weight");
 
                     b.Property<string>("MotherPlantId")
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("plant_mother_id");
 
                     b.Property<string>("MotherRemovedTag")
                         .HasMaxLength(40)
-                        .HasColumnType("varchar(40)")
+                        .HasColumnType("character varying(40)")
                         .HasColumnName("mother_removed_tag");
 
                     b.Property<int>("PopulationId")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("population_id");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("project_id");
 
                     b.Property<int>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasDefaultValue(1)
                         .HasColumnName("row_version");
 
                     b.Property<string>("SeedColor")
-                        .HasColumnType("longtext")
+                        .HasColumnType("citext")
                         .HasColumnName("seed_color");
 
                     b.Property<string>("SeedWeight")
-                        .HasColumnType("longtext")
+                        .HasColumnType("citext")
                         .HasColumnName("seed_weight");
 
                     b.Property<string>("Tag")
                         .IsRequired()
                         .HasMaxLength(40)
-                        .HasColumnType("varchar(40)")
+                        .HasColumnType("citext")
                         .HasColumnName("tag");
 
                     b.HasKey("PlantId");
@@ -530,29 +531,29 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ContactAddress")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("contact_address");
 
                     b.Property<string>("ContactEmail")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("contact_email");
 
                     b.Property<string>("ContactPhone")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("contact_phone");
 
                     b.Property<string>("Description")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("description");
 
                     b.Property<string>("VideoUrl")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("video_url");
 
                     b.HasKey("Id");
@@ -563,25 +564,25 @@ namespace SeedsBank.Server.Migrations
             modelBuilder.Entity("SeedsBank.Server.Models.User", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("userId");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("citext")
                         .HasColumnName("email");
 
                     b.Property<bool>("IsAdmin")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("isAdmin");
 
                     b.Property<string>("Password")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("password");
 
                     b.Property<string>("UserName")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("userName");
 
                     b.HasKey("UserId");
@@ -593,43 +594,43 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<double>("FertilizerKgPer100m2")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("fertilizer_kg_per_100m2");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("name");
 
                     b.Property<double>("PlantSpacing")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("plant_spacing");
 
                     b.Property<double>("RowSpacing")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("row_spacing");
 
                     b.Property<double>("SeedBufferPercent")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("seed_buffer_percent");
 
                     b.Property<string>("SeedUnit")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("seed_unit");
 
                     b.Property<double>("WaterMmPerSeason")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("water_mm_per_season");
 
                     b.HasKey("Id");
@@ -641,26 +642,26 @@ namespace SeedsBank.Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<double>("HourlyRate")
-                        .HasColumnType("double")
+                        .HasColumnType("double precision")
                         .HasColumnName("hourly_rate");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("name");
 
                     b.Property<string>("Role")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("role");
 
                     b.HasKey("Id");

@@ -735,7 +735,7 @@ public class PlantServiceTests
         Assert.Equal(new[] { "T1" }, await Find("50%"));
         Assert.Equal(new[] { "T3" }, await Find("a_b"));
         // A literal backslash is escaped too (InputRulesTests covers the pattern);
-        // the in-memory provider cannot match it, so it is only checked on MySQL.
+        // the in-memory provider cannot match it, so it is only checked on Postgres.
         Assert.Equal(new[] { "T1" }, await Find("%")); // only the one value that contains a percent sign
     }
 

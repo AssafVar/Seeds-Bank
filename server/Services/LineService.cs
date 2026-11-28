@@ -437,7 +437,7 @@ public class LineService : ILineService
         }
     }
 
-    // Case-insensitive, whatever the column collation does.
+    // Case-insensitive, whatever the column type does.
     private async Task EnsureNameFreeAsync(string projectId, string name)
     {
         var lower = name.ToLower();

@@ -19,7 +19,7 @@ public class ProjectItem
     public string ProjectId { get; set; } = null!;
 
     // Assigned when the plant is created and never changed. Unique per
-    // project, case-insensitive (column collation).
+    // project, case-insensitive (the column is citext).
     [Column("tag")]
     [MaxLength(40)]
     public string Tag { get; set; } = null!;

@@ -27,13 +27,10 @@ builder.Services.AddCors(options =>
 });
 
 var connectionString = builder.Configuration.GetConnectionString("Default");
-// Pinned rather than ServerVersion.AutoDetect: auto-detect opens a blocking
-// DB connection during startup (and during EF tooling like `dotnet ef
-// migrations add`) just to sniff the server version. Bump this if your
-// MySQL server is on a materially different 8.x version.
-var mySqlServerVersion = new MySqlServerVersion(new Version(8, 0, 34));
+// No EnableRetryOnFailure: PlantService runs user-initiated transactions,
+// which EF's retrying execution strategy refuses.
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, mySqlServerVersion));
+    options.UseNpgsql(connectionString));
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 builder.Services
@@ -78,7 +75,7 @@ builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    // The old MySQL-backed client tolerated numeric-looking strings for
+    // The original client tolerated numeric-looking strings for
     // integer columns (e.g. editing the "generation" table cell); keep
     // that same leniency here instead of hard-rejecting the request.
     options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
@@ -87,6 +84,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Fail fast on missing or unsafe configuration (after Build() so `dotnet ef` still works).
+StartupChecks.Validate(app.Configuration, app.Environment.IsDevelopment());
+
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+}
 
 app.UseExceptionHandler(errorApp => errorApp.Run(GlobalExceptionHandler.HandleAsync));
 

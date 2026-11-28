@@ -14,7 +14,7 @@ public class Line
     [Column("project_id")]
     public string ProjectId { get; set; } = null!;
 
-    // Unique per project (case-insensitive through the column collation).
+    // Unique per project (case-insensitive: the column is citext).
     // New names are validated to 1..40 characters; the column is wider for
     // legacy names.
     [Column("name")]
