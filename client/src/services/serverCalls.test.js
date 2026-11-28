@@ -2,7 +2,11 @@ const mockApi = {
   get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn(),
   interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
 };
-jest.mock("axios", () => ({ __esModule: true, default: { create: () => mockApi, get: jest.fn() } }));
+const mockCreateConfigs = [];
+jest.mock("axios", () => ({
+  __esModule: true,
+  default: { create: (config) => { mockCreateConfigs.push(config); return mockApi; }, get: jest.fn() },
+}));
 jest.mock("nanoid", () => ({ nanoid: () => "id" }));
 
 const calls = require("./serverCalls");
@@ -88,6 +92,13 @@ describe("breeding serverCalls", () => {
     await expect(calls[name](...args)).rejects.toBe(err);
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe("api instance", () => {
+  it("is created same-origin under /api/", () => {
+    expect(mockCreateConfigs).toHaveLength(1);
+    expect(mockCreateConfigs[0].baseURL).toBe("/api/");
   });
 });
 
