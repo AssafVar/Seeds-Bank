@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SeedsBank.Server.Models;
 
 namespace SeedsBank.Server.Data;
@@ -26,9 +27,24 @@ public class AppDbContext : DbContext
     // Every DateTime is a UTC wall-clock value or a calendar date, stored
     // without a zone (the server never converts between zones). Reads come
     // back as Kind Unspecified, so the JSON the client sees has no offset.
+    // Npgsql refuses to write a Kind=Utc value (DateTime.UtcNow) to a
+    // timestamp-without-zone column, hence the converter on the way in.
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTime>().HaveColumnType("timestamp without time zone");
+        // The in-memory provider (unit tests) stores the CLR value as is.
+        if (!Database.IsNpgsql()) return;
+
+        configurationBuilder.Properties<DateTime>()
+            .HaveColumnType("timestamp without time zone")
+            .HaveConversion<UnspecifiedKindDateTimeConverter>();
+    }
+
+    private sealed class UnspecifiedKindDateTimeConverter : ValueConverter<DateTime, DateTime>
+    {
+        public UnspecifiedKindDateTimeConverter()
+            : base(v => DateTime.SpecifyKind(v, DateTimeKind.Unspecified), v => v)
+        {
+        }
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
