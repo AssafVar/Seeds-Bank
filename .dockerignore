@@ -1,0 +1,10 @@
+**/bin
+**/obj
+**/node_modules
+client/build
+server/Server.Tests
+server/appsettings.*.local.json
+.git
+.github
+.claude
+**/*.md

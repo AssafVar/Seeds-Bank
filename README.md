@@ -26,10 +26,27 @@ manageit's:
 | SMTP (Mailpit) | `localhost:1026` |
 | Mailpit inbox | http://localhost:8026 |
 
-In Development the API reads `server/appsettings.Development.json`: the compose Postgres, a dev-only `Jwt:Key`, and
-`Database:MigrateOnStartup=true`, so the schema is created on the first run. `docker compose down -v` wipes the data.
+The API listens on http://localhost:8080 and the React dev server on http://localhost:3000 forwards `/api` to it.
 
-Emails the app sends locally land in Mailpit at http://localhost:8026; nothing is really sent.
+In Development the API reads `server/appsettings.Development.json`: the compose Postgres, SeaweedFS and Mailpit, a
+dev-only `Jwt:Key`, `Database:MigrateOnStartup=true` (the schema is created on the first run) and
+`Storage:CreateBucketIfMissing=true` (the `seeds-bank` bucket is created on the first run). `docker compose down -v`
+wipes the data.
+
+Gallery images are stored in the bucket, which is private: the API hands the page a signed link per image, valid for an
+hour. Emails the app sends locally land in Mailpit at http://localhost:8026; nothing is really sent.
+
+To try the production image locally against the compose services:
+
+```sh
+docker build -t seeds-bank .
+docker run --rm -p 127.0.0.1:8090:8080 -e ASPNETCORE_ENVIRONMENT=Development \
+  -e 'ConnectionStrings__Default=Host=host.docker.internal;Port=5433;Database=seeds_bank;Username=seeds_bank;Password=seeds_bank_dev' \
+  -e Storage__ServiceUrl=http://host.docker.internal:9100 -e Email__Host=host.docker.internal seeds-bank
+```
+
+Then open http://localhost:8090. (Gallery links point at `host.docker.internal:9100` in this setup, so images only load
+where that name resolves.)
 
 ### Tests
 
@@ -46,15 +63,48 @@ cd server && dotnet test Server.slnx
 
 Each test creates and drops its own database on that server.
 
-## Configuration
+## Deploy (free tier)
 
-Outside Development, set these (environment variables use `__` for `:`):
+One `Dockerfile` builds the React app and the API into a single image: .NET serves the API under `/api` and the app
+from the same origin. Hosting is the same as manageit's: Render (Docker), Neon (Postgres), Cloudflare R2 (storage) and
+Resend (email). Build the `Dockerfile` on Render (or any container host) and set these environment variables (`__`
+stands for `:`):
 
-| Setting | Notes |
+| Variable | Example |
 |---|---|
-| `ConnectionStrings__Default` | Postgres connection string |
+| `ConnectionStrings__Default` | Neon Postgres connection string (see [Neon](#neon)) |
 | `Database__MigrateOnStartup` | `true` to apply migrations when the API starts |
-| `Jwt__Key` | Random secret of at least 32 bytes (`openssl rand -base64 48`). The API won't start without it, or with the development key from `appsettings.Development.json`. |
+| `Jwt__Key` | `openssl rand -base64 48`, as a secret. The API won't start without it, with fewer than 32 bytes, or with the development key from `appsettings.Development.json`. |
+| `ForwardedHeaders__Enabled` | `true` behind Render's proxy (needed for HTTPS redirects, HSTS and per-IP rate limits). **Required outside Development.** |
+| `AllowedHosts` | the app's host name, e.g. `seeds-bank.onrender.com`. **Required outside Development** (`*` is refused unless `Hosting__AllowAnyHost=true`). |
+| `Storage__ServiceUrl` | `https://<account-id>.r2.cloudflarestorage.com` (https is required outside Development) |
+| `Storage__Bucket` | `seeds-bank`: create it once in R2, as a **private** bucket |
+| `Storage__AccessKey` / `Storage__SecretKey` | an R2 API token with Object Read & Write on that bucket, as secrets |
+| `Storage__Region` | `auto` |
+| `Storage__PublicOrigin` | same as `Storage__ServiceUrl` (added to the Content-Security-Policy so gallery images load) |
+| `Email__Host` / `Email__Port` | `smtp.resend.com` / `587` (Resend free plan: 100 emails a day, 3,000 a month) |
+| `Email__User` | `resend` |
+| `Email__Password` | a Resend API key with "Sending access", as a secret |
+| `Email__From` | an address on your domain verified in Resend, e.g. `noreply@your-domain.com` |
+| `PORT` | `8080` (tells Render the port the image listens on) |
+
+The health check is `GET /api/health`. Without `Email__Host` the app runs but sends no email (nothing sends email yet).
+
+After the first deploy, sign in from two different networks to check that the per-IP rate limits see the real client IP
+(`ForwardedHeaders__Enabled`), not the proxy's.
+
+To send real email from your machine instead of Mailpit, keep the Resend API key in .NET user secrets (stored in your
+home folder, never in the repo), and run `dotnet user-secrets clear` in `server/` to go back to Mailpit:
+
+```sh
+cd server
+dotnet user-secrets set "Email:Host" "smtp.resend.com"
+dotnet user-secrets set "Email:Port" "587"
+dotnet user-secrets set "Email:UseStartTls" "true"
+dotnet user-secrets set "Email:User" "resend"
+dotnet user-secrets set "Email:From" "noreply@your-domain.com"
+dotnet user-secrets set "Email:Password" "<Resend API key>"
+```
 
 ### Neon
 

@@ -50,3 +50,11 @@ jobs:
         env:
           TEST_POSTGRES: Host=localhost;Port=5433;Database=seeds_bank;Username=seeds_bank;Password=seeds_bank_dev
         run: dotnet test Server.slnx
+
+  image:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t seeds-bank .
