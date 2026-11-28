@@ -90,7 +90,10 @@ public class StartupChecksTests
         }
         Assert.NotNull(dir);
 
-        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir!.FullName, "appsettings.json")));
+        using var doc = JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(dir!.FullName, "appsettings.json")),
+            // Like the configuration loader, accept // comments and trailing commas.
+            new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
         Assert.Equal("", doc.RootElement.GetProperty("Jwt").GetProperty("Key").GetString());
         Assert.Equal("", doc.RootElement.GetProperty("ConnectionStrings").GetProperty("Default").GetString());
         Assert.False(doc.RootElement.GetProperty("Database").GetProperty("MigrateOnStartup").GetBoolean());
