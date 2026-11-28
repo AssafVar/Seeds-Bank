@@ -196,7 +196,7 @@ public class RouteSweepTests
         // The replacement is nested under plants.
         var plantDelete = Find(nameof(PlantsController), nameof(PlantsController.DeletePlant)).GetCustomAttribute<HttpDeleteAttribute>()!;
         Assert.Equal("{plantId}", plantDelete.Template);
-        Assert.Equal("projects/{userId}/{projectId}/plants", typeof(PlantsController).GetCustomAttribute<RouteAttribute>()!.Template);
+        Assert.Equal("api/projects/{userId}/{projectId}/plants", typeof(PlantsController).GetCustomAttribute<RouteAttribute>()!.Template);
         await Task.CompletedTask;
     }
 }

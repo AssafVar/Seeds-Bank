@@ -5,26 +5,11 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SeedsBank.Server.Data;
+using SeedsBank.Server.Hosting;
 using SeedsBank.Server.Services;
 using SeedsBank.Server.Services.Pedigree;
 
 var builder = WebApplication.CreateBuilder(args);
-
-const string CorsPolicy = "ClientCorsPolicy";
-
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? new[] { "http://localhost:3000" };
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(CorsPolicy, policy =>
-    {
-        policy.WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-});
 
 var connectionString = builder.Configuration.GetConnectionString("Default");
 // Pinned rather than ServerVersion.AutoDetect: auto-detect opens a blocking
@@ -83,11 +68,14 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     // that same leniency here instead of hard-rejecting the request.
     options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
 });
+builder.Services.AddSameOriginHosting(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Proxy headers first, so everything below sees the real scheme and client IP.
+app.UseSameOriginHostingPreAuth();
 app.UseExceptionHandler(errorApp => errorApp.Run(GlobalExceptionHandler.HandleAsync));
 
 if (app.Environment.IsDevelopment())
@@ -96,12 +84,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseStaticFiles();
-app.UseCors(CorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => "Response from server");
-app.MapControllers();
+app.MapSameOriginHosting();
 
 app.Run();

@@ -1,13 +1,15 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SeedsBank.Server.DTOs;
+using SeedsBank.Server.Hosting;
 using SeedsBank.Server.Services;
 
 namespace SeedsBank.Server.Controllers;
 
 [ApiController]
-[Route("users")]
+[Route("api/users")]
 public class UsersController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -18,6 +20,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("signup")]
+    [EnableRateLimiting(HostingExtensions.SignupPolicy)]
     public async Task<IActionResult> Signup(SignupRequest request)
     {
         var created = await _authService.SignupAsync(request);
@@ -30,6 +33,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(HostingExtensions.LoginPolicy)]
     public async Task<IActionResult> Login(LoginRequest request)
     {
         var result = await _authService.LoginAsync(request);

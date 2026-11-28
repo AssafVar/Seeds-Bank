@@ -5,3 +5,6 @@ appsettings.*.local.json
 *.user
 wwwroot/uploads/gallery/*
 !wwwroot/uploads/gallery/.gitkeep
+
+wwwroot/*
+!wwwroot/uploads
