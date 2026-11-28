@@ -33,7 +33,17 @@ public class AuthService : IAuthService
         };
 
         _db.Users.Add(user);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException
+            { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_users_email" })
+        {
+            // Lost a race on the same email: the same answer as the pre-check.
+            _db.ChangeTracker.Clear();
+            return false;
+        }
         return true;
     }
 

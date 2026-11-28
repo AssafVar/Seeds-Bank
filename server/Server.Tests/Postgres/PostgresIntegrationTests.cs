@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Npgsql;
+using SeedsBank.Server.Data;
 using SeedsBank.Server.DTOs;
 using SeedsBank.Server.Models;
 using SeedsBank.Server.Services;
@@ -274,5 +275,75 @@ public class PostgresIntegrationTests
         Assert.Equal(0, await after.Populations.CountAsync());
         Assert.Equal(0, await after.Lines.CountAsync());
         Assert.Equal(0, await after.LineOrigins.CountAsync());
+    }
+
+    [PostgresFact]
+    public async Task Parallel_signups_with_the_same_email_in_different_case_leave_exactly_one_user()
+    {
+        using var pg = TestDbContextFactory.CreatePostgres();
+        var jwt = new Mock<IJwtTokenService>();
+        var gate = new TaskCompletionSource();
+
+        var tasks = Enumerable.Range(0, 6).Select(n => Task.Run(async () =>
+        {
+            await using var db = pg.NewContext();
+            await db.Database.OpenConnectionAsync();
+            var auth = new AuthService(db, jwt.Object);
+            await gate.Task;
+            var email = n % 2 == 0 ? "Race@Example.com" : "RACE@example.COM";
+            return await auth.SignupAsync(new SignupRequest { UserId = $"u{n}", Email = email, Password = "hunter22x" });
+        })).ToList();
+        gate.SetResult();
+        var results = await Task.WhenAll(tasks);
+
+        Assert.Equal(1, results.Count(r => r));
+        await using var check = pg.NewContext();
+        Assert.Equal(1, await check.Users.CountAsync());
+    }
+
+    [PostgresFact]
+    public async Task The_users_email_index_refuses_a_duplicate_in_another_case()
+    {
+        using var pg = TestDbContextFactory.CreatePostgres();
+        await using var db = pg.NewContext();
+        db.Users.AddRange(
+            new User { UserId = "a", Email = "x@example.com", Password = "p" },
+            new User { UserId = "b", Email = "X@EXAMPLE.COM", Password = "p" });
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        var pgEx = Assert.IsType<PostgresException>(ex.InnerException);
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, pgEx.SqlState);
+        Assert.Equal("IX_users_email", pgEx.ConstraintName);
+    }
+
+    [PostgresFact]
+    public async Task Too_long_citext_values_are_rejected_by_the_database()
+    {
+        using var pg = TestDbContextFactory.CreatePostgres();
+        var (s, projectId) = await NewProjectAsync(pg);
+        var plant = await s.FounderAsync(projectId);
+        var populationId = (await s.Db.ProjectItems.AsNoTracking().SingleAsync(i => i.PlantId == plant.PlantId)).PopulationId;
+
+        async Task AssertCheckViolation(Action<AppDbContext> add, string constraint)
+        {
+            await using var db = pg.NewContext();
+            add(db);
+            var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+            var pgEx = Assert.IsType<PostgresException>(ex.InnerException);
+            Assert.Equal(PostgresErrorCodes.CheckViolation, pgEx.SqlState);
+            Assert.Equal(constraint, pgEx.ConstraintName);
+        }
+
+        await AssertCheckViolation(db => db.ProjectItems.Add(new ProjectItem
+            { PlantId = "long1", ProjectId = projectId, Tag = new string('t', 41), PopulationId = populationId }), "CK_project_items_tag_length");
+        await AssertCheckViolation(db => db.Lines.Add(new Line
+            { ProjectId = projectId, Name = new string('n', 101), Code = "OK" }), "CK_lines_name_length");
+        await AssertCheckViolation(db => db.Lines.Add(new Line
+            { ProjectId = projectId, Name = "Fine", Code = "TOOLONG" }), "CK_lines_code_length");
+
+        // At the limit is fine.
+        await using var ok = pg.NewContext();
+        ok.ProjectItems.Add(new ProjectItem { PlantId = "ok1", ProjectId = projectId, Tag = new string('t', 40), PopulationId = populationId });
+        ok.Lines.Add(new Line { ProjectId = projectId, Name = new string('n', 100), Code = "ABCDEF" });
+        await ok.SaveChangesAsync();
     }
 }

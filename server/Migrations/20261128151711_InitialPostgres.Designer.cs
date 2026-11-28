@@ -12,7 +12,7 @@ using SeedsBank.Server.Data;
 namespace SeedsBank.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261128150952_InitialPostgres")]
+    [Migration("20261128151711_InitialPostgres")]
     partial class InitialPostgres
     {
         /// <inheritdoc />
@@ -272,7 +272,12 @@ namespace SeedsBank.Server.Migrations
                     b.HasIndex("ProjectId", "Name")
                         .IsUnique();
 
-                    b.ToTable("lines");
+                    b.ToTable("lines", t =>
+                        {
+                            t.HasCheckConstraint("CK_lines_code_length", "char_length(code) <= 6");
+
+                            t.HasCheckConstraint("CK_lines_name_length", "char_length(name) <= 100");
+                        });
                 });
 
             modelBuilder.Entity("SeedsBank.Server.Models.LineOrigin", b =>
@@ -524,7 +529,10 @@ namespace SeedsBank.Server.Migrations
                     b.HasIndex("ProjectId", "Tag")
                         .IsUnique();
 
-                    b.ToTable("project_items");
+                    b.ToTable("project_items", t =>
+                        {
+                            t.HasCheckConstraint("CK_project_items_tag_length", "char_length(tag) <= 40");
+                        });
                 });
 
             modelBuilder.Entity("SeedsBank.Server.Models.SiteContent", b =>
@@ -586,6 +594,9 @@ namespace SeedsBank.Server.Migrations
                         .HasColumnName("userName");
 
                     b.HasKey("UserId");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.ToTable("users");
                 });

@@ -188,6 +188,8 @@ namespace SeedsBank.Server.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_lines", x => x.id);
+                    table.CheckConstraint("CK_lines_code_length", "char_length(code) <= 6");
+                    table.CheckConstraint("CK_lines_name_length", "char_length(name) <= 100");
                     table.ForeignKey(
                         name: "FK_lines_lines_successor_line_id",
                         column: x => x.successor_line_id,
@@ -322,6 +324,7 @@ namespace SeedsBank.Server.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_project_items", x => x.plant_id);
+                    table.CheckConstraint("CK_project_items_tag_length", "char_length(tag) <= 40");
                     table.ForeignKey(
                         name: "FK_project_items_populations_population_id",
                         column: x => x.population_id,
@@ -425,6 +428,12 @@ namespace SeedsBank.Server.Migrations
                 name: "IX_project_items_project_id_tag",
                 table: "project_items",
                 columns: new[] { "project_id", "tag" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_users_email",
+                table: "users",
+                column: "email",
                 unique: true);
         }
 

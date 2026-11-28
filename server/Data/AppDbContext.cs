@@ -55,6 +55,7 @@ public class AppDbContext : DbContext
         // login and LIKE search rely on (a plain text column is case-sensitive).
         modelBuilder.HasPostgresExtension("citext");
         modelBuilder.Entity<User>().Property(u => u.Email).HasColumnType("citext");
+        modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
 
         // EF's default for self-referencing FKs is Restrict (it won't guess
         // a cascade path). We want deleting a large field to take its
@@ -102,6 +103,12 @@ public class AppDbContext : DbContext
             e.Property(l => l.IsStable).HasDefaultValue(false);
             e.Property(l => l.Name).HasColumnType("citext");
             e.Property(l => l.Code).HasColumnType("citext");
+            // citext ignores maxLength, so the caps are check constraints.
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_lines_name_length", "char_length(name) <= 100");
+                t.HasCheckConstraint("CK_lines_code_length", "char_length(code) <= 6");
+            });
         });
 
         modelBuilder.Entity<Population>(e =>
@@ -135,6 +142,7 @@ public class AppDbContext : DbContext
             e.Property(i => i.RowVersion).HasDefaultValue(1).IsConcurrencyToken();
             e.Property(i => i.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
             e.Property(i => i.Tag).HasColumnType("citext");
+            e.ToTable(t => t.HasCheckConstraint("CK_project_items_tag_length", "char_length(tag) <= 40"));
             e.Property(i => i.FruitColor).HasColumnType("citext");
             e.Property(i => i.FruitWeight).HasColumnType("citext");
             e.Property(i => i.SeedColor).HasColumnType("citext");
