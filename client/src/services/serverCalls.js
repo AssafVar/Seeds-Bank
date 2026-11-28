@@ -2,11 +2,10 @@ import axios from "axios";
 import { nanoid } from "nanoid";
 import { converToCitiesList } from "../libs/cities";
 
-export const SERVER_BASE_URL = "http://localhost:8080";
-
+// Same origin: the API is served under /api by the same host as the app
+// (in development the CRA dev server proxies /api, see "proxy" in package.json).
 const api = axios.create({
-  baseURL: `${SERVER_BASE_URL}/`,
-  withCredentials: false,
+  baseURL: "/api/",
 });
 
 api.interceptors.request.use((config) => {
@@ -32,11 +31,14 @@ api.interceptors.response.use(
   }
 );
 
+export const TOO_MANY_ATTEMPTS_MESSAGE = "Too many attempts, try again in a minute.";
+
 // Extracts a human-readable message from the various error body shapes the
 // server can return: a plain string (BadRequest/Unauthorized), a {message}
 // object (Conflict), or ASP.NET Core's automatic ValidationProblemDetails
 // ({title, errors}) from DataAnnotations validation failures.
 export const extractErrorMessage = (err, fallback = "Something went wrong. Please try again.") => {
+  if (err?.response?.status === 429) return TOO_MANY_ATTEMPTS_MESSAGE;
   const data = err?.response?.data;
   if (!data) return fallback;
   if (typeof data === "string") return data;

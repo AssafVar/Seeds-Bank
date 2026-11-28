@@ -8,7 +8,6 @@ jest.mock("../../../services/serverCalls", () => ({
   getSiteContent: jest.fn(),
   uploadGalleryImage: jest.fn(),
   deleteGalleryImage: jest.fn(),
-  SERVER_BASE_URL: "http://localhost:8080",
 }));
 
 describe("GallerySection", () => {

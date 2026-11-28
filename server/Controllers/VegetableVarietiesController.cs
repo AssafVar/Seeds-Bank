@@ -6,7 +6,7 @@ using SeedsBank.Server.Services;
 namespace SeedsBank.Server.Controllers;
 
 [ApiController]
-[Route("vegetable-varieties")]
+[Route("api/vegetable-varieties")]
 public class VegetableVarietiesController : ControllerBase
 {
     private readonly IVegetableVarietyService _varietyService;

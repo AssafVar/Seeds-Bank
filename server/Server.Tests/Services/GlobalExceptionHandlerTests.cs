@@ -40,7 +40,7 @@ public class GlobalExceptionHandlerTests
         {
             RequestServices = new ServiceCollection().AddSingleton<ILogger<Program>>(spy).BuildServiceProvider(),
         };
-        context.Request.Path = "/projects/u1/p1/plants";
+        context.Request.Path = "/api/projects/u1/p1/plants";
         context.Features.Set<IExceptionHandlerFeature>(new Feature { Error = error });
         var body = new MemoryStream();
         context.Response.Body = body;

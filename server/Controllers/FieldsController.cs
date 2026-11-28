@@ -7,7 +7,7 @@ namespace SeedsBank.Server.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("projects/{userId}/{projectId}/fields")]
+[Route("api/projects/{userId}/{projectId}/fields")]
 public class FieldsController : OwnedResourceControllerBase
 {
     private readonly IFieldService _fieldService;

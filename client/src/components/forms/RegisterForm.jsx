@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Link as MuiLink, TextField, Typography } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import { useNavigate } from 'react-router';
 import { extractErrorMessage } from '../../services/serverCalls';
@@ -22,10 +22,19 @@ function RegisterForm({isSignup, setIsSignup, handleLogin}) {
     const {onLogin} = useAuth();
     const navigate = useNavigate();
 
-    const showError = (message) => {
+    const errorTimer = useRef(null);
+
+    // Errors fade after 2s, except "too many attempts": that one stays until the
+    // user submits again, so they can read how long to wait.
+    const showError = (message, { persist = false } = {}) => {
+        clearTimeout(errorTimer.current);
         setRegisterError(message);
-        setTimeout(() => setRegisterError(""), 2000);
+        if (!persist) {
+            errorTimer.current = setTimeout(() => setRegisterError(""), 2000);
+        }
     };
+
+    useEffect(() => () => clearTimeout(errorTimer.current), []);
 
     const validate = () => {
         if (!email || !password || (isSignup && !confirmPassword)) {
@@ -45,6 +54,8 @@ function RegisterForm({isSignup, setIsSignup, handleLogin}) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        clearTimeout(errorTimer.current);
+        setRegisterError("");
         const validationError = validate();
         if (validationError) {
             showError(validationError);
@@ -70,7 +81,7 @@ function RegisterForm({isSignup, setIsSignup, handleLogin}) {
                 }, 1500);
             }
         } catch (err) {
-            showError(extractErrorMessage(err));
+            showError(extractErrorMessage(err), { persist: err?.response?.status === 429 });
         } finally {
             setIsSubmitting(false);
         }

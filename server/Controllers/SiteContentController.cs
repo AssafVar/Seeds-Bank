@@ -6,7 +6,7 @@ using SeedsBank.Server.Services;
 namespace SeedsBank.Server.Controllers;
 
 [ApiController]
-[Route("site-content")]
+[Route("api/site-content")]
 public class SiteContentController : ControllerBase
 {
     private readonly ISiteContentService _siteContentService;
