@@ -5,35 +5,19 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SeedsBank.Server.Data;
+using SeedsBank.Server.Email;
+using SeedsBank.Server.Hosting;
 using SeedsBank.Server.Services;
 using SeedsBank.Server.Services.Pedigree;
+using SeedsBank.Server.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
-const string CorsPolicy = "ClientCorsPolicy";
-
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? new[] { "http://localhost:3000" };
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(CorsPolicy, policy =>
-    {
-        policy.WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-});
-
 var connectionString = builder.Configuration.GetConnectionString("Default");
-// Pinned rather than ServerVersion.AutoDetect: auto-detect opens a blocking
-// DB connection during startup (and during EF tooling like `dotnet ef
-// migrations add`) just to sniff the server version. Bump this if your
-// MySQL server is on a materially different 8.x version.
-var mySqlServerVersion = new MySqlServerVersion(new Version(8, 0, 34));
+// No EnableRetryOnFailure: PlantService runs user-initiated transactions,
+// which EF's retrying execution strategy refuses.
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, mySqlServerVersion));
+    options.UseNpgsql(connectionString));
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 builder.Services
@@ -75,19 +59,34 @@ builder.Services.AddScoped<IVegetableVarietyService, VegetableVarietyService>();
 builder.Services.AddScoped<IWorkerService, WorkerService>();
 builder.Services.AddScoped<IFieldWorkLogService, FieldWorkLogService>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddFileStorage(builder.Configuration);
+builder.Services.AddEmail(builder.Configuration);
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    // The old MySQL-backed client tolerated numeric-looking strings for
+    // The original client tolerated numeric-looking strings for
     // integer columns (e.g. editing the "generation" table cell); keep
     // that same leniency here instead of hard-rejecting the request.
     options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
 });
+builder.Services.AddSameOriginHosting(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Fail fast on missing or unsafe configuration (after Build() so `dotnet ef` still works).
+StartupChecks.Validate(app.Configuration, app.Environment.IsDevelopment());
+
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+}
+await app.CreateBucketIfMissingAsync();
+
+// Proxy headers first, so everything below sees the real scheme and client IP.
+app.UseSameOriginHostingPreAuth();
 app.UseExceptionHandler(errorApp => errorApp.Run(GlobalExceptionHandler.HandleAsync));
 
 if (app.Environment.IsDevelopment())
@@ -96,12 +95,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseStaticFiles();
-app.UseCors(CorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => "Response from server");
-app.MapControllers();
+app.MapSameOriginHosting();
 
 app.Run();

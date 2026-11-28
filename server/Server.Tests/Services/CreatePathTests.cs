@@ -12,7 +12,7 @@ namespace SeedsBank.Server.Tests.Services;
 // Round trips of the create path. The in-memory provider runs no SQL, so
 // commands cannot be counted here; what can be pinned is the number of
 // SaveChanges calls (one transaction, one batch) and that the answer needs no
-// re-read. Command counts on MySQL belong to the local MySQL run.
+// re-read. Command counts belong to the Postgres integration tests.
 public class CreatePathTests
 {
     private sealed class CountingContext : AppDbContext

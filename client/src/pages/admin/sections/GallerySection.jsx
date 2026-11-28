@@ -10,7 +10,6 @@ import { classes } from "../../../styles/adminStyle.js";
 import ConfirmDialog from "../../../components/admin/ConfirmDialog.jsx";
 import Spinner, { InlineSpinner } from "../../../components/common/Spinner.jsx";
 import {
-  SERVER_BASE_URL,
   deleteGalleryImage,
   getSiteContent,
   uploadGalleryImage,
@@ -90,7 +89,7 @@ function GallerySection() {
             <Grid item xs={6} sm={4} key={image.id}>
               <Box sx={{ position: "relative" }}>
                 <img
-                  src={`${SERVER_BASE_URL}${image.url}`}
+                  src={image.url}
                   alt={image.caption || "Gallery"}
                   style={{ width: "100%", borderRadius: 4 }}
                 />

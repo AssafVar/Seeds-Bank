@@ -2,25 +2,27 @@ using Microsoft.EntityFrameworkCore;
 using SeedsBank.Server.Data;
 using SeedsBank.Server.DTOs;
 using SeedsBank.Server.Models;
+using SeedsBank.Server.Storage;
 
 namespace SeedsBank.Server.Services;
 
 public class SiteContentService : ISiteContentService
 {
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".jpg", ".jpeg", ".png", ".webp", ".gif",
-    };
     private const long MaxFileSizeBytes = 8 * 1024 * 1024;
-    private const string GalleryRelativeDirectory = "uploads/gallery";
+    private const string GalleryKeyPrefix = "gallery/";
+
+    // The bucket is private: the page gets a signed link per image, valid long enough for one visit.
+    internal static readonly TimeSpan ImageUrlLifetime = TimeSpan.FromHours(1);
 
     private readonly AppDbContext _db;
-    private readonly IWebHostEnvironment _env;
+    private readonly IFileStorage _storage;
+    private readonly ILogger<SiteContentService> _logger;
 
-    public SiteContentService(AppDbContext db, IWebHostEnvironment env)
+    public SiteContentService(AppDbContext db, IFileStorage storage, ILogger<SiteContentService> logger)
     {
         _db = db;
-        _env = env;
+        _storage = storage;
+        _logger = logger;
     }
 
     public async Task<SiteContentDto> GetSiteContentAsync()
@@ -37,7 +39,7 @@ public class SiteContentService : ISiteContentService
             ContactPhone = content.ContactPhone,
             ContactAddress = content.ContactAddress,
             VideoUrl = content.VideoUrl,
-            Images = images.Select(ToImageDto).ToList(),
+            Images = await ToImageDtosAsync(images),
         };
     }
 
@@ -63,33 +65,36 @@ public class SiteContentService : ISiteContentService
             throw new ArgumentException("File is too large (max 8 MB).");
         }
 
-        var extension = Path.GetExtension(file.FileName);
-        if (!AllowedExtensions.Contains(extension))
+        var type = await ImageTypeValidator.DetectAsync(file);
+        if (type is null)
         {
             throw new ArgumentException("Unsupported file type. Allowed: jpg, jpeg, png, webp, gif.");
         }
 
-        var galleryDir = Path.Combine(_env.WebRootPath, GalleryRelativeDirectory);
-        Directory.CreateDirectory(galleryDir);
-
-        var storedFileName = $"{Guid.NewGuid()}{extension}";
-        var fullPath = Path.Combine(galleryDir, storedFileName);
-
-        await using (var stream = new FileStream(fullPath, FileMode.Create))
+        var key = $"{GalleryKeyPrefix}{Guid.NewGuid()}{type.Value.Extension}";
+        await using (var stream = file.OpenReadStream())
         {
-            await file.CopyToAsync(stream);
+            await _storage.UploadAsync(key, stream, type.Value.ContentType);
         }
 
         var image = new GalleryImage
         {
-            FilePath = $"{GalleryRelativeDirectory}/{storedFileName}",
+            FilePath = key,
             Caption = caption,
             UploadedAt = DateTime.UtcNow,
         };
         _db.GalleryImages.Add(image);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch
+        {
+            await DeleteStoredFileAsync(key);
+            throw;
+        }
 
-        return ToImageDto(image);
+        return await ToImageDtoAsync(image);
     }
 
     public async Task<bool> DeleteGalleryImageAsync(int id)
@@ -103,13 +108,21 @@ public class SiteContentService : ISiteContentService
         _db.GalleryImages.Remove(image);
         await _db.SaveChangesAsync();
 
-        var fullPath = Path.Combine(_env.WebRootPath, image.FilePath);
-        if (File.Exists(fullPath))
-        {
-            File.Delete(fullPath);
-        }
-
+        await DeleteStoredFileAsync(image.FilePath);
         return true;
+    }
+
+    // The row is the source of truth: a file left behind by a failed delete is only wasted space, so log and move on.
+    private async Task DeleteStoredFileAsync(string key)
+    {
+        try
+        {
+            await _storage.DeleteAsync(key);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("A gallery file could not be deleted from storage ({ExceptionType})", ex.GetType().Name);
+        }
     }
 
     private async Task<SiteContent> GetOrCreateSiteContentAsync()
@@ -126,10 +139,20 @@ public class SiteContentService : ISiteContentService
         return content;
     }
 
-    private static GalleryImageDto ToImageDto(GalleryImage image) => new()
+    private async Task<List<GalleryImageDto>> ToImageDtosAsync(List<GalleryImage> images)
+    {
+        var dtos = new List<GalleryImageDto>(images.Count);
+        foreach (var image in images)
+        {
+            dtos.Add(await ToImageDtoAsync(image));
+        }
+        return dtos;
+    }
+
+    private async Task<GalleryImageDto> ToImageDtoAsync(GalleryImage image) => new()
     {
         Id = image.Id,
-        Url = $"/{image.FilePath}",
+        Url = await _storage.GetReadUrlAsync(image.FilePath, ImageUrlLifetime),
         Caption = image.Caption,
         UploadedAt = image.UploadedAt,
     };

@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   client:
     name: Client (React)
@@ -32,4 +35,26 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - run: dotnet test Server.slnx
+      # Local-only credentials from docker-compose.yml; no secrets involved.
+      - name: Start Postgres
+        working-directory: .
+        run: |
+          docker compose up -d postgres
+          for i in $(seq 1 30); do
+            if docker compose exec -T postgres pg_isready -U seeds_bank -d seeds_bank; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs postgres
+          exit 1
+      - name: Test
+        env:
+          TEST_POSTGRES: Host=localhost;Port=5433;Database=seeds_bank;Username=seeds_bank;Password=seeds_bank_dev
+        run: dotnet test Server.slnx
+
+  image:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t seeds-bank .

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SeedsBank.Server.Models;
 
 namespace SeedsBank.Server.Data;
@@ -23,9 +24,38 @@ public class AppDbContext : DbContext
     public DbSet<Population> Populations => Set<Population>();
     public DbSet<LineOrigin> LineOrigins => Set<LineOrigin>();
 
+    // Every DateTime is a UTC wall-clock value or a calendar date, stored
+    // without a zone (the server never converts between zones). Reads come
+    // back as Kind Unspecified, so the JSON the client sees has no offset.
+    // Npgsql refuses to write a Kind=Utc value (DateTime.UtcNow) to a
+    // timestamp-without-zone column, hence the converter on the way in.
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // The in-memory provider (unit tests) stores the CLR value as is.
+        if (!Database.IsNpgsql()) return;
+
+        configurationBuilder.Properties<DateTime>()
+            .HaveColumnType("timestamp without time zone")
+            .HaveConversion<UnspecifiedKindDateTimeConverter>();
+    }
+
+    private sealed class UnspecifiedKindDateTimeConverter : ValueConverter<DateTime, DateTime>
+    {
+        public UnspecifiedKindDateTimeConverter()
+            : base(v => DateTime.SpecifyKind(v, DateTimeKind.Unspecified), v => v)
+        {
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // citext keeps the case-insensitive comparison the unique indexes,
+        // login and LIKE search rely on (a plain text column is case-sensitive).
+        modelBuilder.HasPostgresExtension("citext");
+        modelBuilder.Entity<User>().Property(u => u.Email).HasColumnType("citext");
+        modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
 
         // EF's default for self-referencing FKs is Restrict (it won't guess
         // a cascade path). We want deleting a large field to take its
@@ -56,8 +86,8 @@ public class AppDbContext : DbContext
     }
 
     // Lines, populations, plants. Everything inside a project's tree cascades
-    // from the project (a RESTRICT in the middle would make MySQL reject a
-    // project delete with error 1451); plant- and line-level safety lives in
+    // from the project (a RESTRICT in the middle would make the database reject a
+    // project delete with a foreign key violation); plant- and line-level safety lives in
     // the services, not in RESTRICT foreign keys.
     private static void ConfigureBreeding(ModelBuilder modelBuilder)
     {
@@ -71,8 +101,14 @@ public class AppDbContext : DbContext
             e.Property(l => l.NextSeq).HasDefaultValue(1).IsConcurrencyToken();
             e.Property(l => l.IsFounders).HasDefaultValue(false);
             e.Property(l => l.IsStable).HasDefaultValue(false);
-            e.Property(l => l.CreatedAt).HasColumnType("datetime(6)");
-            e.Property(l => l.StableMarkedAt).HasColumnType("datetime(6)");
+            e.Property(l => l.Name).HasColumnType("citext");
+            e.Property(l => l.Code).HasColumnType("citext");
+            // citext ignores maxLength, so the caps are check constraints.
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_lines_name_length", "char_length(name) <= 100");
+                t.HasCheckConstraint("CK_lines_code_length", "char_length(code) <= 6");
+            });
         });
 
         modelBuilder.Entity<Population>(e =>
@@ -83,8 +119,6 @@ public class AppDbContext : DbContext
             e.HasIndex(p => p.ProjectId);
             e.HasIndex(p => new { p.LineId, p.Kind, p.Generation, p.Season, p.Year, p.FieldId }).IsUnique();
             e.HasIndex(p => p.FieldId);
-            e.Property(p => p.Kind).HasColumnType("char(1)");
-            e.Property(p => p.CreatedAt).HasColumnType("datetime(6)");
         });
 
         modelBuilder.Entity<LineOrigin>(e =>
@@ -106,7 +140,13 @@ public class AppDbContext : DbContext
             e.HasIndex(i => i.MotherPlantId);
             e.HasIndex(i => i.FatherPlantId);
             e.Property(i => i.RowVersion).HasDefaultValue(1).IsConcurrencyToken();
-            e.Property(i => i.CreatedAt).HasColumnType("datetime(6)").HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            e.Property(i => i.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
+            e.Property(i => i.Tag).HasColumnType("citext");
+            e.ToTable(t => t.HasCheckConstraint("CK_project_items_tag_length", "char_length(tag) <= 40"));
+            e.Property(i => i.FruitColor).HasColumnType("citext");
+            e.Property(i => i.FruitWeight).HasColumnType("citext");
+            e.Property(i => i.SeedColor).HasColumnType("citext");
+            e.Property(i => i.SeedWeight).HasColumnType("citext");
         });
     }
 }

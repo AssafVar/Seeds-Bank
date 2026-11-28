@@ -6,7 +6,7 @@ using SeedsBank.Server.Services;
 namespace SeedsBank.Server.Controllers;
 
 [ApiController]
-[Route("news")]
+[Route("api/news")]
 public class NewsController : ControllerBase
 {
     private readonly INewsService _newsService;

@@ -7,7 +7,7 @@ namespace SeedsBank.Server.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("workers")]
+[Route("api/workers")]
 public class WorkersController : ControllerBase
 {
     private readonly IWorkerService _workerService;
